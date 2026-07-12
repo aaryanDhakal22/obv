@@ -1,0 +1,275 @@
+{
+  "uid": "quicc-stack-health",
+  "title": "Quicc — Collector & stack health",
+  "tags": ["quicc", "infra"],
+  "timezone": "browser",
+  "schemaVersion": 39,
+  "version": 1,
+  "refresh": "1m",
+  "time": { "from": "now-6h", "to": "now" },
+  "links": [
+    {
+      "type": "dashboards",
+      "title": "Quicc dashboards",
+      "tags": ["quicc"],
+      "asDropdown": true,
+      "keepTime": true,
+      "includeVars": true,
+      "icon": "external link"
+    }
+  ],
+  "templating": { "list": [] },
+  "panels": [
+    {
+      "id": 100,
+      "type": "row",
+      "title": "Collector throughput (accepted vs refused, sent vs failed)",
+      "gridPos": { "x": 0, "y": 0, "w": 24, "h": 1 },
+      "collapsed": false,
+      "panels": []
+    },
+    {
+      "id": 1,
+      "type": "timeseries",
+      "title": "Spans",
+      "gridPos": { "x": 0, "y": 1, "w": 8, "h": 8 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": {
+        "defaults": { "unit": "ops", "custom": { "fillOpacity": 10 } },
+        "overrides": [
+          { "matcher": { "id": "byRegexp", "options": "(refused|failed).*" }, "properties": [{ "id": "color", "value": { "mode": "fixed", "fixedColor": "red" } }] }
+        ]
+      },
+      "targets": [
+        { "expr": "sum by (receiver) (rate(otelcol_receiver_accepted_spans[$__rate_interval]))", "legendFormat": "accepted · {{receiver}}" },
+        { "expr": "sum by (receiver) (rate(otelcol_receiver_refused_spans[$__rate_interval]))", "legendFormat": "refused · {{receiver}}" },
+        { "expr": "sum by (exporter) (rate(otelcol_exporter_sent_spans[$__rate_interval]))", "legendFormat": "sent · {{exporter}}" },
+        { "expr": "sum by (exporter) (rate(otelcol_exporter_send_failed_spans[$__rate_interval]))", "legendFormat": "failed · {{exporter}}" }
+      ]
+    },
+    {
+      "id": 2,
+      "type": "timeseries",
+      "title": "Metric points",
+      "gridPos": { "x": 8, "y": 1, "w": 8, "h": 8 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": {
+        "defaults": { "unit": "ops", "custom": { "fillOpacity": 10 } },
+        "overrides": [
+          { "matcher": { "id": "byRegexp", "options": "(refused|failed).*" }, "properties": [{ "id": "color", "value": { "mode": "fixed", "fixedColor": "red" } }] }
+        ]
+      },
+      "targets": [
+        { "expr": "sum by (receiver) (rate(otelcol_receiver_accepted_metric_points[$__rate_interval]))", "legendFormat": "accepted · {{receiver}}" },
+        { "expr": "sum by (receiver) (rate(otelcol_receiver_refused_metric_points[$__rate_interval]))", "legendFormat": "refused · {{receiver}}" },
+        { "expr": "sum by (exporter) (rate(otelcol_exporter_sent_metric_points[$__rate_interval]))", "legendFormat": "sent · {{exporter}}" },
+        { "expr": "sum by (exporter) (rate(otelcol_exporter_send_failed_metric_points[$__rate_interval]))", "legendFormat": "failed · {{exporter}}" }
+      ]
+    },
+    {
+      "id": 3,
+      "type": "timeseries",
+      "title": "Log records",
+      "gridPos": { "x": 16, "y": 1, "w": 8, "h": 8 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": {
+        "defaults": { "unit": "ops", "custom": { "fillOpacity": 10 } },
+        "overrides": [
+          { "matcher": { "id": "byRegexp", "options": "(refused|failed).*" }, "properties": [{ "id": "color", "value": { "mode": "fixed", "fixedColor": "red" } }] }
+        ]
+      },
+      "targets": [
+        { "expr": "sum by (receiver) (rate(otelcol_receiver_accepted_log_records[$__rate_interval]))", "legendFormat": "accepted · {{receiver}}" },
+        { "expr": "sum by (receiver) (rate(otelcol_receiver_refused_log_records[$__rate_interval]))", "legendFormat": "refused · {{receiver}}" },
+        { "expr": "sum by (exporter) (rate(otelcol_exporter_sent_log_records[$__rate_interval]))", "legendFormat": "sent · {{exporter}}" },
+        { "expr": "sum by (exporter) (rate(otelcol_exporter_send_failed_log_records[$__rate_interval]))", "legendFormat": "failed · {{exporter}}" }
+      ]
+    },
+    {
+      "id": 101,
+      "type": "row",
+      "title": "Collector resources",
+      "gridPos": { "x": 0, "y": 9, "w": 24, "h": 1 },
+      "collapsed": false,
+      "panels": []
+    },
+    {
+      "id": 4,
+      "type": "timeseries",
+      "title": "Exporter queue (size vs capacity)",
+      "description": "A queue pinned at capacity means a backend (Tempo/Loki/Prometheus) is not keeping up and data will drop.",
+      "gridPos": { "x": 0, "y": 10, "w": 10, "h": 8 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": {
+        "defaults": { "unit": "short", "decimals": 0, "custom": { "fillOpacity": 10 } },
+        "overrides": [
+          { "matcher": { "id": "byRegexp", "options": "capacity.*" }, "properties": [
+            { "id": "custom.lineStyle", "value": { "fill": "dash", "dash": [10, 10] } },
+            { "id": "color", "value": { "mode": "fixed", "fixedColor": "red" } }
+          ] }
+        ]
+      },
+      "targets": [
+        { "expr": "sum by (exporter) (otelcol_exporter_queue_size)", "legendFormat": "size · {{exporter}}" },
+        { "expr": "sum by (exporter) (otelcol_exporter_queue_capacity)", "legendFormat": "capacity · {{exporter}}" }
+      ]
+    },
+    {
+      "id": 5,
+      "type": "timeseries",
+      "title": "Collector memory (RSS)",
+      "description": "memory_limiter kicks in at 80% of the container limit — refused batches show up in the throughput row.",
+      "gridPos": { "x": 10, "y": 10, "w": 10, "h": 8 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": { "defaults": { "unit": "bytes", "custom": { "fillOpacity": 10 } } },
+      "targets": [
+        { "expr": "otelcol_process_memory_rss", "legendFormat": "rss" },
+        { "expr": "otelcol_process_runtime_heap_alloc_bytes", "legendFormat": "heap alloc" }
+      ]
+    },
+    {
+      "id": 6,
+      "type": "stat",
+      "title": "Collector up",
+      "gridPos": { "x": 20, "y": 10, "w": 4, "h": 8 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "options": { "colorMode": "background", "graphMode": "none", "reduceOptions": { "calcs": ["last"] } },
+      "fieldConfig": {
+        "defaults": {
+          "mappings": [
+            { "type": "value", "options": { "0": { "text": "DOWN", "color": "red" }, "1": { "text": "UP", "color": "green" } } }
+          ],
+          "noValue": "DOWN",
+          "thresholds": { "mode": "absolute", "steps": [{ "color": "red" }, { "color": "green", "value": 1 }] }
+        }
+      },
+      "targets": [
+        { "expr": "up{job=\"otel-collector\"}", "legendFormat": "collector" }
+      ]
+    },
+    {
+      "id": 102,
+      "type": "row",
+      "title": "Prometheus",
+      "gridPos": { "x": 0, "y": 18, "w": 24, "h": 1 },
+      "collapsed": false,
+      "panels": []
+    },
+    {
+      "id": 7,
+      "type": "stat",
+      "title": "Scrape targets",
+      "gridPos": { "x": 0, "y": 19, "w": 8, "h": 7 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "options": { "colorMode": "background", "graphMode": "none", "reduceOptions": { "calcs": ["last"] }, "textMode": "value_and_name" },
+      "fieldConfig": {
+        "defaults": {
+          "mappings": [
+            { "type": "value", "options": { "0": { "text": "DOWN", "color": "red" }, "1": { "text": "UP", "color": "green" } } }
+          ],
+          "thresholds": { "mode": "absolute", "steps": [{ "color": "red" }, { "color": "green", "value": 1 }] }
+        }
+      },
+      "targets": [
+        { "expr": "up", "legendFormat": "{{job}}" }
+      ]
+    },
+    {
+      "id": 8,
+      "type": "timeseries",
+      "title": "TSDB head series",
+      "description": "Slow steady growth is normal; a sudden jump means a label-cardinality leak.",
+      "gridPos": { "x": 8, "y": 19, "w": 8, "h": 7 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": { "defaults": { "unit": "short", "custom": { "fillOpacity": 10 } } },
+      "targets": [
+        { "expr": "prometheus_tsdb_head_series", "legendFormat": "head series" }
+      ]
+    },
+    {
+      "id": 9,
+      "type": "timeseries",
+      "title": "Samples ingested /s",
+      "description": "Covers scrapes plus remote-write from the Collector and Tempo's metrics-generator.",
+      "gridPos": { "x": 16, "y": 19, "w": 8, "h": 7 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": { "defaults": { "unit": "ops", "custom": { "fillOpacity": 10 } } },
+      "targets": [
+        { "expr": "rate(prometheus_tsdb_head_samples_appended_total[$__rate_interval])", "legendFormat": "samples/s" }
+      ]
+    },
+    {
+      "id": 103,
+      "type": "row",
+      "title": "Tempo metrics-generator & Loki",
+      "gridPos": { "x": 0, "y": 26, "w": 24, "h": 1 },
+      "collapsed": false,
+      "panels": []
+    },
+    {
+      "id": 10,
+      "type": "stat",
+      "title": "Span-metrics flowing",
+      "description": "Rate of traces_spanmetrics_calls_total over 15m. STALLED while traces are arriving means the metrics-generator or its remote-write broke.",
+      "gridPos": { "x": 0, "y": 27, "w": 6, "h": 7 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "options": { "colorMode": "background", "graphMode": "none", "reduceOptions": { "calcs": ["last"] } },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ops",
+          "noValue": "STALLED",
+          "mappings": [
+            { "type": "value", "options": { "0": { "text": "STALLED", "color": "red" } } }
+          ],
+          "thresholds": { "mode": "absolute", "steps": [{ "color": "red" }, { "color": "green", "value": 0.001 }] }
+        }
+      },
+      "targets": [
+        { "expr": "sum(rate(traces_spanmetrics_calls_total[15m]))", "legendFormat": "span-metrics" }
+      ]
+    },
+    {
+      "id": 11,
+      "type": "stat",
+      "title": "Service-graph flowing",
+      "gridPos": { "x": 6, "y": 27, "w": 6, "h": 7 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "options": { "colorMode": "background", "graphMode": "none", "reduceOptions": { "calcs": ["last"] } },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ops",
+          "noValue": "STALLED",
+          "mappings": [
+            { "type": "value", "options": { "0": { "text": "STALLED", "color": "red" } } }
+          ],
+          "thresholds": { "mode": "absolute", "steps": [{ "color": "red" }, { "color": "green", "value": 0.001 }] }
+        }
+      },
+      "targets": [
+        { "expr": "sum(rate(traces_service_graph_request_total[15m]))", "legendFormat": "service-graph" }
+      ]
+    },
+    {
+      "id": 12,
+      "type": "timeseries",
+      "title": "Tempo: spans into metrics-generator",
+      "gridPos": { "x": 12, "y": 27, "w": 6, "h": 7 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": { "defaults": { "unit": "ops", "custom": { "fillOpacity": 10 } } },
+      "targets": [
+        { "expr": "sum(rate(tempo_metrics_generator_spans_received_total[$__rate_interval]))", "legendFormat": "spans received" }
+      ]
+    },
+    {
+      "id": 13,
+      "type": "timeseries",
+      "title": "Loki: lines received",
+      "gridPos": { "x": 18, "y": 27, "w": 6, "h": 7 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": { "defaults": { "unit": "ops", "custom": { "fillOpacity": 10 } } },
+      "targets": [
+        { "expr": "sum(rate(loki_distributor_lines_received_total[$__rate_interval]))", "legendFormat": "lines/s" }
+      ]
+    }
+  ]
+}

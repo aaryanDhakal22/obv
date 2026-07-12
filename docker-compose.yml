@@ -1,0 +1,143 @@
+name: quicc-observability
+
+# LGTM stack for Quicc POS.
+#
+# On homelab we front everything with Traefik on the external `proxy` network:
+#   - metrics.quiccpos.com  → Grafana UI
+#   - otlp.quiccpos.com     → OTEL Collector OTLP HTTP ingest (bearer-auth'd)
+#
+# Tempo, Loki, Prometheus have no public route — Grafana reaches them over
+# the internal `default` network.
+#
+# On dev boxes (where Traefik isn't running), set BIND_ADDR in .env to
+# 127.0.0.1 and you still get host-mapped ports for curl/browser access.
+
+x-traefik-defaults: &traefik-defaults
+  - "traefik.enable=true"
+  - "traefik.docker.network=proxy"
+
+services:
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:0.117.0
+    container_name: quicc-otel-collector
+    restart: unless-stopped
+    command: ["--config=/etc/otelcol/config.yaml"]
+    environment:
+      # Bearer token that apps must send on every OTLP HTTP request. Injected
+      # from the `obv` Doppler project by `doppler run` (see Taskfile); the same
+      # token is copied into main/agent/ingest by the console's OTLP sync.
+      OTLP_BEARER_TOKEN: "${OTLP_BEARER_TOKEN:-}"
+    volumes:
+      - ./otel-collector-config.yaml:/etc/otelcol/config.yaml:ro
+    ports:
+      # BIND_ADDR=127.0.0.1 (Doppler: obv) keeps these off the public net;
+      # dev boxes without Traefik can still reach the Collector directly.
+      - "${BIND_ADDR:-127.0.0.1}:4317:4317"   # OTLP gRPC  (internal only)
+      - "${BIND_ADDR:-127.0.0.1}:4318:4318"   # OTLP HTTP  (local dev use)
+      - "${BIND_ADDR:-127.0.0.1}:8888:8888"   # collector self-metrics
+    depends_on:
+      - tempo
+      - loki
+      - prometheus
+    networks:
+      - default
+      - proxy
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=proxy"
+      - "traefik.http.routers.quicc-otlp.entrypoints=websecure"
+      - "traefik.http.routers.quicc-otlp.rule=Host(`otlp.quiccpos.com`)"
+      - "traefik.http.routers.quicc-otlp.tls=true"
+      - "traefik.http.routers.quicc-otlp.tls.certresolver=cloudflare"
+      - "traefik.http.services.quicc-otlp.loadbalancer.server.port=4318"
+
+  tempo:
+    image: grafana/tempo:2.6.1
+    container_name: quicc-tempo
+    restart: unless-stopped
+    command: ["-config.file=/etc/tempo/tempo.yaml"]
+    volumes:
+      - ./tempo.yaml:/etc/tempo/tempo.yaml:ro
+      - tempo_data:/var/tempo
+    ports:
+      - "${BIND_ADDR:-127.0.0.1}:3200:3200"
+
+  loki:
+    image: grafana/loki:3.3.2
+    container_name: quicc-loki
+    restart: unless-stopped
+    command: ["-config.file=/etc/loki/loki.yaml"]
+    volumes:
+      - ./loki.yaml:/etc/loki/loki.yaml:ro
+      - loki_data:/loki
+    ports:
+      - "${BIND_ADDR:-127.0.0.1}:3100:3100"
+
+  prometheus:
+    image: prom/prometheus:v3.0.1
+    container_name: quicc-prometheus
+    restart: unless-stopped
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yaml"
+      - "--storage.tsdb.path=/prometheus"
+      - "--web.enable-remote-write-receiver"
+      - "--enable-feature=exemplar-storage"
+    volumes:
+      - ./prometheus.yaml:/etc/prometheus/prometheus.yaml:ro
+      - prometheus_data:/prometheus
+    ports:
+      - "${BIND_ADDR:-127.0.0.1}:9090:9090"
+
+  grafana:
+    image: grafana/grafana:11.4.0
+    container_name: quicc-grafana
+    restart: unless-stopped
+    environment:
+      # Public-facing root URL so Grafana generates correct absolute links.
+      GF_SERVER_ROOT_URL: "${GRAFANA_ROOT_URL:-http://localhost:3001/}"
+      # Anonymous-admin is a disaster in front of the public internet. Disable
+      # it and require a real login. On dev boxes you can flip this back to
+      # true via .env override if you want quick-click access.
+      GF_AUTH_ANONYMOUS_ENABLED: "${GF_AUTH_ANONYMOUS_ENABLED:-false}"
+      GF_AUTH_ANONYMOUS_ORG_ROLE: Admin
+      GF_AUTH_DISABLE_LOGIN_FORM: "false"
+      GF_SECURITY_ADMIN_USER: "${GRAFANA_ADMIN_USER:-admin}"
+      GF_SECURITY_ADMIN_PASSWORD: "${GRAFANA_ADMIN_PASSWORD:-admin}"
+      GF_FEATURE_TOGGLES_ENABLE: traceqlEditor traceToMetrics traceToProfiles
+      # Consumed by grafana/provisioning/alerting/contactpoints.yaml (${VAR}
+      # expansion) so the Pushover order-pipeline alerts can authenticate.
+      PUSHOVER_APP_TOKEN: "${PUSHOVER_APP_TOKEN:-}"
+      PUSHOVER_USER_KEY: "${PUSHOVER_USER_KEY:-}"
+    volumes:
+      - ./grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./grafana/dashboards:/var/lib/grafana/dashboards:ro
+      - grafana_data:/var/lib/grafana
+    ports:
+      - "${BIND_ADDR:-127.0.0.1}:3001:3000"
+    depends_on:
+      - tempo
+      - loki
+      - prometheus
+    networks:
+      - default
+      - proxy
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=proxy"
+      - "traefik.http.routers.quicc-grafana.entrypoints=websecure"
+      - "traefik.http.routers.quicc-grafana.rule=Host(`metrics.quiccpos.com`)"
+      - "traefik.http.routers.quicc-grafana.tls=true"
+      - "traefik.http.routers.quicc-grafana.tls.certresolver=cloudflare"
+      - "traefik.http.services.quicc-grafana.loadbalancer.server.port=3000"
+
+networks:
+  default:
+    driver: bridge
+  proxy:
+    external: true
+
+volumes:
+  tempo_data:
+  loki_data:
+  prometheus_data:
+  grafana_data:

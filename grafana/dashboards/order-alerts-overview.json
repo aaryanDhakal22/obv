@@ -1,0 +1,151 @@
+{
+  "uid": "quicc-alerts-overview",
+  "title": "Quicc — Order alerts overview",
+  "tags": ["quicc", "alerts", "orders"],
+  "timezone": "browser",
+  "schemaVersion": 39,
+  "version": 1,
+  "refresh": "1m",
+  "time": { "from": "now-6h", "to": "now" },
+  "links": [
+    { "type": "dashboards", "title": "Quicc dashboards", "tags": ["quicc"], "asDropdown": true, "keepTime": true, "includeVars": true, "icon": "external link" }
+  ],
+  "templating": {
+    "list": [
+      {
+        "name": "env",
+        "label": "Environment",
+        "type": "query",
+        "datasource": { "type": "prometheus", "uid": "prometheus" },
+        "query": "label_values(deployment_environment)",
+        "refresh": 2,
+        "sort": 1
+      }
+    ]
+  },
+  "panels": [
+    {
+      "id": 100, "type": "row", "title": "Live alerts — Order pipeline folder (each buzzes Pushover)",
+      "gridPos": { "x": 0, "y": 0, "w": 24, "h": 1 }, "collapsed": false, "panels": []
+    },
+    {
+      "id": 1, "type": "alertlist", "title": "Firing & pending order-pipeline alerts",
+      "description": "Live view of the 9 Pushover alert rules in the \"Order pipeline\" folder. Empty = every order is moving.",
+      "gridPos": { "x": 0, "y": 1, "w": 24, "h": 9 },
+      "options": {
+        "showOptions": "current",
+        "folder": "Order pipeline",
+        "alertName": "",
+        "alertInstanceLabelFilter": "",
+        "dashboardAlerts": false,
+        "maxItems": 20,
+        "sortOrder": 3,
+        "viewMode": "list",
+        "stateFilter": { "firing": true, "pending": true, "noData": false, "normal": false }
+      }
+    },
+    {
+      "id": 101, "type": "row", "title": "Drops by stage (selected range) — each maps 1:1 to a Pushover rule",
+      "gridPos": { "x": 0, "y": 10, "w": 24, "h": 1 }, "collapsed": false, "panels": []
+    },
+    {
+      "id": 2, "type": "stat", "title": "online rejected",
+      "description": "Rule: \"online rejected an order\".",
+      "gridPos": { "x": 0, "y": 11, "w": 5, "h": 6 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "options": { "colorMode": "background", "graphMode": "none", "reduceOptions": { "calcs": ["last"] } },
+      "fieldConfig": { "defaults": { "unit": "short", "decimals": 0, "noValue": "0", "thresholds": { "mode": "absolute", "steps": [{ "color": "green" }, { "color": "red", "value": 1 }] } } },
+      "targets": [ { "expr": "sum(increase(orders_rejected_total{deployment_environment=\"$env\"}[$__range]))", "legendFormat": "rejected" } ]
+    },
+    {
+      "id": 3, "type": "stat", "title": "main cast-failed",
+      "description": "Rule: \"main failed to cast an order (DLQ)\".",
+      "gridPos": { "x": 5, "y": 11, "w": 5, "h": 6 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "options": { "colorMode": "background", "graphMode": "none", "reduceOptions": { "calcs": ["last"] } },
+      "fieldConfig": { "defaults": { "unit": "short", "decimals": 0, "noValue": "0", "thresholds": { "mode": "absolute", "steps": [{ "color": "green" }, { "color": "red", "value": 1 }] } } },
+      "targets": [ { "expr": "sum(increase(orders_cast_failed_total{deployment_environment=\"$env\"}[$__range]))", "legendFormat": "cast-failed" } ]
+    },
+    {
+      "id": 4, "type": "stat", "title": "main persist-failed",
+      "description": "Rule: \"main failed to persist an order\".",
+      "gridPos": { "x": 10, "y": 11, "w": 5, "h": 6 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "options": { "colorMode": "background", "graphMode": "none", "reduceOptions": { "calcs": ["last"] } },
+      "fieldConfig": { "defaults": { "unit": "short", "decimals": 0, "noValue": "0", "thresholds": { "mode": "absolute", "steps": [{ "color": "green" }, { "color": "red", "value": 1 }] } } },
+      "targets": [ { "expr": "sum(increase(orders_persist_failed_total{deployment_environment=\"$env\"}[$__range]))", "legendFormat": "persist-failed" } ]
+    },
+    {
+      "id": 5, "type": "stat", "title": "main dispatch-failed",
+      "description": "Rule: \"main outbox dispatch failing\".",
+      "gridPos": { "x": 15, "y": 11, "w": 5, "h": 6 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "options": { "colorMode": "background", "graphMode": "none", "reduceOptions": { "calcs": ["last"] } },
+      "fieldConfig": { "defaults": { "unit": "short", "decimals": 0, "noValue": "0", "thresholds": { "mode": "absolute", "steps": [{ "color": "green" }, { "color": "red", "value": 1 }] } } },
+      "targets": [ { "expr": "sum(increase(outbox_events_failed_total{deployment_environment=\"$env\"}[$__range]))", "legendFormat": "dispatch-failed" } ]
+    },
+    {
+      "id": 6, "type": "stat", "title": "agent print-failed",
+      "description": "Rule: \"agent failed to print an order\".",
+      "gridPos": { "x": 20, "y": 11, "w": 4, "h": 6 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "options": { "colorMode": "background", "graphMode": "none", "reduceOptions": { "calcs": ["last"] } },
+      "fieldConfig": { "defaults": { "unit": "short", "decimals": 0, "noValue": "0", "thresholds": { "mode": "absolute", "steps": [{ "color": "green" }, { "color": "red", "value": 1 }] } } },
+      "targets": [ { "expr": "sum(increase(orders_print_failed_total{deployment_environment=\"$env\"}[$__range]))", "legendFormat": "print-failed" } ]
+    },
+    {
+      "id": 102, "type": "row", "title": "SSE / agent link health",
+      "gridPos": { "x": 0, "y": 17, "w": 24, "h": 1 }, "collapsed": false, "panels": []
+    },
+    {
+      "id": 7, "type": "stat", "title": "Agents connected (SSE)",
+      "description": "Live SSE subscriptions on main. 0 = nothing will print (rule: \"order could not reach the agent (SSE down)\").",
+      "gridPos": { "x": 0, "y": 18, "w": 6, "h": 8 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "options": { "colorMode": "background", "graphMode": "none", "reduceOptions": { "calcs": ["last"] }, "textMode": "value" },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "decimals": 0,
+          "noValue": "NO AGENT",
+          "mappings": [ { "type": "value", "options": { "0": { "text": "NO AGENT", "color": "red" } } } ],
+          "thresholds": { "mode": "absolute", "steps": [{ "color": "red" }, { "color": "green", "value": 1 }] }
+        }
+      },
+      "targets": [ { "expr": "sum(sse_clients_active{deployment_environment=\"$env\"})", "legendFormat": "agents" } ]
+    },
+    {
+      "id": 8, "type": "timeseries", "title": "Orders broadcast with no agent (SSE down)",
+      "description": "sse.events.broadcast{event_type=order,result=no_subscribers} — order frames main tried to fan out while no agent was subscribed. Non-zero = the SSE link is down; tickets queue in the outbox and won't print until reconnect.",
+      "gridPos": { "x": 6, "y": 18, "w": 18, "h": 8 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ops",
+          "custom": { "fillOpacity": 40, "drawStyle": "bars" },
+          "color": { "mode": "fixed", "fixedColor": "red" },
+          "thresholds": { "mode": "absolute", "steps": [{ "color": "green" }, { "color": "red", "value": 1 }] }
+        }
+      },
+      "targets": [ { "expr": "sum(increase(sse_events_broadcast_total{event_type=\"order\", result=\"no_subscribers\", deployment_environment=\"$env\"}[$__rate_interval]))", "legendFormat": "no-agent broadcasts" } ]
+    },
+    {
+      "id": 103, "type": "row", "title": "Order throughput (one-glance health)",
+      "gridPos": { "x": 0, "y": 26, "w": 24, "h": 1 }, "collapsed": false, "panels": []
+    },
+    {
+      "id": 9, "type": "timeseries", "title": "Key stages — online received → agent printed",
+      "description": "Front door to paper. Healthy = the lines track together; a line falling below the one to its left = orders lost at that hop.",
+      "gridPos": { "x": 0, "y": 27, "w": 24, "h": 9 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": { "defaults": { "unit": "ops", "custom": { "fillOpacity": 5, "drawStyle": "line" } } },
+      "targets": [
+        { "expr": "sum(rate(orders_received_total{service_name=\"quicc-online\", deployment_environment=\"$env\"}[$__rate_interval]))", "legendFormat": "1 online received" },
+        { "expr": "sum(rate(orders_consumed_total{deployment_environment=\"$env\"}[$__rate_interval]))", "legendFormat": "2 main consumed" },
+        { "expr": "sum(rate(orders_persisted_total{result=\"ok\", deployment_environment=\"$env\"}[$__rate_interval]))", "legendFormat": "3 main persisted" },
+        { "expr": "sum(rate(orders_received_total{service_name=\"quicc-agent\", deployment_environment=\"$env\"}[$__rate_interval]))", "legendFormat": "4 agent received" },
+        { "expr": "sum(rate(orders_printed_total{deployment_environment=\"$env\"}[$__rate_interval]))", "legendFormat": "5 agent printed" }
+      ]
+    }
+  ]
+}

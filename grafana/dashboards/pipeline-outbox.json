@@ -1,0 +1,279 @@
+{
+  "uid": "quicc-pipeline-outbox",
+  "title": "Quicc — Pipeline & outbox (main)",
+  "tags": ["quicc", "main"],
+  "timezone": "browser",
+  "schemaVersion": 39,
+  "version": 1,
+  "refresh": "1m",
+  "time": { "from": "now-6h", "to": "now" },
+  "links": [
+    {
+      "type": "dashboards",
+      "title": "Quicc dashboards",
+      "tags": ["quicc"],
+      "asDropdown": true,
+      "keepTime": true,
+      "includeVars": true,
+      "icon": "external link"
+    }
+  ],
+  "templating": {
+    "list": [
+      {
+        "name": "env",
+        "label": "Environment",
+        "type": "query",
+        "datasource": { "type": "prometheus", "uid": "prometheus" },
+        "query": "label_values(deployment_environment)",
+        "refresh": 2,
+        "sort": 1
+      }
+    ]
+  },
+  "panels": [
+    {
+      "id": 100,
+      "type": "row",
+      "title": "SQS → Postgres",
+      "gridPos": { "x": 0, "y": 0, "w": 24, "h": 1 },
+      "collapsed": false,
+      "panels": []
+    },
+    {
+      "id": 1,
+      "type": "timeseries",
+      "title": "Consume / persist / cast-fail",
+      "gridPos": { "x": 0, "y": 1, "w": 12, "h": 8 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": {
+        "defaults": { "unit": "ops", "custom": { "fillOpacity": 10 } },
+        "overrides": [
+          { "matcher": { "id": "byName", "options": "persisted · duplicate" }, "properties": [{ "id": "color", "value": { "mode": "fixed", "fixedColor": "orange" } }] },
+          { "matcher": { "id": "byName", "options": "persisted · ok" }, "properties": [{ "id": "color", "value": { "mode": "fixed", "fixedColor": "green" } }] },
+          { "matcher": { "id": "byName", "options": "cast failed" }, "properties": [{ "id": "color", "value": { "mode": "fixed", "fixedColor": "red" } }] }
+        ]
+      },
+      "targets": [
+        { "expr": "sum(rate(orders_consumed_total{deployment_environment=\"$env\"}[$__rate_interval]))", "legendFormat": "consumed" },
+        { "expr": "sum by (result) (rate(orders_persisted_total{deployment_environment=\"$env\"}[$__rate_interval]))", "legendFormat": "persisted · {{result}}" },
+        { "expr": "sum(rate(orders_cast_failed_total{deployment_environment=\"$env\"}[$__rate_interval]))", "legendFormat": "cast failed" }
+      ]
+    },
+    {
+      "id": 2,
+      "type": "stat",
+      "title": "Duplicates (24h)",
+      "description": "Vendor retries land as duplicates — a few are normal, a spike means the vendor is hammering.",
+      "gridPos": { "x": 12, "y": 1, "w": 4, "h": 8 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "options": { "colorMode": "background", "graphMode": "none", "reduceOptions": { "calcs": ["last"] } },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "decimals": 0,
+          "noValue": "0",
+          "thresholds": { "mode": "absolute", "steps": [{ "color": "green" }, { "color": "yellow", "value": 1 }] }
+        }
+      },
+      "targets": [
+        { "expr": "sum(increase(orders_persisted_total{result=\"duplicate\", deployment_environment=\"$env\"}[24h]))", "legendFormat": "duplicates" }
+      ]
+    },
+    {
+      "id": 3,
+      "type": "stat",
+      "title": "Cast failures (24h)",
+      "description": "A cast failure means a vendor body the caster couldn't shape — the order did NOT persist.",
+      "gridPos": { "x": 16, "y": 1, "w": 4, "h": 8 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "options": { "colorMode": "background", "graphMode": "none", "reduceOptions": { "calcs": ["last"] } },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "decimals": 0,
+          "noValue": "0",
+          "thresholds": { "mode": "absolute", "steps": [{ "color": "green" }, { "color": "red", "value": 1 }] }
+        }
+      },
+      "targets": [
+        { "expr": "sum(increase(orders_cast_failed_total{deployment_environment=\"$env\"}[24h]))", "legendFormat": "cast failures" }
+      ]
+    },
+    {
+      "id": 4,
+      "type": "timeseries",
+      "title": "SQS messages in flight",
+      "gridPos": { "x": 20, "y": 1, "w": 4, "h": 8 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "decimals": 0,
+          "custom": { "fillOpacity": 30 },
+          "thresholds": { "mode": "absolute", "steps": [{ "color": "green" }, { "color": "yellow", "value": 5 }, { "color": "red", "value": 10 }] }
+        }
+      },
+      "targets": [
+        { "expr": "sum(sqs_messages_in_flight{deployment_environment=\"$env\"})", "legendFormat": "in flight" }
+      ]
+    },
+    {
+      "id": 101,
+      "type": "row",
+      "title": "Outbox",
+      "gridPos": { "x": 0, "y": 9, "w": 24, "h": 1 },
+      "collapsed": false,
+      "panels": []
+    },
+    {
+      "id": 5,
+      "type": "timeseries",
+      "title": "Dispatched by handler",
+      "gridPos": { "x": 0, "y": 10, "w": 8, "h": 8 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": { "defaults": { "unit": "ops", "custom": { "fillOpacity": 10 } } },
+      "targets": [
+        { "expr": "sum by (handler) (rate(outbox_events_dispatched_total{deployment_environment=\"$env\"}[$__rate_interval]))", "legendFormat": "{{handler}}" }
+      ]
+    },
+    {
+      "id": 6,
+      "type": "timeseries",
+      "title": "Dispatch failures by handler",
+      "gridPos": { "x": 8, "y": 10, "w": 8, "h": 8 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ops",
+          "custom": { "fillOpacity": 10 },
+          "color": { "mode": "palette-classic-by-name" },
+          "thresholds": { "mode": "absolute", "steps": [{ "color": "green" }, { "color": "red", "value": 1 }] }
+        }
+      },
+      "targets": [
+        { "expr": "sum by (handler, transient) (rate(outbox_events_failed_total{deployment_environment=\"$env\"}[$__rate_interval]))", "legendFormat": "{{handler}} · transient={{transient}}" }
+      ]
+    },
+    {
+      "id": 7,
+      "type": "timeseries",
+      "title": "Pending depth per handler",
+      "description": "Rows in outbox_dispatches with dispatched_at IS NULL. A stuck dispatcher shows here first.",
+      "gridPos": { "x": 16, "y": 10, "w": 8, "h": 8 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "decimals": 0,
+          "custom": { "fillOpacity": 30 },
+          "thresholds": { "mode": "absolute", "steps": [{ "color": "green" }, { "color": "yellow", "value": 5 }, { "color": "red", "value": 50 }] }
+        }
+      },
+      "targets": [
+        { "expr": "outbox_events_pending{deployment_environment=\"$env\"}", "legendFormat": "{{handler}}" }
+      ]
+    },
+    {
+      "id": 8,
+      "type": "stat",
+      "title": "Dispatch success % (range)",
+      "gridPos": { "x": 0, "y": 18, "w": 6, "h": 5 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "options": { "colorMode": "background", "graphMode": "none", "reduceOptions": { "calcs": ["last"] } },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "decimals": 1,
+          "min": 0,
+          "max": 100,
+          "noValue": "no events",
+          "thresholds": { "mode": "absolute", "steps": [{ "color": "red" }, { "color": "yellow", "value": 95 }, { "color": "green", "value": 99 }] }
+        }
+      },
+      "targets": [
+        { "expr": "100 * sum(increase(outbox_events_dispatched_total{deployment_environment=\"$env\"}[$__range])) / clamp_min(sum(increase(outbox_events_dispatched_total{deployment_environment=\"$env\"}[$__range])) + sum(increase(outbox_events_failed_total{deployment_environment=\"$env\"}[$__range])), 1)", "legendFormat": "success" }
+      ]
+    },
+    {
+      "id": 102,
+      "type": "row",
+      "title": "SSE fan-out",
+      "gridPos": { "x": 0, "y": 23, "w": 24, "h": 1 },
+      "collapsed": false,
+      "panels": []
+    },
+    {
+      "id": 9,
+      "type": "stat",
+      "title": "Agents connected (SSE)",
+      "description": "Live SSE subscriptions on main. 0 means no agent is listening — orders will persist but nothing prints.",
+      "gridPos": { "x": 0, "y": 24, "w": 8, "h": 7 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "options": { "colorMode": "background", "graphMode": "none", "reduceOptions": { "calcs": ["last"] }, "textMode": "value" },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "decimals": 0,
+          "noValue": "NO AGENT",
+          "mappings": [
+            { "type": "value", "options": { "0": { "text": "NO AGENT", "color": "red" } } }
+          ],
+          "thresholds": { "mode": "absolute", "steps": [{ "color": "red" }, { "color": "green", "value": 1 }] }
+        }
+      },
+      "targets": [
+        { "expr": "sum(sse_clients_active{deployment_environment=\"$env\"})", "legendFormat": "connected" }
+      ]
+    },
+    {
+      "id": 10,
+      "type": "timeseries",
+      "title": "Agent SSE reconnects per hour",
+      "description": "Counted on the agent side. Sustained reconnects point at a proxy idle-timeout or a flaky link.",
+      "gridPos": { "x": 8, "y": 24, "w": 16, "h": 7 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": { "defaults": { "unit": "short", "decimals": 0, "custom": { "drawStyle": "bars", "fillOpacity": 80 } } },
+      "targets": [
+        { "expr": "sum(increase(sse_reconnects_total{deployment_environment=\"$env\"}[1h]))", "legendFormat": "reconnects" }
+      ]
+    },
+    {
+      "id": 103,
+      "type": "row",
+      "title": "DB & client spans (Tempo span-metrics)",
+      "gridPos": { "x": 0, "y": 31, "w": 24, "h": 1 },
+      "collapsed": false,
+      "panels": []
+    },
+    {
+      "id": 11,
+      "type": "timeseries",
+      "title": "main client-span p95 (otelpgx queries, SQS calls)",
+      "gridPos": { "x": 0, "y": 32, "w": 12, "h": 8 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": { "defaults": { "unit": "s", "custom": { "fillOpacity": 10 } } },
+      "targets": [
+        { "expr": "histogram_quantile(0.95, sum by (span_name, le) (rate(traces_spanmetrics_latency_bucket{service=\"quicc-main\", span_kind=\"SPAN_KIND_CLIENT\", deployment_environment=\"$env\"}[$__rate_interval])))", "legendFormat": "{{span_name}}", "exemplar": true }
+      ]
+    },
+    {
+      "id": 12,
+      "type": "timeseries",
+      "title": "sqs.process p95 (consume → persist → outbox)",
+      "description": "The whole consume transaction: caster, order insert, outbox rows, message delete.",
+      "gridPos": { "x": 12, "y": 32, "w": 12, "h": 8 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "custom": { "fillOpacity": 10 },
+          "thresholds": { "mode": "absolute", "steps": [{ "color": "green" }, { "color": "yellow", "value": 1 }, { "color": "red", "value": 5 }] }
+        }
+      },
+      "targets": [
+        { "expr": "histogram_quantile(0.95, sum by (le) (rate(traces_spanmetrics_latency_bucket{service=\"quicc-main\", span_name=\"sqs.process\", deployment_environment=\"$env\"}[$__rate_interval])))", "legendFormat": "p95", "exemplar": true }
+      ]
+    }
+  ]
+}

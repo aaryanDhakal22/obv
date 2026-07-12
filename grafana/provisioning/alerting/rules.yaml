@@ -1,0 +1,190 @@
+apiVersion: 1
+
+# Order-pipeline alerts: fire if an order fails to move through ANY module.
+# Every rule is tagged team=orders so policies.yaml routes it to Pushover.
+#
+# noDataState=OK on purpose: no orders → no series → not a problem. These alert
+# on *failures/backlog*, not on absence of traffic.
+#
+# Prometheus names follow the OTEL→PRW convention (dots→_, counters +_total).
+groups:
+  - orgId: 1
+    name: order-pipeline
+    folder: Order pipeline
+    interval: 1m
+    rules:
+      # 1 — online rejected an inbound order (bad body / SQS publish error).
+      - uid: quicc-ord-online-rejected
+        title: online rejected an order
+        condition: C
+        for: 0m
+        labels: { team: orders, module: online, severity: page }
+        annotations:
+          summary: "online/ rejected {{ printf \"%.0f\" $values.A.Value }} order(s) in 10m — a vendor POST was not relayed to SQS."
+        noDataState: OK
+        execErrState: Error
+        data:
+          - refId: A
+            relativeTimeRange: { from: 600, to: 0 }
+            datasourceUid: prometheus
+            model: { refId: A, instant: true, expr: "sum by (deployment_environment, reason) (increase(orders_rejected_total[10m]))" }
+          - refId: C
+            datasourceUid: __expr__
+            model: { refId: C, type: threshold, expression: A, conditions: [ { evaluator: { type: gt, params: [0] } } ] }
+
+      # 2 — main could not cast a message (missing scope / unknown source / bad body) → DLQ.
+      - uid: quicc-ord-main-cast
+        title: main failed to cast an order (DLQ)
+        condition: C
+        for: 0m
+        labels: { team: orders, module: main, severity: page }
+        annotations:
+          summary: "main/ cast-failed {{ printf \"%.0f\" $values.A.Value }} message(s) in 10m (reason={{ $labels.reason }}) — left for redrive/DLQ, never persisted."
+        noDataState: OK
+        execErrState: Error
+        data:
+          - refId: A
+            relativeTimeRange: { from: 600, to: 0 }
+            datasourceUid: prometheus
+            model: { refId: A, instant: true, expr: "sum by (deployment_environment, reason) (increase(orders_cast_failed_total[10m]))" }
+          - refId: C
+            datasourceUid: __expr__
+            model: { refId: C, type: threshold, expression: A, conditions: [ { evaluator: { type: gt, params: [0] } } ] }
+
+      # 3 — main consumed but failed to persist (DB error; message left on queue).
+      - uid: quicc-ord-main-persist
+        title: main failed to persist an order
+        condition: C
+        for: 0m
+        labels: { team: orders, module: main, severity: page }
+        annotations:
+          summary: "main/ persist-failed {{ printf \"%.0f\" $values.A.Value }} order(s) in 10m — consumed from SQS but not written to Postgres."
+        noDataState: OK
+        execErrState: Error
+        data:
+          - refId: A
+            relativeTimeRange: { from: 600, to: 0 }
+            datasourceUid: prometheus
+            model: { refId: A, instant: true, expr: "sum by (deployment_environment) (increase(orders_persist_failed_total[10m]))" }
+          - refId: C
+            datasourceUid: __expr__
+            model: { refId: C, type: threshold, expression: A, conditions: [ { evaluator: { type: gt, params: [0] } } ] }
+
+      # 4 — main dispatched an outbox event and it errored (SSE fan-out failing).
+      - uid: quicc-ord-main-dispatch
+        title: main outbox dispatch failing
+        condition: C
+        for: 0m
+        labels: { team: orders, module: main, severity: page }
+        annotations:
+          summary: "main/ outbox dispatch errored {{ printf \"%.0f\" $values.A.Value }} time(s) in 10m (handler={{ $labels.handler }}) — order persisted but the SSE push failed."
+        noDataState: OK
+        execErrState: Error
+        data:
+          - refId: A
+            relativeTimeRange: { from: 600, to: 0 }
+            datasourceUid: prometheus
+            model: { refId: A, instant: true, expr: "sum by (deployment_environment, handler) (increase(outbox_events_failed_total[10m]))" }
+          - refId: C
+            datasourceUid: __expr__
+            model: { refId: C, type: threshold, expression: A, conditions: [ { evaluator: { type: gt, params: [0] } } ] }
+
+      # 5 — outbox backlog not draining (dispatcher stuck / no agent consuming).
+      - uid: quicc-ord-main-outbox-stuck
+        title: main outbox backlog not draining
+        condition: C
+        for: 15m
+        labels: { team: orders, module: main, severity: page }
+        annotations:
+          summary: "main/ has {{ printf \"%.0f\" $values.A.Value }} pending outbox row(s) (handler={{ $labels.handler }}) unsent for 15m — dispatch is stalled."
+        noDataState: OK
+        execErrState: Error
+        data:
+          - refId: A
+            relativeTimeRange: { from: 900, to: 0 }
+            datasourceUid: prometheus
+            model: { refId: A, instant: true, expr: "max by (deployment_environment, handler) (max_over_time(outbox_events_pending[15m]))" }
+          - refId: C
+            datasourceUid: __expr__
+            model: { refId: C, type: threshold, expression: A, conditions: [ { evaluator: { type: gt, params: [0] } } ] }
+
+      # 6 — agent received an order but the print failed.
+      - uid: quicc-ord-agent-print
+        title: agent failed to print an order
+        condition: C
+        for: 0m
+        labels: { team: orders, module: agent, severity: page }
+        annotations:
+          summary: "agent/ print-failed {{ printf \"%.0f\" $values.A.Value }} order(s) in 10m (reason={{ $labels.reason }}) — ticket did not reach the printer."
+        noDataState: OK
+        execErrState: Error
+        data:
+          - refId: A
+            relativeTimeRange: { from: 600, to: 0 }
+            datasourceUid: prometheus
+            model: { refId: A, instant: true, expr: "sum by (deployment_environment, reason) (increase(orders_print_failed_total[10m]))" }
+          - refId: C
+            datasourceUid: __expr__
+            model: { refId: C, type: threshold, expression: A, conditions: [ { evaluator: { type: gt, params: [0] } } ] }
+
+      # 7 — funnel gap: orders reached the agent over SSE but fewer got printed (30m, sustained).
+      - uid: quicc-ord-agent-funnel-gap
+        title: agent received orders it did not print
+        condition: C
+        for: 30m
+        labels: { team: orders, module: agent, severity: warn }
+        annotations:
+          summary: "agent/ received {{ printf \"%.0f\" $values.A.Value }} more order(s) than it printed over 30m — a silent drop between SSE receive and print."
+        noDataState: OK
+        execErrState: Error
+        data:
+          - refId: A
+            relativeTimeRange: { from: 1800, to: 0 }
+            datasourceUid: prometheus
+            model:
+              refId: A
+              instant: true
+              expr: "sum by (deployment_environment) (increase(orders_received_total{service_name=\"quicc-agent\"}[30m])) - sum by (deployment_environment) (increase(orders_printed_total[30m]))"
+          - refId: C
+            datasourceUid: __expr__
+            model: { refId: C, type: threshold, expression: A, conditions: [ { evaluator: { type: gt, params: [0] } } ] }
+
+      # 8 — main→agent command timed out (roster stale / duplex leg degraded). Warning.
+      - uid: quicc-ord-rpc-timeout
+        title: agent command channel timing out
+        condition: C
+        for: 0m
+        labels: { team: orders, module: main, severity: warn }
+        annotations:
+          summary: "main/ RPC to the agent timed out {{ printf \"%.0f\" $values.A.Value }} time(s) in 10m (type={{ $labels.type }}) — the duplex command channel is degraded."
+        noDataState: OK
+        execErrState: Error
+        data:
+          - refId: A
+            relativeTimeRange: { from: 600, to: 0 }
+            datasourceUid: prometheus
+            model: { refId: A, instant: true, expr: "sum by (deployment_environment, type) (increase(rpc_timeouts_total[10m]))" }
+          - refId: C
+            datasourceUid: __expr__
+            model: { refId: C, type: threshold, expression: A, conditions: [ { evaluator: { type: gt, params: [0] } } ] }
+
+      # 9 — SSE down: an order was ready but NO agent was connected to receive it.
+      #     main retries (outbox), so it's not lost — but the ticket won't print
+      #     until the agent reconnects. This is the headline "SSE failure" alert.
+      - uid: quicc-ord-sse-down
+        title: order could not reach the agent (SSE down)
+        condition: C
+        for: 0m
+        labels: { team: orders, module: main, severity: page }
+        annotations:
+          summary: "main/ broadcast {{ printf \"%.0f\" $values.A.Value }} order frame(s) in 10m with NO agent subscribed — the SSE link is down; tickets are queued (outbox retry) and won't print until the agent reconnects."
+        noDataState: OK
+        execErrState: Error
+        data:
+          - refId: A
+            relativeTimeRange: { from: 600, to: 0 }
+            datasourceUid: prometheus
+            model: { refId: A, instant: true, expr: "sum by (deployment_environment) (increase(sse_events_broadcast_total{event_type=\"order\", result=\"no_subscribers\"}[10m]))" }
+          - refId: C
+            datasourceUid: __expr__
+            model: { refId: C, type: threshold, expression: A, conditions: [ { evaluator: { type: gt, params: [0] } } ] }

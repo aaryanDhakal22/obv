@@ -1,0 +1,21 @@
+# Secrets — this stack runs under `doppler run`; nothing secret is committed.
+.env
+.env.*
+*.local.*
+.doppler-*
+
+# Claude Code local/session files
+.claude/
+CLAUDE.local.md
+
+# OS / editor cruft
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+*~
+.idea/
+.vscode/
+
+# Logs
+*.log

@@ -1,0 +1,53 @@
+version: "3"
+
+# Secrets come from the `obv` Doppler project — nothing lives in a local .env.
+# Put a read-scoped obv service token in `.doppler-obv-token` (gitignored):
+#   doppler configs tokens create obv --project obv --config prd --plain > .doppler-obv-token
+# `up`/`config` inject those secrets via `doppler run`; teardown/inspection don't
+# need them (compose falls back to the ${VAR:-default}s in docker-compose.yml).
+
+vars:
+  COMPOSE: docker compose -f ./docker-compose.yml
+  DOPPLER_TOKEN_FILE: .doppler-obv-token
+  DRUN: DOPPLER_TOKEN=$(cat {{.DOPPLER_TOKEN_FILE}}) doppler run --
+
+tasks:
+  default:
+    desc: List tasks
+    cmds:
+      - task --list
+
+  up:
+    desc: Start the LGTM stack (detached), secrets injected from Doppler (obv).
+    cmds:
+      - "{{.DRUN}} {{.COMPOSE}} up -d"
+      - echo "Grafana   http://localhost:3001"
+      - echo "Tempo     http://localhost:3200"
+      - echo "Loki      http://localhost:3100"
+      - echo "Prom      http://localhost:9090"
+      - echo "Collector OTLP gRPC :4317 / HTTP :4318"
+
+  down:
+    desc: Stop the LGTM stack (keep volumes)
+    cmds:
+      - "{{.COMPOSE}} down"
+
+  reset:
+    desc: Stop and wipe all observability data
+    cmds:
+      - "{{.COMPOSE}} down -v"
+
+  logs:
+    desc: Tail logs for a component. Example&#58; task logs -- otel-collector
+    cmds:
+      - "{{.COMPOSE}} logs -f --tail=200 {{.CLI_ARGS}}"
+
+  ps:
+    desc: Show running services
+    cmds:
+      - "{{.COMPOSE}} ps"
+
+  config:
+    desc: Print resolved docker-compose config (with Doppler-injected secrets)
+    cmds:
+      - "{{.DRUN}} {{.COMPOSE}} config"

@@ -1,0 +1,103 @@
+{
+  "uid": "quicc-duplex-rpc",
+  "title": "Quicc — Duplex RPC / command channel",
+  "tags": ["quicc", "rpc", "main", "agent"],
+  "timezone": "browser",
+  "schemaVersion": 39,
+  "version": 1,
+  "refresh": "1m",
+  "time": { "from": "now-6h", "to": "now" },
+  "links": [
+    { "type": "dashboards", "title": "Quicc dashboards", "tags": ["quicc"], "asDropdown": true, "keepTime": true, "includeVars": true, "icon": "external link" }
+  ],
+  "templating": {
+    "list": [
+      {
+        "name": "env", "label": "Environment", "type": "query",
+        "datasource": { "type": "prometheus", "uid": "prometheus" },
+        "query": "label_values(deployment_environment)", "refresh": 2, "sort": 1
+      }
+    ]
+  },
+  "panels": [
+    {
+      "id": 100, "type": "row", "title": "main → agent (commands)",
+      "gridPos": { "x": 0, "y": 0, "w": 24, "h": 1 }, "collapsed": false, "panels": []
+    },
+    {
+      "id": 1, "type": "timeseries", "title": "Command requests by type",
+      "description": "Commands main/ sent down the SSE channel (rpc.requests).",
+      "gridPos": { "x": 0, "y": 1, "w": 12, "h": 8 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": { "defaults": { "unit": "ops", "custom": { "fillOpacity": 10 } } },
+      "targets": [ { "expr": "sum by (type) (rate(rpc_requests_total{deployment_environment=\"$env\"}[$__rate_interval]))", "legendFormat": "{{type}}" } ]
+    },
+    {
+      "id": 2, "type": "timeseries", "title": "Failed sends — offline & timeout",
+      "description": "rpc.offline = no agent subscribed to the scope; rpc.timeouts = command sent but no reply in time. Both mean a command didn't complete.",
+      "gridPos": { "x": 12, "y": 1, "w": 12, "h": 8 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": { "defaults": { "unit": "ops", "custom": { "fillOpacity": 20, "drawStyle": "bars" }, "thresholds": { "mode": "absolute", "steps": [{ "color": "green" }, { "color": "red", "value": 1 }] } } },
+      "targets": [
+        { "expr": "sum by (type) (rate(rpc_offline_total{deployment_environment=\"$env\"}[$__rate_interval]))", "legendFormat": "offline · {{type}}" },
+        { "expr": "sum by (type) (rate(rpc_timeouts_total{deployment_environment=\"$env\"}[$__rate_interval]))", "legendFormat": "timeout · {{type}}" }
+      ]
+    },
+    {
+      "id": 3, "type": "stat", "title": "Reply success % (range)",
+      "description": "rpc.replies result=ok vs error.",
+      "gridPos": { "x": 0, "y": 9, "w": 6, "h": 7 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "options": { "colorMode": "background", "graphMode": "none", "reduceOptions": { "calcs": ["last"] } },
+      "fieldConfig": { "defaults": { "unit": "percent", "decimals": 1, "min": 0, "max": 100, "noValue": "no calls", "thresholds": { "mode": "absolute", "steps": [{ "color": "red" }, { "color": "yellow", "value": 95 }, { "color": "green", "value": 99 }] } } },
+      "targets": [ { "expr": "100 * sum(increase(rpc_replies_total{result=\"ok\", deployment_environment=\"$env\"}[$__range])) / clamp_min(sum(increase(rpc_replies_total{deployment_environment=\"$env\"}[$__range])), 1)", "legendFormat": "ok %" } ]
+    },
+    {
+      "id": 4, "type": "timeseries", "title": "Command round-trip p95 (ms)",
+      "description": "rpc.roundtrip.duration — send → matched reply.",
+      "gridPos": { "x": 6, "y": 9, "w": 18, "h": 7 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": { "defaults": { "unit": "ms", "custom": { "fillOpacity": 10 }, "thresholds": { "mode": "absolute", "steps": [{ "color": "green" }, { "color": "yellow", "value": 1000 }, { "color": "red", "value": 3000 }] } } },
+      "targets": [ { "expr": "histogram_quantile(0.95, sum by (type, le) (rate(rpc_roundtrip_duration_milliseconds_bucket{deployment_environment=\"$env\"}[$__rate_interval])))", "legendFormat": "p95 · {{type}}", "exemplar": true } ]
+    },
+    {
+      "id": 101, "type": "row", "title": "agent → main (replies & reports)",
+      "gridPos": { "x": 0, "y": 16, "w": 24, "h": 1 }, "collapsed": false, "panels": []
+    },
+    {
+      "id": 5, "type": "timeseries", "title": "Commands handled (agent)",
+      "description": "rpc.commands.received — result=ok|error|unknown (unknown = no handler for that type).",
+      "gridPos": { "x": 0, "y": 17, "w": 12, "h": 8 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": { "defaults": { "unit": "ops", "custom": { "fillOpacity": 10 } } },
+      "targets": [ { "expr": "sum by (type, result) (rate(rpc_commands_received_total{deployment_environment=\"$env\"}[$__rate_interval]))", "legendFormat": "{{type}} · {{result}}" } ]
+    },
+    {
+      "id": 6, "type": "timeseries", "title": "Replies & reports POSTed to main",
+      "description": "rpc.replies.sent + rpc.reports.sent — result=post_error means the agent→main POST failed (main won't get the roster/reply).",
+      "gridPos": { "x": 12, "y": 17, "w": 12, "h": 8 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": { "defaults": { "unit": "ops", "custom": { "fillOpacity": 10 } } },
+      "targets": [
+        { "expr": "sum by (type, result) (rate(rpc_replies_sent_total{deployment_environment=\"$env\"}[$__rate_interval]))", "legendFormat": "reply {{type}} · {{result}}" },
+        { "expr": "sum by (type, result) (rate(rpc_reports_sent_total{deployment_environment=\"$env\"}[$__rate_interval]))", "legendFormat": "report {{type}} · {{result}}" }
+      ]
+    },
+    {
+      "id": 7, "type": "timeseries", "title": "agent handler duration p95 (ms)",
+      "description": "rpc.handle.duration — time the agent spent running a command handler.",
+      "gridPos": { "x": 0, "y": 25, "w": 12, "h": 7 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": { "defaults": { "unit": "ms", "custom": { "fillOpacity": 10 } } },
+      "targets": [ { "expr": "histogram_quantile(0.95, sum by (type, le) (rate(rpc_handle_duration_milliseconds_bucket{deployment_environment=\"$env\"}[$__rate_interval])))", "legendFormat": "p95 · {{type}}", "exemplar": true } ]
+    },
+    {
+      "id": 8, "type": "timeseries", "title": "Inbound reports received (main)",
+      "description": "rpc.inbound — agent-initiated messages main/ processed (e.g. printer.report). result=unknown = main has no handler for that type.",
+      "gridPos": { "x": 12, "y": 25, "w": 12, "h": 7 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": { "defaults": { "unit": "ops", "custom": { "fillOpacity": 10 } } },
+      "targets": [ { "expr": "sum by (type, result) (rate(rpc_inbound_total{deployment_environment=\"$env\"}[$__rate_interval]))", "legendFormat": "{{type}} · {{result}}" } ]
+    }
+  ]
+}

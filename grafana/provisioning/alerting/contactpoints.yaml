@@ -1,0 +1,40 @@
+apiVersion: 1
+
+# Contact points for order-pipeline alerts. Reuses the same Pushover app the
+# agent already sends printer notifications to — set PUSHOVER_APP_TOKEN and
+# PUSHOVER_USER_KEY in observability/.env (Grafana expands ${VAR} in provisioning).
+contactPoints:
+  - orgId: 1
+    name: pushover-orders
+    receivers:
+      - uid: pushover-orders
+        type: pushover
+        settings:
+          apiToken: ${PUSHOVER_APP_TOKEN}
+          userKey: ${PUSHOVER_USER_KEY}
+          # Deliver to this specific device (leave blank to hit all devices).
+          device: AaryanPhone
+          # Custom Pushover sound for firing order-drop alerts. Resolved
+          # notifications use the default sound (okSound unset).
+          sound: error
+          # 1 = high priority (bypasses quiet hours) while firing, 0 on resolve.
+          priority: "1"
+          okPriority: "0"
+          title: '[{{ .Status }}] Quicc order pipeline: {{ len .Alerts.Firing }} firing'
+          message: |-
+            {{ range .Alerts.Firing }}⚠️ {{ index .Labels "alertname" }} ({{ index .Labels "module" }}/{{ index .Labels "deployment_environment" }})
+            {{ index .Annotations "summary" }}
+            {{ end }}{{ range .Alerts.Resolved }}✅ resolved: {{ index .Labels "alertname" }}
+            {{ end }}
+        disableResolveMessage: false
+
+  # No-op fallback so the root policy always resolves to a valid receiver even
+  # on a dev box where Pushover creds are unset.
+  - orgId: 1
+    name: default-noop
+    receivers:
+      - uid: default-noop
+        type: webhook
+        settings:
+          url: http://localhost:9099/noop
+        disableResolveMessage: true

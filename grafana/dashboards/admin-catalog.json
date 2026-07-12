@@ -1,0 +1,171 @@
+{
+  "uid": "quicc-admin-catalog",
+  "title": "Quicc — Admin, menu & auth",
+  "tags": ["quicc", "menu", "auth"],
+  "timezone": "browser",
+  "schemaVersion": 39,
+  "version": 1,
+  "refresh": "1m",
+  "time": { "from": "now-6h", "to": "now" },
+  "links": [
+    { "type": "dashboards", "title": "Quicc dashboards", "tags": ["quicc"], "asDropdown": true, "keepTime": true, "includeVars": true, "icon": "external link" }
+  ],
+  "templating": {
+    "list": [
+      {
+        "name": "env",
+        "label": "Environment",
+        "type": "query",
+        "datasource": { "type": "prometheus", "uid": "prometheus" },
+        "query": "label_values(deployment_environment)",
+        "refresh": 2,
+        "sort": 1
+      }
+    ]
+  },
+  "panels": [
+    {
+      "id": 100, "type": "row", "title": "Menu (main)",
+      "gridPos": { "x": 0, "y": 0, "w": 24, "h": 1 }, "collapsed": false, "panels": []
+    },
+    {
+      "id": 1, "type": "timeseries", "title": "Menu reads by surface",
+      "description": "menu.reads — surface=manager (the /store menu editor) vs operator (the read-only operator token).",
+      "gridPos": { "x": 0, "y": 1, "w": 12, "h": 8 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": { "defaults": { "unit": "ops", "custom": { "fillOpacity": 10 } } },
+      "targets": [ { "expr": "sum by (surface) (rate(menu_reads_total{deployment_environment=\"$env\"}[$__rate_interval]))", "legendFormat": "{{surface}}" } ]
+    },
+    {
+      "id": 2, "type": "timeseries", "title": "Menu mutations by entity & op",
+      "description": "menu.mutations — entity=menu|category|item|modifier_group, op=create|update|delete.",
+      "gridPos": { "x": 12, "y": 1, "w": 12, "h": 8 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ops",
+          "custom": { "fillOpacity": 20, "drawStyle": "bars", "stacking": { "mode": "normal" } },
+          "color": { "mode": "palette-classic-by-name" }
+        },
+        "overrides": [
+          { "matcher": { "id": "byRegexp", "options": ".* · delete" }, "properties": [{ "id": "color", "value": { "mode": "fixed", "fixedColor": "red" } }] }
+        ]
+      },
+      "targets": [ { "expr": "sum by (entity, op) (rate(menu_mutations_total{deployment_environment=\"$env\"}[$__rate_interval]))", "legendFormat": "{{entity}} · {{op}}" } ]
+    },
+    {
+      "id": 101, "type": "row", "title": "Auth — store key & operator token",
+      "gridPos": { "x": 0, "y": 9, "w": 24, "h": 1 }, "collapsed": false, "panels": []
+    },
+    {
+      "id": 3, "type": "timeseries", "title": "Store-key auth (allowed vs denied)",
+      "description": "auth.store.allowed vs auth.store.denied{reason} — the agent/store API key.",
+      "gridPos": { "x": 0, "y": 10, "w": 12, "h": 8 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": {
+        "defaults": { "unit": "ops", "custom": { "fillOpacity": 10 } },
+        "overrides": [
+          { "matcher": { "id": "byRegexp", "options": "denied.*" }, "properties": [{ "id": "color", "value": { "mode": "fixed", "fixedColor": "red" } }] },
+          { "matcher": { "id": "byName", "options": "allowed" }, "properties": [{ "id": "color", "value": { "mode": "fixed", "fixedColor": "green" } }] }
+        ]
+      },
+      "targets": [
+        { "expr": "sum(rate(auth_store_allowed_total{deployment_environment=\"$env\"}[$__rate_interval]))", "legendFormat": "allowed" },
+        { "expr": "sum by (reason) (rate(auth_store_denied_total{deployment_environment=\"$env\"}[$__rate_interval]))", "legendFormat": "denied · {{reason}}" }
+      ]
+    },
+    {
+      "id": 4, "type": "timeseries", "title": "Operator-token auth (allowed vs denied)",
+      "description": "auth.operator.allowed vs auth.operator.denied{reason} — the revocable qopr_ operator token.",
+      "gridPos": { "x": 12, "y": 10, "w": 12, "h": 8 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": {
+        "defaults": { "unit": "ops", "custom": { "fillOpacity": 10 } },
+        "overrides": [
+          { "matcher": { "id": "byRegexp", "options": "denied.*" }, "properties": [{ "id": "color", "value": { "mode": "fixed", "fixedColor": "red" } }] },
+          { "matcher": { "id": "byName", "options": "allowed" }, "properties": [{ "id": "color", "value": { "mode": "fixed", "fixedColor": "green" } }] }
+        ]
+      },
+      "targets": [
+        { "expr": "sum(rate(auth_operator_allowed_total{deployment_environment=\"$env\"}[$__rate_interval]))", "legendFormat": "allowed" },
+        { "expr": "sum by (reason) (rate(auth_operator_denied_total{deployment_environment=\"$env\"}[$__rate_interval]))", "legendFormat": "denied · {{reason}}" }
+      ]
+    },
+    {
+      "id": 5, "type": "timeseries", "title": "Denied rate (store + operator)",
+      "description": "Sustained denies smell like a stale/leaked key or a brute-force attempt.",
+      "gridPos": { "x": 0, "y": 18, "w": 12, "h": 7 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ops",
+          "custom": { "fillOpacity": 20, "drawStyle": "bars" },
+          "color": { "mode": "palette-classic-by-name" },
+          "thresholds": { "mode": "absolute", "steps": [{ "color": "green" }, { "color": "red", "value": 1 }] }
+        }
+      },
+      "targets": [
+        { "expr": "sum by (reason) (rate(auth_store_denied_total{deployment_environment=\"$env\"}[$__rate_interval]))", "legendFormat": "store · {{reason}}" },
+        { "expr": "sum by (reason) (rate(auth_operator_denied_total{deployment_environment=\"$env\"}[$__rate_interval]))", "legendFormat": "operator · {{reason}}" }
+      ]
+    },
+    {
+      "id": 6, "type": "stat", "title": "Allowed vs denied (range)",
+      "description": "Total auth decisions across both surfaces over the selected range.",
+      "gridPos": { "x": 12, "y": 18, "w": 12, "h": 7 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "options": { "colorMode": "background", "graphMode": "none", "textMode": "value_and_name", "orientation": "horizontal", "reduceOptions": { "calcs": ["last"] } },
+      "fieldConfig": {
+        "defaults": { "unit": "short", "decimals": 0, "noValue": "0", "thresholds": { "mode": "absolute", "steps": [{ "color": "text" }] } },
+        "overrides": [
+          { "matcher": { "id": "byName", "options": "allowed" }, "properties": [{ "id": "thresholds", "value": { "mode": "absolute", "steps": [{ "color": "green" }] } }] },
+          { "matcher": { "id": "byName", "options": "denied" }, "properties": [{ "id": "thresholds", "value": { "mode": "absolute", "steps": [{ "color": "green" }, { "color": "red", "value": 1 }] } }] }
+        ]
+      },
+      "targets": [
+        { "expr": "sum(increase(auth_store_allowed_total{deployment_environment=\"$env\"}[$__range])) + sum(increase(auth_operator_allowed_total{deployment_environment=\"$env\"}[$__range]))", "legendFormat": "allowed" },
+        { "expr": "sum(increase(auth_store_denied_total{deployment_environment=\"$env\"}[$__range])) + sum(increase(auth_operator_denied_total{deployment_environment=\"$env\"}[$__range]))", "legendFormat": "denied" }
+      ]
+    },
+    {
+      "id": 102, "type": "row", "title": "Operator tokens",
+      "gridPos": { "x": 0, "y": 25, "w": 24, "h": 1 }, "collapsed": false, "panels": []
+    },
+    {
+      "id": 7, "type": "timeseries", "title": "Operator tokens minted vs revoked",
+      "description": "operator.tokens.minted / operator.tokens.revoked — lifecycle of the qopr_ call-center tokens (admin-managed at /app/admin/operators).",
+      "gridPos": { "x": 0, "y": 26, "w": 24, "h": 7 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": {
+        "defaults": { "unit": "short", "decimals": 0, "custom": { "drawStyle": "bars", "fillOpacity": 80 } },
+        "overrides": [
+          { "matcher": { "id": "byName", "options": "minted" }, "properties": [{ "id": "color", "value": { "mode": "fixed", "fixedColor": "green" } }] },
+          { "matcher": { "id": "byName", "options": "revoked" }, "properties": [{ "id": "color", "value": { "mode": "fixed", "fixedColor": "orange" } }] }
+        ]
+      },
+      "targets": [
+        { "expr": "sum(increase(operator_tokens_minted_total{deployment_environment=\"$env\"}[$__rate_interval]))", "legendFormat": "minted" },
+        { "expr": "sum(increase(operator_tokens_revoked_total{deployment_environment=\"$env\"}[$__rate_interval]))", "legendFormat": "revoked" }
+      ]
+    },
+    {
+      "id": 103, "type": "row", "title": "Printers roster (live queries)",
+      "gridPos": { "x": 0, "y": 33, "w": 24, "h": 1 }, "collapsed": false, "panels": []
+    },
+    {
+      "id": 8, "type": "timeseries", "title": "Live-printer roster queries by result",
+      "description": "printers.live.queries — result=live (agent answered over the duplex channel), cache (served last-known roster), offline (no agent connected). Sustained offline = the roster at /store/v1/me/printers/live is stale.",
+      "gridPos": { "x": 0, "y": 34, "w": 24, "h": 8 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": {
+        "defaults": { "unit": "ops", "custom": { "fillOpacity": 10 } },
+        "overrides": [
+          { "matcher": { "id": "byName", "options": "offline" }, "properties": [{ "id": "color", "value": { "mode": "fixed", "fixedColor": "red" } }] },
+          { "matcher": { "id": "byName", "options": "cache" }, "properties": [{ "id": "color", "value": { "mode": "fixed", "fixedColor": "yellow" } }] },
+          { "matcher": { "id": "byName", "options": "live" }, "properties": [{ "id": "color", "value": { "mode": "fixed", "fixedColor": "green" } }] }
+        ]
+      },
+      "targets": [ { "expr": "sum by (result) (rate(printers_live_queries_total{deployment_environment=\"$env\"}[$__rate_interval]))", "legendFormat": "{{result}}" } ]
+    }
+  ]
+}
