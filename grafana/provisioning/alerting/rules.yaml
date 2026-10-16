@@ -235,3 +235,50 @@ groups:
           - refId: C
             datasourceUid: __expr__
             model: { refId: C, type: threshold, expression: A, conditions: [ { evaluator: { type: gt, params: [0] } } ] }
+
+      # 12 — delivery guarantee breached: main has orders the connected agent
+      #      hasn't acked for over a minute (main re-sends every 10 s; the
+      #      agent reconciles every 60 s). Should never fire — if it does, an
+      #      order may not be on the floor. Prod + staging (dev tests leave
+      #      unacked orders on purpose).
+      - uid: quicc-ord-unacked
+        title: order not acknowledged by the agent
+        condition: C
+        for: 2m
+        labels: { team: orders, module: main, severity: critical }
+        annotations:
+          summary: "main/ has {{ printf \"%.0f\" $values.A.Value }} order(s) the agent has not acknowledged for 3+ minutes — check the Pi and the tablet now."
+        noDataState: OK
+        execErrState: Error
+        data:
+          - refId: A
+            relativeTimeRange: { from: 300, to: 0 }
+            datasourceUid: prometheus
+            model: { refId: A, instant: true, expr: "max by (deployment_environment) (max_over_time(orders_unacked{deployment_environment=~\"prod|staging\"}[5m]))" }
+          - refId: C
+            datasourceUid: __expr__
+            model: { refId: C, type: threshold, expression: A, conditions: [ { evaluator: { type: gt, params: [0] } } ] }
+
+      # 13 — the Pi itself: SD-card I/O errors (a dying card — swap in the
+      #      spare), under 500 MB free, or running hot (80 °C+). From the
+      #      agent's heartbeat gauges; prod + staging.
+      - uid: quicc-pi-health
+        title: Pi health problem (SD card, disk or temperature)
+        condition: C
+        for: 5m
+        labels: { team: orders, module: agent, severity: warn }
+        annotations:
+          summary: "The Pi reports a problem ({{ printf \"%.0f\" $values.A.Value }} signal(s)): SD-card errors, low disk or overheating — see /admin/v1/agents/health; a failing SD card means swap in the spare."
+        noDataState: OK
+        execErrState: Error
+        data:
+          - refId: A
+            relativeTimeRange: { from: 600, to: 0 }
+            datasourceUid: prometheus
+            model:
+              refId: A
+              instant: true
+              expr: "sum by (deployment_environment) ((max by (deployment_environment) ({__name__=~\"agent_sd_errors\", deployment_environment=~\"prod|staging\"}) > bool 0) + (min by (deployment_environment) ({__name__=~\"agent_disk_free(_bytes)?\", deployment_environment=~\"prod|staging\"}) < bool 500000000) + (max by (deployment_environment) ({__name__=~\"agent_temp(_celsius)?\", deployment_environment=~\"prod|staging\"}) > bool 80))"
+          - refId: C
+            datasourceUid: __expr__
+            model: { refId: C, type: threshold, expression: A, conditions: [ { evaluator: { type: gt, params: [0] } } ] }
