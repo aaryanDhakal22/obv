@@ -188,3 +188,50 @@ groups:
           - refId: C
             datasourceUid: __expr__
             model: { refId: C, type: threshold, expression: A, conditions: [ { evaluator: { type: gt, params: [0] } } ] }
+
+      # 10 — floor sync stalled: the agent holds floor changes (accepts, ready,
+      #      drivers…) it hasn't been able to push to main for 15 min. The floor
+      #      keeps working; main (and later customer tracking) is stale until it
+      #      catches up.
+      - uid: quicc-floor-sync-stalled
+        title: agent floor changes not reaching main
+        condition: C
+        for: 15m
+        labels: { team: orders, module: agent, severity: warn }
+        annotations:
+          summary: "agent/ has {{ printf \"%.0f\" $values.A.Value }} floor change(s) not synced to main for 15m+ — main's order status is stale until the agent reaches it again."
+        noDataState: OK
+        execErrState: Error
+        data:
+          - refId: A
+            relativeTimeRange: { from: 600, to: 0 }
+            datasourceUid: prometheus
+            model: { refId: A, instant: true, expr: "max by (deployment_environment) (max_over_time(floor_sync_backlog[10m]))" }
+          - refId: C
+            datasourceUid: __expr__
+            model: { refId: C, type: threshold, expression: A, conditions: [ { evaluator: { type: gt, params: [0] } } ] }
+
+      # 11 — orders arrive but no floor events come back: main persisted orders
+      #      in the last hour and received NO floor event from any agent (an old
+      #      agent build, a broken sync, or orders nobody is accepting). Prod
+      #      only: dev/staging smoke orders are never accepted on purpose.
+      - uid: quicc-floor-no-events
+        title: orders arriving but no floor updates from the agent
+        condition: C
+        for: 0m
+        labels: { team: orders, module: main, severity: warn }
+        annotations:
+          summary: "main/ persisted {{ printf \"%.0f\" $values.A.Value }} order(s) in the last hour but received no floor events — check the agent's sync (or whether orders are being accepted)."
+        noDataState: OK
+        execErrState: Error
+        data:
+          - refId: A
+            relativeTimeRange: { from: 3600, to: 0 }
+            datasourceUid: prometheus
+            model:
+              refId: A
+              instant: true
+              expr: "(sum by (deployment_environment) (increase(orders_persisted_total{deployment_environment=\"prod\"}[60m])) > 0) unless (sum by (deployment_environment) (increase(floor_events_received_total{deployment_environment=\"prod\"}[60m])) > 0)"
+          - refId: C
+            datasourceUid: __expr__
+            model: { refId: C, type: threshold, expression: A, conditions: [ { evaluator: { type: gt, params: [0] } } ] }
