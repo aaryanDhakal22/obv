@@ -1,8 +1,9 @@
 apiVersion: 1
 
-# Route everything tagged team=orders to Pushover; everything else to the
-# no-op default. Grouping by module+env so a burst of one module's failures is
-# one notification, not twenty.
+# team=orders alerts are routed by environment: prod pages loudly (priority 1,
+# bypasses quiet hours), staging sends a quiet Pushover (priority 0), and dev
+# (or a series with no env label) goes nowhere. Grouped per env + store +
+# module, so a burst of one module's failures is one notification, not twenty.
 policies:
   - orgId: 1
     receiver: default-noop
@@ -11,7 +12,16 @@ policies:
       - receiver: pushover-orders
         object_matchers:
           - ["team", "=", "orders"]
-        group_by: ["module", "deployment_environment", "alertname"]
+          - ["deployment_environment", "=", "prod"]
+        group_by: ["deployment_environment", "tenant", "module", "alertname"]
         group_wait: 30s
         group_interval: 2m
         repeat_interval: 1h
+      - receiver: pushover-staging
+        object_matchers:
+          - ["team", "=", "orders"]
+          - ["deployment_environment", "=", "staging"]
+        group_by: ["deployment_environment", "tenant", "module", "alertname"]
+        group_wait: 1m
+        group_interval: 5m
+        repeat_interval: 6h

@@ -22,7 +22,31 @@ contactPoints:
           okPriority: "0"
           title: '[{{ .Status }}] Quicc order pipeline: {{ len .Alerts.Firing }} firing'
           message: |-
-            {{ range .Alerts.Firing }}⚠️ {{ index .Labels "alertname" }} ({{ index .Labels "module" }}/{{ index .Labels "deployment_environment" }})
+            {{ range .Alerts.Firing }}⚠️ {{ index .Labels "alertname" }} ({{ with index .Labels "tenant" }}{{ . }} · {{ end }}{{ index .Labels "module" }}/{{ index .Labels "deployment_environment" }})
+            {{ index .Annotations "summary" }}
+            {{ end }}{{ range .Alerts.Resolved }}✅ resolved: {{ index .Labels "alertname" }}
+            {{ end }}
+        disableResolveMessage: false
+
+  - orgId: 1
+    name: pushover-staging
+    receivers:
+      - uid: pushover-staging
+        type: pushover
+        settings:
+          apiToken: ${PUSHOVER_APP_TOKEN}
+          userKey: ${PUSHOVER_USER_KEY}
+          # Deliver to this specific device (leave blank to hit all devices).
+          device: AaryanPhone
+          # Custom Pushover sound for firing order-drop alerts. Resolved
+          # notifications use the default sound (okSound unset).
+          sound: none
+          # Staging: quiet (priority 0, no sound).
+          priority: "0"
+          okPriority: "0"
+          title: '[{{ .Status }}] Quicc STAGING: {{ len .Alerts.Firing }} firing'
+          message: |-
+            {{ range .Alerts.Firing }}⚠️ {{ index .Labels "alertname" }} ({{ with index .Labels "tenant" }}{{ . }} · {{ end }}{{ index .Labels "module" }}/{{ index .Labels "deployment_environment" }})
             {{ index .Annotations "summary" }}
             {{ end }}{{ range .Alerts.Resolved }}✅ resolved: {{ index .Labels "alertname" }}
             {{ end }}

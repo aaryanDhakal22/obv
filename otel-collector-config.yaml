@@ -1,4 +1,8 @@
 extensions:
+  # Liveness for Docker's healthcheck and the off-box uptime check.
+  health_check:
+    endpoint: 0.0.0.0:13133
+
   # Bearer-token auth on the OTLP HTTP receiver. Apps must send
   # Authorization: Bearer <OTLP_BEARER_TOKEN> or their requests are rejected.
   # gRPC receiver is NOT protected — it's only reachable over the Docker
@@ -32,6 +36,12 @@ processors:
       - key: collector.version
         value: "0.117.0"
         action: insert
+      # The SDKs (semconv >= 1.27) send deployment.environment.name; every
+      # dashboard, alert rule, Loki index label and Tempo dimension keys on
+      # deployment.environment. Copy it here once instead of in every app.
+      - key: deployment.environment
+        from_attribute: deployment.environment.name
+        action: insert
 
 exporters:
   otlp/tempo:
@@ -56,7 +66,7 @@ exporters:
     verbosity: basic
 
 service:
-  extensions: [bearertokenauth/otlp]
+  extensions: [health_check, bearertokenauth/otlp]
 
   pipelines:
     traces:

@@ -4,7 +4,10 @@ apiVersion: 1
 # Every rule is tagged team=orders so policies.yaml routes it to Pushover.
 #
 # noDataState=OK on purpose: no orders → no series → not a problem. These alert
-# on *failures/backlog*, not on absence of traffic.
+# on *failures/backlog*, not on absence of traffic. Silence is caught by the
+# `telemetry-silence` group at the bottom (absent_over_time on heartbeats).
+# Every rule keeps `deployment_environment` + `tenant`, so policies.yaml routes
+# prod to a loud page, staging to a quiet one and dev nowhere.
 #
 # Prometheus names follow the OTEL→PRW convention (dots→_, counters +_total).
 groups:
@@ -27,7 +30,7 @@ groups:
           - refId: A
             relativeTimeRange: { from: 600, to: 0 }
             datasourceUid: prometheus
-            model: { refId: A, instant: true, expr: "sum by (deployment_environment, reason) (increase(orders_rejected_total[10m]))" }
+            model: { refId: A, instant: true, expr: "sum by (deployment_environment, tenant, reason) (increase(orders_rejected_total[10m]))" }
           - refId: C
             datasourceUid: __expr__
             model: { refId: C, type: threshold, expression: A, conditions: [ { evaluator: { type: gt, params: [0] } } ] }
@@ -46,7 +49,7 @@ groups:
           - refId: A
             relativeTimeRange: { from: 600, to: 0 }
             datasourceUid: prometheus
-            model: { refId: A, instant: true, expr: "sum by (deployment_environment, reason) (increase(orders_cast_failed_total[10m]))" }
+            model: { refId: A, instant: true, expr: "sum by (deployment_environment, tenant, reason) (increase(orders_cast_failed_total[10m]))" }
           - refId: C
             datasourceUid: __expr__
             model: { refId: C, type: threshold, expression: A, conditions: [ { evaluator: { type: gt, params: [0] } } ] }
@@ -65,7 +68,7 @@ groups:
           - refId: A
             relativeTimeRange: { from: 600, to: 0 }
             datasourceUid: prometheus
-            model: { refId: A, instant: true, expr: "sum by (deployment_environment) (increase(orders_persist_failed_total[10m]))" }
+            model: { refId: A, instant: true, expr: "sum by (deployment_environment, tenant) (increase(orders_persist_failed_total[10m]))" }
           - refId: C
             datasourceUid: __expr__
             model: { refId: C, type: threshold, expression: A, conditions: [ { evaluator: { type: gt, params: [0] } } ] }
@@ -84,7 +87,7 @@ groups:
           - refId: A
             relativeTimeRange: { from: 600, to: 0 }
             datasourceUid: prometheus
-            model: { refId: A, instant: true, expr: "sum by (deployment_environment, handler) (increase(outbox_events_failed_total[10m]))" }
+            model: { refId: A, instant: true, expr: "sum by (deployment_environment, tenant, handler) (increase(outbox_events_failed_total[10m]))" }
           - refId: C
             datasourceUid: __expr__
             model: { refId: C, type: threshold, expression: A, conditions: [ { evaluator: { type: gt, params: [0] } } ] }
@@ -103,7 +106,7 @@ groups:
           - refId: A
             relativeTimeRange: { from: 900, to: 0 }
             datasourceUid: prometheus
-            model: { refId: A, instant: true, expr: "max by (deployment_environment, handler) (max_over_time(outbox_events_pending[15m]))" }
+            model: { refId: A, instant: true, expr: "max by (deployment_environment, tenant, handler) (max_over_time(outbox_events_pending[15m]))" }
           - refId: C
             datasourceUid: __expr__
             model: { refId: C, type: threshold, expression: A, conditions: [ { evaluator: { type: gt, params: [0] } } ] }
@@ -122,29 +125,7 @@ groups:
           - refId: A
             relativeTimeRange: { from: 600, to: 0 }
             datasourceUid: prometheus
-            model: { refId: A, instant: true, expr: "sum by (deployment_environment, reason) (increase(orders_print_failed_total[10m]))" }
-          - refId: C
-            datasourceUid: __expr__
-            model: { refId: C, type: threshold, expression: A, conditions: [ { evaluator: { type: gt, params: [0] } } ] }
-
-      # 7 — funnel gap: orders reached the agent over SSE but fewer got printed (30m, sustained).
-      - uid: quicc-ord-agent-funnel-gap
-        title: agent received orders it did not print
-        condition: C
-        for: 30m
-        labels: { team: orders, module: agent, severity: warn }
-        annotations:
-          summary: "agent/ received {{ printf \"%.0f\" $values.A.Value }} more order(s) than it printed over 30m — a silent drop between SSE receive and print."
-        noDataState: OK
-        execErrState: Error
-        data:
-          - refId: A
-            relativeTimeRange: { from: 1800, to: 0 }
-            datasourceUid: prometheus
-            model:
-              refId: A
-              instant: true
-              expr: "sum by (deployment_environment) (increase(orders_received_total{service_name=\"quicc-agent\"}[30m])) - sum by (deployment_environment) (increase(orders_printed_total[30m]))"
+            model: { refId: A, instant: true, expr: "sum by (deployment_environment, tenant, reason) (increase(orders_print_failed_total[10m]))" }
           - refId: C
             datasourceUid: __expr__
             model: { refId: C, type: threshold, expression: A, conditions: [ { evaluator: { type: gt, params: [0] } } ] }
@@ -163,7 +144,7 @@ groups:
           - refId: A
             relativeTimeRange: { from: 600, to: 0 }
             datasourceUid: prometheus
-            model: { refId: A, instant: true, expr: "sum by (deployment_environment, type) (increase(rpc_timeouts_total[10m]))" }
+            model: { refId: A, instant: true, expr: "sum by (deployment_environment, tenant, type) (increase(rpc_timeouts_total[10m]))" }
           - refId: C
             datasourceUid: __expr__
             model: { refId: C, type: threshold, expression: A, conditions: [ { evaluator: { type: gt, params: [0] } } ] }
@@ -184,7 +165,167 @@ groups:
           - refId: A
             relativeTimeRange: { from: 600, to: 0 }
             datasourceUid: prometheus
-            model: { refId: A, instant: true, expr: "sum by (deployment_environment) (increase(sse_events_broadcast_total{event_type=\"order\", result=\"no_subscribers\"}[10m]))" }
+            model: { refId: A, instant: true, expr: "sum by (deployment_environment, tenant) (increase(sse_events_broadcast_total{event_type=\"order\", result=\"no_subscribers\"}[10m]))" }
+          - refId: C
+            datasourceUid: __expr__
+            model: { refId: C, type: threshold, expression: A, conditions: [ { evaluator: { type: gt, params: [0] } } ] }
+
+      # 10 — floor sync stalled: the agent holds floor changes (accepts, ready,
+      #      drivers…) it hasn't been able to push to main for 15 min. The floor
+      #      keeps working; main (and later customer tracking) is stale until it
+      #      catches up.
+      - uid: quicc-floor-sync-stalled
+        title: agent floor changes not reaching main
+        condition: C
+        for: 15m
+        labels: { team: orders, module: agent, severity: warn }
+        annotations:
+          summary: "agent/ has {{ printf \"%.0f\" $values.A.Value }} floor change(s) not synced to main for 15m+ — main's order status is stale until the agent reaches it again."
+        noDataState: OK
+        execErrState: Error
+        data:
+          - refId: A
+            relativeTimeRange: { from: 600, to: 0 }
+            datasourceUid: prometheus
+            model: { refId: A, instant: true, expr: "max by (deployment_environment, tenant) (max_over_time(floor_sync_backlog[10m]))" }
+          - refId: C
+            datasourceUid: __expr__
+            model: { refId: C, type: threshold, expression: A, conditions: [ { evaluator: { type: gt, params: [0] } } ] }
+
+      # 11 — orders arrive but no floor events come back: main persisted orders
+      #      in the last hour and received NO floor event from any agent (an old
+      #      agent build, a broken sync, or orders nobody is accepting). Prod
+      #      only: dev/staging smoke orders are never accepted on purpose.
+      - uid: quicc-floor-no-events
+        title: orders arriving but no floor updates from the agent
+        condition: C
+        for: 0m
+        labels: { team: orders, module: main, severity: warn }
+        annotations:
+          summary: "main/ persisted {{ printf \"%.0f\" $values.A.Value }} order(s) in the last hour but received no floor events — check the agent's sync (or whether orders are being accepted)."
+        noDataState: OK
+        execErrState: Error
+        data:
+          - refId: A
+            relativeTimeRange: { from: 3600, to: 0 }
+            datasourceUid: prometheus
+            model:
+              refId: A
+              instant: true
+              expr: "(sum by (deployment_environment, tenant) (increase(orders_persisted_total{deployment_environment=\"prod\"}[60m])) > 0) unless (sum by (deployment_environment, tenant) (increase(floor_events_received_total{deployment_environment=\"prod\"}[60m])) > 0)"
+          - refId: C
+            datasourceUid: __expr__
+            model: { refId: C, type: threshold, expression: A, conditions: [ { evaluator: { type: gt, params: [0] } } ] }
+
+      # 12 — delivery guarantee breached: main has orders the connected agent
+      #      hasn't acked for over a minute (main re-sends every 10 s; the
+      #      agent reconciles every 60 s). Should never fire — if it does, an
+      #      order may not be on the floor. Prod + staging (dev tests leave
+      #      unacked orders on purpose).
+      - uid: quicc-ord-unacked
+        title: order not acknowledged by the agent
+        condition: C
+        for: 2m
+        labels: { team: orders, module: main, severity: critical }
+        annotations:
+          summary: "main/ has {{ printf \"%.0f\" $values.A.Value }} order(s) the agent has not acknowledged for 3+ minutes — check the Pi and the tablet now."
+        noDataState: OK
+        execErrState: Error
+        data:
+          - refId: A
+            relativeTimeRange: { from: 300, to: 0 }
+            datasourceUid: prometheus
+            model: { refId: A, instant: true, expr: "max by (deployment_environment, tenant) (max_over_time(orders_unacked{deployment_environment=~\"prod|staging\"}[5m]))" }
+          - refId: C
+            datasourceUid: __expr__
+            model: { refId: C, type: threshold, expression: A, conditions: [ { evaluator: { type: gt, params: [0] } } ] }
+
+      # 13 — the Pi itself: SD-card I/O errors (a dying card — swap in the
+      #      spare), under 500 MB free, or running hot (80 °C+). From the
+      #      agent's heartbeat gauges; prod + staging.
+      - uid: quicc-pi-health
+        title: Pi health problem (SD card, disk or temperature)
+        condition: C
+        for: 5m
+        labels: { team: orders, module: agent, severity: warn }
+        annotations:
+          summary: "The Pi reports a problem ({{ printf \"%.0f\" $values.A.Value }} signal(s)): SD-card errors, low disk or overheating — see /admin/v1/agents/health; a failing SD card means swap in the spare."
+        noDataState: OK
+        execErrState: Error
+        data:
+          - refId: A
+            relativeTimeRange: { from: 600, to: 0 }
+            datasourceUid: prometheus
+            model:
+              refId: A
+              instant: true
+              expr: "sum by (deployment_environment, tenant) ((max by (deployment_environment, tenant) ({__name__=~\"agent_sd_errors\", deployment_environment=~\"prod|staging\"}) > bool 0) + (min by (deployment_environment, tenant) ({__name__=~\"agent_disk_free(_bytes)?\", deployment_environment=~\"prod|staging\"}) < bool 500000000) + (max by (deployment_environment, tenant) ({__name__=~\"agent_temp(_celsius)?\", deployment_environment=~\"prod|staging\"}) > bool 80))"
+          - refId: C
+            datasourceUid: __expr__
+            model: { refId: C, type: threshold, expression: A, conditions: [ { evaluator: { type: gt, params: [0] } } ] }
+
+  # Dead-man rules: an outage that stops telemetry must page, not look green.
+  # Each watches a heartbeat series that is always present while the piece is
+  # up (gauges are re-exported every interval even with no traffic).
+  - orgId: 1
+    name: telemetry-silence
+    folder: Order pipeline
+    interval: 1m
+    rules:
+      - uid: quicc-silence-collector
+        title: OTLP collector down
+        condition: C
+        for: 5m
+        labels: { team: orders, module: stack, severity: critical, deployment_environment: prod }
+        annotations:
+          summary: "Prometheus can't scrape the OTLP collector: no traces, metrics or logs from any service are arriving. Check `docker compose ps` in observability/ on the home server."
+        noDataState: Alerting
+        execErrState: Error
+        data:
+          - refId: A
+            relativeTimeRange: { from: 300, to: 0 }
+            datasourceUid: prometheus
+            model: { refId: A, instant: true, expr: "max(up{job=\"otel-collector\"})" }
+          - refId: C
+            datasourceUid: __expr__
+            model: { refId: C, type: threshold, expression: A, conditions: [ { evaluator: { type: lt, params: [1] } } ] }
+
+      - uid: quicc-silence-main
+        title: prod main stopped reporting
+        condition: C
+        for: 5m
+        labels: { team: orders, module: main, severity: critical, deployment_environment: prod }
+        annotations:
+          summary: "No telemetry from prod main for 10 minutes: main is down, or its OTLP export is broken. Orders may not be reaching the store."
+        noDataState: OK
+        execErrState: Error
+        data:
+          - refId: A
+            relativeTimeRange: { from: 600, to: 0 }
+            datasourceUid: prometheus
+            model: { refId: A, instant: true, expr: "absent_over_time(sse_clients_active{service_name=\"quicc-main\", deployment_environment=\"prod\"}[10m])" }
+          - refId: C
+            datasourceUid: __expr__
+            model: { refId: C, type: threshold, expression: A, conditions: [ { evaluator: { type: gt, params: [0] } } ] }
+
+      - uid: quicc-silence-pi
+        title: a prod Pi stopped reporting
+        condition: C
+        for: 10m
+        labels: { team: orders, module: agent, severity: critical, deployment_environment: prod }
+        annotations:
+          summary: "Store {{ $labels.tenant }}: its Pi sent no heartbeat for 15 minutes (powered off, offline, or OTLP not configured). Main's own agent-offline page covers opening hours."
+        noDataState: OK
+        execErrState: Error
+        data:
+          - refId: A
+            relativeTimeRange: { from: 86400, to: 0 }
+            datasourceUid: prometheus
+            model:
+              refId: A
+              instant: true
+              # Every Pi seen in the last day, minus the ones heard from in the last 15 min.
+              expr: "(max by (deployment_environment, tenant) (max_over_time({__name__=~\"agent_disk_free(_bytes)?\", deployment_environment=\"prod\"}[1d])) * 0 + 1) unless (max by (deployment_environment, tenant) (max_over_time({__name__=~\"agent_disk_free(_bytes)?\", deployment_environment=\"prod\"}[15m])))"
           - refId: C
             datasourceUid: __expr__
             model: { refId: C, type: threshold, expression: A, conditions: [ { evaluator: { type: gt, params: [0] } } ] }

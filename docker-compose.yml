@@ -82,6 +82,9 @@ services:
       - "--storage.tsdb.path=/prometheus"
       - "--web.enable-remote-write-receiver"
       - "--enable-feature=exemplar-storage"
+      # Bounded: the home server's disk also holds prod Postgres.
+      - "--storage.tsdb.retention.time=30d"
+      - "--storage.tsdb.retention.size=8GB"
     volumes:
       - ./prometheus.yaml:/etc/prometheus/prometheus.yaml:ro
       - prometheus_data:/prometheus
@@ -99,7 +102,7 @@ services:
       # it and require a real login. On dev boxes you can flip this back to
       # true via .env override if you want quick-click access.
       GF_AUTH_ANONYMOUS_ENABLED: "${GF_AUTH_ANONYMOUS_ENABLED:-false}"
-      GF_AUTH_ANONYMOUS_ORG_ROLE: Admin
+      GF_AUTH_ANONYMOUS_ORG_ROLE: Viewer   # only if anonymous is ever turned on
       GF_AUTH_DISABLE_LOGIN_FORM: "false"
       GF_SECURITY_ADMIN_USER: "${GRAFANA_ADMIN_USER:-admin}"
       GF_SECURITY_ADMIN_PASSWORD: "${GRAFANA_ADMIN_PASSWORD:-admin}"

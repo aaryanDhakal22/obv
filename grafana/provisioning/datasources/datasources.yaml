@@ -1,5 +1,14 @@
 apiVersion: 1
 
+# The Postgres reporting datasources (pg-prod / pg-staging) are gone: every
+# number reaches Grafana over OTLP (TENANT-SCOPING.md). Listed here so a Grafana
+# that provisioned them earlier drops them too.
+deleteDatasources:
+  - name: pg-prod
+    orgId: 1
+  - name: pg-staging
+    orgId: 1
+
 datasources:
   - name: Tempo
     type: tempo
