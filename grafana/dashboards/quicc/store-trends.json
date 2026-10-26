@@ -1,0 +1,2003 @@
+{
+  "uid": "store-trends",
+  "title": "Store — Trends",
+  "description": "How the store is doing over days and weeks: orders, sales, ticket, busy hours, accept/prep/delivery speed, late and cancelled orders, and drivers.",
+  "tags": [
+    "quicc",
+    "quicc-core",
+    "store",
+    "trends"
+  ],
+  "timezone": "browser",
+  "schemaVersion": 39,
+  "version": 1,
+  "editable": true,
+  "graphTooltip": 1,
+  "refresh": "",
+  "liveNow": false,
+  "time": {
+    "from": "now-30d",
+    "to": "now"
+  },
+  "timepicker": {},
+  "links": [
+    {
+      "type": "link",
+      "title": "Live floor",
+      "url": "/d/store-live",
+      "icon": "dashboard",
+      "includeVars": true,
+      "keepTime": false,
+      "asDropdown": false,
+      "targetBlank": false,
+      "tags": [],
+      "tooltip": ""
+    },
+    {
+      "type": "link",
+      "title": "Order pipeline",
+      "url": "/d/pipeline",
+      "icon": "dashboard",
+      "includeVars": true,
+      "keepTime": false,
+      "asDropdown": false,
+      "targetBlank": false,
+      "tags": [],
+      "tooltip": ""
+    },
+    {
+      "type": "link",
+      "title": "Pi & printers",
+      "url": "/d/fleet",
+      "icon": "dashboard",
+      "includeVars": true,
+      "keepTime": false,
+      "asDropdown": false,
+      "targetBlank": false,
+      "tags": [],
+      "tooltip": ""
+    },
+    {
+      "type": "dashboards",
+      "title": "Debug",
+      "tags": [
+        "quicc-debug"
+      ],
+      "asDropdown": true,
+      "includeVars": false,
+      "keepTime": true,
+      "icon": "external link",
+      "targetBlank": false,
+      "tooltip": ""
+    }
+  ],
+  "templating": {
+    "list": [
+      {
+        "name": "env",
+        "label": "Environment",
+        "type": "custom",
+        "query": "prod,staging,dev",
+        "current": {
+          "selected": true,
+          "text": "prod",
+          "value": "prod"
+        },
+        "options": [
+          {
+            "selected": true,
+            "text": "prod",
+            "value": "prod"
+          },
+          {
+            "selected": false,
+            "text": "staging",
+            "value": "staging"
+          },
+          {
+            "selected": false,
+            "text": "dev",
+            "value": "dev"
+          }
+        ],
+        "hide": 0,
+        "multi": false,
+        "includeAll": false,
+        "skipUrlSync": false
+      },
+      {
+        "name": "pg",
+        "label": "Store database",
+        "type": "datasource",
+        "query": "grafana-postgresql-datasource",
+        "regex": "/^pg-${env}$/",
+        "current": {
+          "selected": true,
+          "text": "pg-prod",
+          "value": "pg-prod"
+        },
+        "hide": 2,
+        "refresh": 1,
+        "multi": false,
+        "includeAll": false,
+        "skipUrlSync": false,
+        "description": "Follows env: pg-prod / pg-staging (no Postgres datasource for dev)."
+      },
+      {
+        "name": "store",
+        "label": "Store",
+        "type": "query",
+        "datasource": {
+          "type": "grafana-postgresql-datasource",
+          "uid": "${pg}"
+        },
+        "definition": "SELECT DISTINCT tenant AS __value, store_name AS __text FROM reporting.stores ORDER BY 2",
+        "query": "SELECT DISTINCT tenant AS __value, store_name AS __text FROM reporting.stores ORDER BY 2",
+        "current": {
+          "selected": true,
+          "text": [
+            "All"
+          ],
+          "value": [
+            "$__all"
+          ]
+        },
+        "refresh": 1,
+        "multi": true,
+        "includeAll": true,
+        "sort": 0,
+        "hide": 0,
+        "skipUrlSync": false
+      }
+    ]
+  },
+  "annotations": {
+    "list": [
+      {
+        "builtIn": 1,
+        "datasource": {
+          "type": "grafana",
+          "uid": "-- Grafana --"
+        },
+        "enable": true,
+        "hide": true,
+        "iconColor": "rgba(0, 211, 255, 1)",
+        "name": "Annotations & Alerts",
+        "type": "dashboard"
+      }
+    ]
+  },
+  "panels": [
+    {
+      "id": 1,
+      "type": "row",
+      "title": "The period at a glance (online orders)",
+      "collapsed": false,
+      "gridPos": {
+        "x": 0,
+        "y": 0,
+        "w": 24,
+        "h": 1
+      },
+      "panels": []
+    },
+    {
+      "type": "stat",
+      "title": "Orders",
+      "description": "Online orders in the selected range (cancelled excluded) and the change vs the previous range of the same length. A red drop with no reason (weather, holiday) is worth a look at the vendor listing.",
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "${pg}"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "${pg}"
+          },
+          "rawSql": "WITH cur AS (SELECT count(*) AS n FROM reporting.orders WHERE tenant IN (${store:sqlstring}) AND $__timeFilter(received_at) AND cancelled_at IS NULL AND status NOT IN ('cancelled','rejected')),\n     prev AS (SELECT count(*) AS n FROM reporting.orders WHERE tenant IN (${store:sqlstring}) AND received_at >= $__timeFrom()::timestamptz - ($__timeTo()::timestamptz - $__timeFrom()::timestamptz) AND received_at < $__timeFrom()::timestamptz AND cancelled_at IS NULL AND status NOT IN ('cancelled','rejected'))\nSELECT cur.n AS \"orders\", 100.0 * (cur.n - prev.n) / NULLIF(prev.n, 0) AS \"vs previous period\" FROM cur, prev",
+          "format": "table",
+          "rawQuery": true,
+          "editorMode": "code",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "text"
+          },
+          "decimals": 0
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "vs previous period"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "percent"
+              },
+              {
+                "id": "decimals",
+                "value": 0
+              },
+              {
+                "id": "noValue",
+                "value": "n/a"
+              },
+              {
+                "id": "thresholds",
+                "value": {
+                  "mode": "absolute",
+                  "steps": [
+                    {
+                      "color": "red",
+                      "value": null
+                    },
+                    {
+                      "color": "yellow",
+                      "value": -10
+                    },
+                    {
+                      "color": "green",
+                      "value": 0
+                    }
+                  ]
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "center",
+        "textMode": "value_and_name",
+        "wideLayout": true,
+        "showPercentChange": false,
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        }
+      },
+      "id": 2,
+      "gridPos": {
+        "x": 0,
+        "y": 1,
+        "w": 4,
+        "h": 5
+      }
+    },
+    {
+      "type": "stat",
+      "title": "Sales",
+      "description": "Order totals in the range (incl. tax, fees and tip; cancelled excluded) and the change vs the previous range of the same length.",
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "${pg}"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "${pg}"
+          },
+          "rawSql": "WITH cur AS (SELECT sum(total_cents) AS s FROM reporting.orders WHERE tenant IN (${store:sqlstring}) AND $__timeFilter(received_at) AND cancelled_at IS NULL AND status NOT IN ('cancelled','rejected')),\n     prev AS (SELECT sum(total_cents) AS s FROM reporting.orders WHERE tenant IN (${store:sqlstring}) AND received_at >= $__timeFrom()::timestamptz - ($__timeTo()::timestamptz - $__timeFrom()::timestamptz) AND received_at < $__timeFrom()::timestamptz AND cancelled_at IS NULL AND status NOT IN ('cancelled','rejected'))\nSELECT cur.s / 100.0 AS \"sales\", 100.0 * (cur.s - prev.s) / NULLIF(prev.s, 0) AS \"vs previous period\" FROM cur, prev",
+          "format": "table",
+          "rawQuery": true,
+          "editorMode": "code",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "currencyUSD",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "text"
+          },
+          "decimals": 0
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "vs previous period"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "percent"
+              },
+              {
+                "id": "decimals",
+                "value": 0
+              },
+              {
+                "id": "noValue",
+                "value": "n/a"
+              },
+              {
+                "id": "thresholds",
+                "value": {
+                  "mode": "absolute",
+                  "steps": [
+                    {
+                      "color": "red",
+                      "value": null
+                    },
+                    {
+                      "color": "yellow",
+                      "value": -10
+                    },
+                    {
+                      "color": "green",
+                      "value": 0
+                    }
+                  ]
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "center",
+        "textMode": "value_and_name",
+        "wideLayout": true,
+        "showPercentChange": false,
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        }
+      },
+      "id": 3,
+      "gridPos": {
+        "x": 4,
+        "y": 1,
+        "w": 4,
+        "h": 5
+      }
+    },
+    {
+      "type": "stat",
+      "title": "Average ticket",
+      "description": "Average order total in the range. Watch the trend below rather than the number — a steady slide can mean upsells or modifiers went missing.",
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "${pg}"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "${pg}"
+          },
+          "rawSql": "SELECT avg(total_cents) / 100.0 AS \"avg ticket\" FROM reporting.orders WHERE tenant IN (${store:sqlstring}) AND $__timeFilter(received_at) AND cancelled_at IS NULL AND status NOT IN ('cancelled','rejected')",
+          "format": "table",
+          "rawQuery": true,
+          "editorMode": "code",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "currencyUSD",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "text"
+          },
+          "decimals": 2,
+          "noValue": "–"
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "center",
+        "textMode": "auto",
+        "wideLayout": true,
+        "showPercentChange": false,
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        }
+      },
+      "id": 4,
+      "gridPos": {
+        "x": 8,
+        "y": 1,
+        "w": 3,
+        "h": 5
+      }
+    },
+    {
+      "type": "stat",
+      "title": "Ready on time",
+      "description": "Share of orders ready by the time promised at accept. Red under 80 %: prep promises are too optimistic for this period — promise longer or staff up the busy hours below.",
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "${pg}"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "${pg}"
+          },
+          "rawSql": "SELECT 100.0 * count(*) FILTER (WHERE NOT late) / NULLIF(count(*) FILTER (WHERE ready_at IS NOT NULL OR late), 0) AS \"on time\"\nFROM reporting.orders WHERE tenant IN (${store:sqlstring}) AND $__timeFilter(received_at) AND cancelled_at IS NULL AND status NOT IN ('cancelled','rejected') AND estimated_ready_at IS NOT NULL",
+          "format": "table",
+          "rawQuery": true,
+          "editorMode": "code",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "red",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 80
+              },
+              {
+                "color": "green",
+                "value": 90
+              }
+            ]
+          },
+          "color": {
+            "mode": "thresholds"
+          },
+          "decimals": 0,
+          "noValue": "–"
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "background",
+        "graphMode": "none",
+        "justifyMode": "center",
+        "textMode": "auto",
+        "wideLayout": true,
+        "showPercentChange": false,
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        }
+      },
+      "id": 5,
+      "gridPos": {
+        "x": 11,
+        "y": 1,
+        "w": 3,
+        "h": 5
+      }
+    },
+    {
+      "type": "stat",
+      "title": "Cancelled",
+      "description": "Share of online orders cancelled. Red over 5 %: check the cancelled-orders table for a pattern (time of day, order type).",
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "${pg}"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "${pg}"
+          },
+          "rawSql": "SELECT 100.0 * count(*) FILTER (WHERE cancelled_at IS NOT NULL OR status = 'cancelled') / NULLIF(count(*), 0) AS \"cancelled\"\nFROM reporting.orders WHERE tenant IN (${store:sqlstring}) AND $__timeFilter(received_at)",
+          "format": "table",
+          "rawQuery": true,
+          "editorMode": "code",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 2
+              },
+              {
+                "color": "red",
+                "value": 5
+              }
+            ]
+          },
+          "color": {
+            "mode": "thresholds"
+          },
+          "decimals": 1,
+          "noValue": "–"
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "background",
+        "graphMode": "none",
+        "justifyMode": "center",
+        "textMode": "auto",
+        "wideLayout": true,
+        "showPercentChange": false,
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        }
+      },
+      "id": 6,
+      "gridPos": {
+        "x": 14,
+        "y": 1,
+        "w": 3,
+        "h": 5
+      }
+    },
+    {
+      "type": "stat",
+      "title": "Median accept time",
+      "description": "Typical arrival → accept time over the range. Over 1 min (yellow) or 2 min (red, when the Pi starts paging) means orders ring unattended at the counter.",
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "${pg}"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "${pg}"
+          },
+          "rawSql": "SELECT percentile_cont(0.5) WITHIN GROUP (ORDER BY accept_seconds) AS \"accept\" FROM reporting.orders WHERE tenant IN (${store:sqlstring}) AND $__timeFilter(received_at) AND accept_seconds IS NOT NULL",
+          "format": "table",
+          "rawQuery": true,
+          "editorMode": "code",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 60
+              },
+              {
+                "color": "red",
+                "value": 120
+              }
+            ]
+          },
+          "color": {
+            "mode": "thresholds"
+          },
+          "decimals": 0,
+          "noValue": "–"
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "background",
+        "graphMode": "none",
+        "justifyMode": "center",
+        "textMode": "auto",
+        "wideLayout": true,
+        "showPercentChange": false,
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        }
+      },
+      "id": 7,
+      "gridPos": {
+        "x": 17,
+        "y": 1,
+        "w": 3,
+        "h": 5
+      }
+    },
+    {
+      "type": "stat",
+      "title": "Median delivery round trip",
+      "description": "Typical minutes from a delivery leaving to delivered. Yellow over 35, red over 50: runs are too long or too bundled.",
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "${pg}"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "${pg}"
+          },
+          "rawSql": "SELECT percentile_cont(0.5) WITHIN GROUP (ORDER BY delivery_minutes) AS \"round trip\" FROM reporting.orders WHERE tenant IN (${store:sqlstring}) AND $__timeFilter(received_at) AND fulfillment_type = 'delivery' AND delivery_minutes IS NOT NULL",
+          "format": "table",
+          "rawQuery": true,
+          "editorMode": "code",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "m",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 35
+              },
+              {
+                "color": "red",
+                "value": 50
+              }
+            ]
+          },
+          "color": {
+            "mode": "thresholds"
+          },
+          "decimals": 0,
+          "noValue": "–"
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "background",
+        "graphMode": "none",
+        "justifyMode": "center",
+        "textMode": "auto",
+        "wideLayout": true,
+        "showPercentChange": false,
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        }
+      },
+      "id": 8,
+      "gridPos": {
+        "x": 20,
+        "y": 1,
+        "w": 4,
+        "h": 5
+      }
+    },
+    {
+      "id": 9,
+      "type": "row",
+      "title": "Volume",
+      "collapsed": false,
+      "gridPos": {
+        "x": 0,
+        "y": 6,
+        "w": 24,
+        "h": 1
+      },
+      "panels": []
+    },
+    {
+      "type": "timeseries",
+      "title": "Orders per day",
+      "description": "Online orders per business day (store's local date), by order type; cancelled excluded. Use it to spot slow days and to staff the busy ones.",
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "${pg}"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "${pg}"
+          },
+          "rawSql": "SELECT (business_date::timestamp AT TIME ZONE timezone) AS \"time\", fulfillment_type AS metric, count(*) AS value\nFROM reporting.orders WHERE tenant IN (${store:sqlstring}) AND $__timeFilter(received_at) AND cancelled_at IS NULL AND status NOT IN ('cancelled','rejected')\nGROUP BY business_date, timezone, fulfillment_type ORDER BY 1",
+          "format": "time_series",
+          "rawQuery": true,
+          "editorMode": "code",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "custom": {
+            "drawStyle": "bars",
+            "lineWidth": 2,
+            "fillOpacity": 70,
+            "showPoints": "never",
+            "spanNulls": false,
+            "barAlignment": 0,
+            "gradientMode": "none",
+            "stacking": {
+              "mode": "normal",
+              "group": "A"
+            },
+            "axisSoftMin": 0
+          },
+          "color": {
+            "mode": "palette-classic"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "decimals": 0
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true,
+          "calcs": []
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "id": 10,
+      "gridPos": {
+        "x": 0,
+        "y": 7,
+        "w": 12,
+        "h": 8
+      }
+    },
+    {
+      "type": "timeseries",
+      "title": "Sales per day",
+      "description": "Order totals per business day (cancelled excluded), by order type.",
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "${pg}"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "${pg}"
+          },
+          "rawSql": "SELECT (business_date::timestamp AT TIME ZONE timezone) AS \"time\", fulfillment_type AS metric, sum(total_cents) / 100.0 AS value\nFROM reporting.orders WHERE tenant IN (${store:sqlstring}) AND $__timeFilter(received_at) AND cancelled_at IS NULL AND status NOT IN ('cancelled','rejected')\nGROUP BY business_date, timezone, fulfillment_type ORDER BY 1",
+          "format": "time_series",
+          "rawQuery": true,
+          "editorMode": "code",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "currencyUSD",
+          "custom": {
+            "drawStyle": "bars",
+            "lineWidth": 2,
+            "fillOpacity": 70,
+            "showPoints": "never",
+            "spanNulls": false,
+            "barAlignment": 0,
+            "gradientMode": "none",
+            "stacking": {
+              "mode": "normal",
+              "group": "A"
+            },
+            "axisSoftMin": 0
+          },
+          "color": {
+            "mode": "palette-classic"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "decimals": 0
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true,
+          "calcs": []
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "id": 11,
+      "gridPos": {
+        "x": 12,
+        "y": 7,
+        "w": 12,
+        "h": 8
+      }
+    },
+    {
+      "type": "table",
+      "title": "Busy hours — average orders per hour × weekday",
+      "description": "Average online orders in each local hour, per weekday the store had orders, over the range. Darker = busier: staff the kitchen and drivers for the dark cells, and promise longer prep there.",
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "${pg}"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "${pg}"
+          },
+          "rawSql": "WITH o AS (\n  SELECT received_at AT TIME ZONE timezone AS lt, business_date, extract(isodow FROM business_date)::int AS dow\n  FROM reporting.orders WHERE tenant IN (${store:sqlstring}) AND $__timeFilter(received_at) AND cancelled_at IS NULL AND status NOT IN ('cancelled','rejected')\n), d AS (\n  SELECT dow, count(DISTINCT business_date) AS nd FROM o GROUP BY dow\n)\nSELECT d.dow AS \"dow\", (ARRAY['Mon','Tue','Wed','Thu','Fri','Sat','Sun'])[d.dow] AS \"day\",\n  round(count(*) FILTER (WHERE extract(hour FROM o.lt) = 0)::numeric / d.nd, 1) AS \"12a\",\n  round(count(*) FILTER (WHERE extract(hour FROM o.lt) = 1)::numeric / d.nd, 1) AS \"1a\",\n  round(count(*) FILTER (WHERE extract(hour FROM o.lt) = 2)::numeric / d.nd, 1) AS \"2a\",\n  round(count(*) FILTER (WHERE extract(hour FROM o.lt) = 3)::numeric / d.nd, 1) AS \"3a\",\n  round(count(*) FILTER (WHERE extract(hour FROM o.lt) = 4)::numeric / d.nd, 1) AS \"4a\",\n  round(count(*) FILTER (WHERE extract(hour FROM o.lt) = 5)::numeric / d.nd, 1) AS \"5a\",\n  round(count(*) FILTER (WHERE extract(hour FROM o.lt) = 6)::numeric / d.nd, 1) AS \"6a\",\n  round(count(*) FILTER (WHERE extract(hour FROM o.lt) = 7)::numeric / d.nd, 1) AS \"7a\",\n  round(count(*) FILTER (WHERE extract(hour FROM o.lt) = 8)::numeric / d.nd, 1) AS \"8a\",\n  round(count(*) FILTER (WHERE extract(hour FROM o.lt) = 9)::numeric / d.nd, 1) AS \"9a\",\n  round(count(*) FILTER (WHERE extract(hour FROM o.lt) = 10)::numeric / d.nd, 1) AS \"10a\",\n  round(count(*) FILTER (WHERE extract(hour FROM o.lt) = 11)::numeric / d.nd, 1) AS \"11a\",\n  round(count(*) FILTER (WHERE extract(hour FROM o.lt) = 12)::numeric / d.nd, 1) AS \"12p\",\n  round(count(*) FILTER (WHERE extract(hour FROM o.lt) = 13)::numeric / d.nd, 1) AS \"1p\",\n  round(count(*) FILTER (WHERE extract(hour FROM o.lt) = 14)::numeric / d.nd, 1) AS \"2p\",\n  round(count(*) FILTER (WHERE extract(hour FROM o.lt) = 15)::numeric / d.nd, 1) AS \"3p\",\n  round(count(*) FILTER (WHERE extract(hour FROM o.lt) = 16)::numeric / d.nd, 1) AS \"4p\",\n  round(count(*) FILTER (WHERE extract(hour FROM o.lt) = 17)::numeric / d.nd, 1) AS \"5p\",\n  round(count(*) FILTER (WHERE extract(hour FROM o.lt) = 18)::numeric / d.nd, 1) AS \"6p\",\n  round(count(*) FILTER (WHERE extract(hour FROM o.lt) = 19)::numeric / d.nd, 1) AS \"7p\",\n  round(count(*) FILTER (WHERE extract(hour FROM o.lt) = 20)::numeric / d.nd, 1) AS \"8p\",\n  round(count(*) FILTER (WHERE extract(hour FROM o.lt) = 21)::numeric / d.nd, 1) AS \"9p\",\n  round(count(*) FILTER (WHERE extract(hour FROM o.lt) = 22)::numeric / d.nd, 1) AS \"10p\",\n  round(count(*) FILTER (WHERE extract(hour FROM o.lt) = 23)::numeric / d.nd, 1) AS \"11p\"\nFROM o JOIN d ON o.dow = d.dow\nGROUP BY d.dow, d.nd\nORDER BY d.dow",
+          "format": "table",
+          "rawQuery": true,
+          "editorMode": "code",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "align": "auto",
+            "cellOptions": {
+              "type": "auto"
+            },
+            "filterable": false
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "color": {
+            "mode": "thresholds"
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "dow"
+            },
+            "properties": [
+              {
+                "id": "custom.hidden",
+                "value": true
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "day"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 60
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "^\\d+[ap]$"
+            },
+            "properties": [
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "color-background",
+                  "mode": "basic"
+                }
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "continuous-blues"
+                }
+              },
+              {
+                "id": "decimals",
+                "value": 1
+              },
+              {
+                "id": "custom.width",
+                "value": 54
+              },
+              {
+                "id": "mappings",
+                "value": [
+                  {
+                    "type": "value",
+                    "options": {
+                      "0": {
+                        "text": " ",
+                        "color": "transparent"
+                      }
+                    }
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "showHeader": true,
+        "cellHeight": "sm",
+        "footer": {
+          "show": false,
+          "reducer": [
+            "sum"
+          ],
+          "countRows": false,
+          "fields": ""
+        }
+      },
+      "transformations": [],
+      "id": 12,
+      "gridPos": {
+        "x": 0,
+        "y": 15,
+        "w": 24,
+        "h": 9
+      }
+    },
+    {
+      "type": "timeseries",
+      "title": "Average ticket per day",
+      "description": "Average order total per business day. A steady slide can mean upsells/modifiers went missing from the menu.",
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "${pg}"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "${pg}"
+          },
+          "rawSql": "SELECT (business_date::timestamp AT TIME ZONE timezone) AS \"time\", 'avg ticket' AS metric, avg(total_cents) / 100.0 AS value\nFROM reporting.orders WHERE tenant IN (${store:sqlstring}) AND $__timeFilter(received_at) AND cancelled_at IS NULL AND status NOT IN ('cancelled','rejected')\nGROUP BY business_date, timezone ORDER BY 1",
+          "format": "time_series",
+          "rawQuery": true,
+          "editorMode": "code",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "currencyUSD",
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 2,
+            "fillOpacity": 10,
+            "showPoints": "never",
+            "spanNulls": false,
+            "barAlignment": 0,
+            "gradientMode": "none",
+            "stacking": {
+              "mode": "none",
+              "group": "A"
+            },
+            "axisSoftMin": 0
+          },
+          "color": {
+            "mode": "palette-classic"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "decimals": 2
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true,
+          "calcs": []
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "id": 13,
+      "gridPos": {
+        "x": 0,
+        "y": 24,
+        "w": 12,
+        "h": 8
+      }
+    },
+    {
+      "type": "table",
+      "title": "By order type",
+      "description": "Orders, sales, ticket, tips and on-time share per order type and source over the range. Compare delivery vs pickup on-time to see which side is slipping.",
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "${pg}"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "${pg}"
+          },
+          "rawSql": "SELECT fulfillment_type AS \"type\", source,\n       count(*) FILTER (WHERE cancelled_at IS NULL AND status NOT IN ('cancelled','rejected')) AS \"orders\",\n       sum(total_cents) FILTER (WHERE cancelled_at IS NULL AND status NOT IN ('cancelled','rejected')) / 100.0 AS \"sales\",\n       avg(total_cents) FILTER (WHERE cancelled_at IS NULL AND status NOT IN ('cancelled','rejected')) / 100.0 AS \"avg ticket\",\n       sum(tip_cents) FILTER (WHERE cancelled_at IS NULL AND status NOT IN ('cancelled','rejected')) / 100.0 AS \"tips\",\n       100.0 * count(*) FILTER (WHERE cancelled_at IS NULL AND status NOT IN ('cancelled','rejected') AND NOT late AND ready_at IS NOT NULL)\n         / NULLIF(count(*) FILTER (WHERE cancelled_at IS NULL AND status NOT IN ('cancelled','rejected') AND (ready_at IS NOT NULL OR late) AND estimated_ready_at IS NOT NULL), 0) AS \"on time\",\n       count(*) FILTER (WHERE cancelled_at IS NOT NULL OR status = 'cancelled') AS \"cancelled\"\nFROM reporting.orders WHERE tenant IN (${store:sqlstring}) AND $__timeFilter(received_at)\nGROUP BY 1, 2 ORDER BY 3 DESC",
+          "format": "table",
+          "rawQuery": true,
+          "editorMode": "code",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "align": "auto",
+            "cellOptions": {
+              "type": "auto"
+            },
+            "filterable": false
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "color": {
+            "mode": "thresholds"
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "sales"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "currencyUSD"
+              },
+              {
+                "id": "decimals",
+                "value": 0
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "avg ticket"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "currencyUSD"
+              },
+              {
+                "id": "decimals",
+                "value": 2
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "tips"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "currencyUSD"
+              },
+              {
+                "id": "decimals",
+                "value": 0
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "on time"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "percent"
+              },
+              {
+                "id": "decimals",
+                "value": 0
+              },
+              {
+                "id": "thresholds",
+                "value": {
+                  "mode": "absolute",
+                  "steps": [
+                    {
+                      "color": "red",
+                      "value": null
+                    },
+                    {
+                      "color": "yellow",
+                      "value": 80
+                    },
+                    {
+                      "color": "green",
+                      "value": 90
+                    }
+                  ]
+                }
+              },
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "color-text"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "cancelled"
+            },
+            "properties": [
+              {
+                "id": "thresholds",
+                "value": {
+                  "mode": "absolute",
+                  "steps": [
+                    {
+                      "color": "green",
+                      "value": null
+                    },
+                    {
+                      "color": "yellow",
+                      "value": 1
+                    },
+                    {
+                      "color": "red",
+                      "value": 5
+                    }
+                  ]
+                }
+              },
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "color-text"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "showHeader": true,
+        "cellHeight": "sm",
+        "footer": {
+          "show": false,
+          "reducer": [
+            "sum"
+          ],
+          "countRows": false,
+          "fields": ""
+        }
+      },
+      "transformations": [],
+      "id": 14,
+      "gridPos": {
+        "x": 12,
+        "y": 24,
+        "w": 12,
+        "h": 8
+      }
+    },
+    {
+      "id": 15,
+      "type": "row",
+      "title": "Speed (p50 = typical, p90 = the slow tail customers remember)",
+      "collapsed": false,
+      "gridPos": {
+        "x": 0,
+        "y": 32,
+        "w": 24,
+        "h": 1
+      },
+      "panels": []
+    },
+    {
+      "type": "timeseries",
+      "title": "Accept time per day",
+      "description": "Arrival → accept on the tablet, per business day. p90 above 2 min (red line) means orders sat ringing on those days.",
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "${pg}"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "${pg}"
+          },
+          "rawSql": "SELECT (business_date::timestamp AT TIME ZONE timezone) AS \"time\",\n       percentile_cont(0.5) WITHIN GROUP (ORDER BY accept_seconds) AS \"p50\",\n       percentile_cont(0.9) WITHIN GROUP (ORDER BY accept_seconds) AS \"p90\"\nFROM reporting.orders WHERE tenant IN (${store:sqlstring}) AND $__timeFilter(received_at) AND accept_seconds IS NOT NULL\nGROUP BY business_date, timezone ORDER BY 1",
+          "format": "time_series",
+          "rawQuery": true,
+          "editorMode": "code",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 2,
+            "fillOpacity": 10,
+            "showPoints": "never",
+            "spanNulls": false,
+            "barAlignment": 0,
+            "gradientMode": "none",
+            "stacking": {
+              "mode": "none",
+              "group": "A"
+            },
+            "axisSoftMin": 0,
+            "thresholdsStyle": {
+              "mode": "dashed"
+            }
+          },
+          "color": {
+            "mode": "palette-classic"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "transparent",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 120
+              }
+            ]
+          },
+          "decimals": 0
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true,
+          "calcs": []
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "id": 16,
+      "gridPos": {
+        "x": 0,
+        "y": 33,
+        "w": 8,
+        "h": 8
+      }
+    },
+    {
+      "type": "timeseries",
+      "title": "Prep: promised vs actual per day",
+      "description": "Median prep promised at accept vs actual accept → ready (p50 and p90). When actual sits above promised, customers are told a time the kitchen does not meet: promise longer.",
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "${pg}"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "${pg}"
+          },
+          "rawSql": "SELECT (business_date::timestamp AT TIME ZONE timezone) AS \"time\",\n       percentile_cont(0.5) WITHIN GROUP (ORDER BY prep_minutes_promised) AS \"promised p50\",\n       percentile_cont(0.5) WITHIN GROUP (ORDER BY prep_minutes_actual) AS \"actual p50\",\n       percentile_cont(0.9) WITHIN GROUP (ORDER BY prep_minutes_actual) AS \"actual p90\"\nFROM reporting.orders WHERE tenant IN (${store:sqlstring}) AND $__timeFilter(received_at) AND cancelled_at IS NULL AND status NOT IN ('cancelled','rejected') AND prep_minutes_actual IS NOT NULL\nGROUP BY business_date, timezone ORDER BY 1",
+          "format": "time_series",
+          "rawQuery": true,
+          "editorMode": "code",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "m",
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 2,
+            "fillOpacity": 10,
+            "showPoints": "never",
+            "spanNulls": false,
+            "barAlignment": 0,
+            "gradientMode": "none",
+            "stacking": {
+              "mode": "none",
+              "group": "A"
+            },
+            "axisSoftMin": 0
+          },
+          "color": {
+            "mode": "palette-classic"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "decimals": 0
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "promised p50"
+            },
+            "properties": [
+              {
+                "id": "custom.lineStyle",
+                "value": {
+                  "fill": "dash",
+                  "dash": [
+                    10,
+                    10
+                  ]
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true,
+          "calcs": []
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "id": 17,
+      "gridPos": {
+        "x": 8,
+        "y": 33,
+        "w": 8,
+        "h": 8
+      }
+    },
+    {
+      "type": "timeseries",
+      "title": "Delivery times per day",
+      "description": "Round trip (out → delivered) p50/p90, and how long ready deliveries waited for a driver (p50). A rising wait means too few drivers; a rising round trip means runs are too long.",
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "${pg}"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "${pg}"
+          },
+          "rawSql": "SELECT (business_date::timestamp AT TIME ZONE timezone) AS \"time\",\n       percentile_cont(0.5) WITHIN GROUP (ORDER BY delivery_minutes) AS \"round trip p50\",\n       percentile_cont(0.9) WITHIN GROUP (ORDER BY delivery_minutes) AS \"round trip p90\",\n       percentile_cont(0.5) WITHIN GROUP (ORDER BY wait_out_minutes) AS \"waited for driver p50\"\nFROM reporting.orders WHERE tenant IN (${store:sqlstring}) AND $__timeFilter(received_at) AND cancelled_at IS NULL AND status NOT IN ('cancelled','rejected') AND fulfillment_type = 'delivery' AND out_at IS NOT NULL\nGROUP BY business_date, timezone ORDER BY 1",
+          "format": "time_series",
+          "rawQuery": true,
+          "editorMode": "code",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "m",
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 2,
+            "fillOpacity": 10,
+            "showPoints": "never",
+            "spanNulls": false,
+            "barAlignment": 0,
+            "gradientMode": "none",
+            "stacking": {
+              "mode": "none",
+              "group": "A"
+            },
+            "axisSoftMin": 0
+          },
+          "color": {
+            "mode": "palette-classic"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "decimals": 0
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true,
+          "calcs": []
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "id": 18,
+      "gridPos": {
+        "x": 16,
+        "y": 33,
+        "w": 8,
+        "h": 8
+      }
+    },
+    {
+      "id": 19,
+      "type": "row",
+      "title": "Quality",
+      "collapsed": false,
+      "gridPos": {
+        "x": 0,
+        "y": 41,
+        "w": 24,
+        "h": 1
+      },
+      "panels": []
+    },
+    {
+      "type": "timeseries",
+      "title": "Late orders per day",
+      "description": "Share of orders not ready by the promised time, per business day. Days above 20 % (red line) had promises the kitchen could not keep — check those days' staffing.",
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "${pg}"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "${pg}"
+          },
+          "rawSql": "SELECT (business_date::timestamp AT TIME ZONE timezone) AS \"time\",\n       100.0 * count(*) FILTER (WHERE late) / NULLIF(count(*) FILTER (WHERE ready_at IS NOT NULL OR late), 0) AS \"late %\"\nFROM reporting.orders WHERE tenant IN (${store:sqlstring}) AND $__timeFilter(received_at) AND cancelled_at IS NULL AND status NOT IN ('cancelled','rejected') AND estimated_ready_at IS NOT NULL\nGROUP BY business_date, timezone ORDER BY 1",
+          "format": "time_series",
+          "rawQuery": true,
+          "editorMode": "code",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 2,
+            "fillOpacity": 10,
+            "showPoints": "never",
+            "spanNulls": false,
+            "barAlignment": 0,
+            "gradientMode": "none",
+            "stacking": {
+              "mode": "none",
+              "group": "A"
+            },
+            "axisSoftMin": 0,
+            "thresholdsStyle": {
+              "mode": "dashed"
+            }
+          },
+          "color": {
+            "mode": "palette-classic"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "transparent",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 20
+              }
+            ]
+          },
+          "decimals": 0
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true,
+          "calcs": []
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "id": 20,
+      "gridPos": {
+        "x": 0,
+        "y": 42,
+        "w": 12,
+        "h": 8
+      }
+    },
+    {
+      "type": "timeseries",
+      "title": "Cancellations per day",
+      "description": "Online orders cancelled per business day, by order type. A spike is worth matching with the cancelled-orders table below.",
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "${pg}"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "${pg}"
+          },
+          "rawSql": "SELECT (business_date::timestamp AT TIME ZONE timezone) AS \"time\", fulfillment_type AS metric, count(*) AS value\nFROM reporting.orders WHERE tenant IN (${store:sqlstring}) AND $__timeFilter(received_at) AND (cancelled_at IS NOT NULL OR status = 'cancelled')\nGROUP BY business_date, timezone, fulfillment_type ORDER BY 1",
+          "format": "time_series",
+          "rawQuery": true,
+          "editorMode": "code",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "custom": {
+            "drawStyle": "bars",
+            "lineWidth": 2,
+            "fillOpacity": 70,
+            "showPoints": "never",
+            "spanNulls": false,
+            "barAlignment": 0,
+            "gradientMode": "none",
+            "stacking": {
+              "mode": "normal",
+              "group": "A"
+            },
+            "axisSoftMin": 0
+          },
+          "color": {
+            "mode": "palette-classic"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "decimals": 0
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true,
+          "calcs": []
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "id": 21,
+      "gridPos": {
+        "x": 12,
+        "y": 42,
+        "w": 12,
+        "h": 8
+      }
+    },
+    {
+      "id": 22,
+      "type": "row",
+      "title": "Drivers",
+      "collapsed": false,
+      "gridPos": {
+        "x": 0,
+        "y": 50,
+        "w": 24,
+        "h": 1
+      },
+      "panels": []
+    },
+    {
+      "type": "table",
+      "title": "Drivers",
+      "description": "Per driver over the range: deliveries, hours on shift, deliveries per hour, round-trip times and tips. A high p90 or a low deliveries/hour next to the others is the one to talk to (or the one getting the far runs).",
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "${pg}"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "${pg}"
+          },
+          "rawSql": "WITH d AS (\n  SELECT tenant, driver_name, count(*) AS deliveries,\n         percentile_cont(0.5) WITHIN GROUP (ORDER BY delivery_minutes) AS p50,\n         percentile_cont(0.9) WITHIN GROUP (ORDER BY delivery_minutes) AS p90,\n         avg(delivery_minutes) AS avg_min,\n         sum(tip_cents) / 100.0 AS tips\n  FROM reporting.orders\n  WHERE tenant IN (${store:sqlstring}) AND $__timeFilter(received_at) AND cancelled_at IS NULL AND status NOT IN ('cancelled','rejected') AND fulfillment_type = 'delivery' AND coalesce(driver_name, '') <> ''\n  GROUP BY tenant, driver_name\n), s AS (\n  SELECT tenant, driver_name,\n         sum(extract(epoch FROM coalesce(ended_at, now()) - started_at)) / 3600.0 AS hours\n  FROM reporting.driver_shifts\n  WHERE tenant IN (${store:sqlstring}) AND $__timeFilter(started_at)\n  GROUP BY tenant, driver_name\n), st AS (SELECT DISTINCT tenant, store_name FROM reporting.stores)\nSELECT d.driver_name AS \"driver\", st.store_name AS \"store\", d.deliveries,\n       round(s.hours::numeric, 1) AS \"hours on shift\",\n       round((d.deliveries / NULLIF(s.hours, 0))::numeric, 1) AS \"deliveries / hour\",\n       round(d.avg_min::numeric, 0) AS \"avg round trip (min)\",\n       round(d.p50::numeric, 0) AS \"p50 (min)\",\n       round(d.p90::numeric, 0) AS \"p90 (min)\",\n       d.tips\nFROM d LEFT JOIN s ON s.tenant = d.tenant AND s.driver_name = d.driver_name\nLEFT JOIN st ON st.tenant = d.tenant\nORDER BY d.deliveries DESC",
+          "format": "table",
+          "rawQuery": true,
+          "editorMode": "code",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "align": "auto",
+            "cellOptions": {
+              "type": "auto"
+            },
+            "filterable": false
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "color": {
+            "mode": "thresholds"
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "p90 (min)"
+            },
+            "properties": [
+              {
+                "id": "thresholds",
+                "value": {
+                  "mode": "absolute",
+                  "steps": [
+                    {
+                      "color": "green",
+                      "value": null
+                    },
+                    {
+                      "color": "yellow",
+                      "value": 45
+                    },
+                    {
+                      "color": "red",
+                      "value": 60
+                    }
+                  ]
+                }
+              },
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "color-text"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "avg round trip (min)"
+            },
+            "properties": [
+              {
+                "id": "thresholds",
+                "value": {
+                  "mode": "absolute",
+                  "steps": [
+                    {
+                      "color": "green",
+                      "value": null
+                    },
+                    {
+                      "color": "yellow",
+                      "value": 35
+                    },
+                    {
+                      "color": "red",
+                      "value": 50
+                    }
+                  ]
+                }
+              },
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "color-text"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "tips"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "currencyUSD"
+              },
+              {
+                "id": "decimals",
+                "value": 2
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "showHeader": true,
+        "cellHeight": "sm",
+        "footer": {
+          "show": false,
+          "reducer": [
+            "sum"
+          ],
+          "countRows": false,
+          "fields": ""
+        }
+      },
+      "transformations": [],
+      "id": 23,
+      "gridPos": {
+        "x": 0,
+        "y": 51,
+        "w": 14,
+        "h": 9
+      }
+    },
+    {
+      "type": "table",
+      "title": "Cancelled orders",
+      "description": "The most recent cancelled online orders in the range, with how long after arrival they were cancelled. Many cancellations soon after arrival usually mean slow accepts or quoted times customers did not like.",
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "${pg}"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "${pg}"
+          },
+          "rawSql": "SELECT received_at AS \"received\", kitchen_order_number AS \"#\", store_name AS \"store\",\n       fulfillment_type AS \"type\", source,\n       round((extract(epoch FROM coalesce(cancelled_at, received_at) - received_at) / 60)::numeric, 0) AS \"cancelled after (min)\",\n       total_cents / 100.0 AS \"total\"\nFROM reporting.orders WHERE tenant IN (${store:sqlstring}) AND $__timeFilter(received_at) AND (cancelled_at IS NOT NULL OR status = 'cancelled')\nORDER BY received_at DESC LIMIT 100",
+          "format": "table",
+          "rawQuery": true,
+          "editorMode": "code",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "align": "auto",
+            "cellOptions": {
+              "type": "auto"
+            },
+            "filterable": false
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "color": {
+            "mode": "thresholds"
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "total"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "currencyUSD"
+              },
+              {
+                "id": "decimals",
+                "value": 2
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "received"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "dateTimeAsLocal"
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "showHeader": true,
+        "cellHeight": "sm",
+        "footer": {
+          "show": false,
+          "reducer": [
+            "sum"
+          ],
+          "countRows": false,
+          "fields": ""
+        }
+      },
+      "transformations": [],
+      "id": 24,
+      "gridPos": {
+        "x": 14,
+        "y": 51,
+        "w": 10,
+        "h": 9
+      }
+    }
+  ]
+}

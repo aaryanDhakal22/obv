@@ -1,7 +1,7 @@
 {
   "uid": "quicc-admin-catalog",
   "title": "Quicc — Admin, menu & auth",
-  "tags": ["quicc", "menu", "auth"],
+  "tags": ["quicc", "menu", "auth", "quicc-debug"],
   "timezone": "browser",
   "schemaVersion": 39,
   "version": 1,
@@ -15,9 +15,11 @@
       {
         "name": "env",
         "label": "Environment",
-        "type": "query",
-        "datasource": { "type": "prometheus", "uid": "prometheus" },
-        "query": "label_values(deployment_environment)",
+        "type": "custom",
+        "description": "deployment_environment label (the collector maps it from deployment.environment.name)",
+        "query": "prod,staging,dev",
+        "current": { "selected": true, "text": "prod", "value": "prod" },
+        "options": [{ "selected": true, "text": "prod", "value": "prod" }, { "selected": false, "text": "staging", "value": "staging" }, { "selected": false, "text": "dev", "value": "dev" }],
         "refresh": 2,
         "sort": 1
       }

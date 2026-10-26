@@ -1,7 +1,7 @@
 {
   "uid": "quicc-stack-health",
   "title": "Quicc — Collector & stack health",
-  "tags": ["quicc", "infra"],
+  "tags": ["quicc", "infra", "quicc-debug"],
   "timezone": "browser",
   "schemaVersion": 39,
   "version": 1,

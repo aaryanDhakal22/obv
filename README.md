@@ -63,21 +63,29 @@ Transport is OTLP/**HTTP** (port `4318`). If `OTEL_EXPORTER_OTLP_ENDPOINT` is un
 
 ## Dashboards (provisioned)
 
-All eleven live in the **Quicc** folder, share an `env` template variable, and link to each other via the "Quicc dashboards" dropdown (tag-based — new dashboards tagged `quicc` join automatically).
+Two folders, one sub-directory each (`grafana/provisioning/dashboards/quicc.yaml`):
 
-- **Order-alerts overview** — the landing/health board: a live **alertlist** of firing/pending order-pipeline alerts, the drop counters across all modules, SSE health (agents connected + "orders broadcast with no agent"), and a compact throughput overlay. Start here.
-- **Order flow funnel (end-to-end)** — the whole pipeline in one view: a stage-by-stage funnel (online received → relayed → main consumed → persisted → SSE broadcast → agent received → printed), per-stage throughput overlay, and a **Drops** row where each failure counter maps 1:1 to a Pushover alert.
-- **Admin & catalog** — menu reads/mutations, store + operator auth (allowed vs denied), operator token mint/revoke, and `printers.live` query outcomes.
-- **Duplex RPC / command channel** — the main↔agent request/reply channel: command requests by type, offline/timeout failures, reply-success %, round-trip p95 (main side), and commands-handled / replies-&-reports-POSTed / handler p95 / inbound-reports (agent side).
-- **Service overview (RED)** — rate / p95 / error-rate per service & span (Tempo span-metrics), plus agents-connected and order-count stats.
-- **Order lifecycle** — TraceQL search for `sqs.process` traces, per-stage p95 (consume → SSE publish → SSE receive → arrival → print), full pipeline funnel from online's relay to paper.
-- **Printer health** — per-printer status, detect/write latency, throughput by result, SSE reconnects, agent HTTP RED.
-- **Logs explorer** — Loki volume by service/level, error stream with trace click-through, free-text browse.
-- **Online relay health** — received/relayed/rejected, relay latency, body size, both auth surfaces, key lifecycle, watchdog staleness.
-- **Pipeline & outbox (main)** — consume/persist/cast-fail, outbox dispatched/failed/pending per handler, SSE fan-out, DB/client span p95.
-- **Collector & stack health** — collector accepted/refused/sent/failed per signal, exporter queues, memory, Prometheus TSDB, Tempo metrics-generator and Loki ingest liveness.
+**Quicc** (`grafana/dashboards/quicc/`) — the store dashboards, scoped by `env`
+(prod / staging / dev) and `store` (multi-select from Postgres `reporting.stores`).
+Each leads with the few numbers that say whether the store is OK, then trends,
+then detail tables; every panel's description says what red means and what to do.
+Prometheus panels filter `tenant=~"${store:regex}|"` (the trailing `|` keeps
+series from releases without a `tenant` label); Postgres panels read main's
+`reporting.*` views through the `pg` variable, which follows `env`
+(`pg-prod` / `pg-staging`; dev has no Postgres datasource). See `TENANT-SCOPING.md`.
 
-Dashboards are bound-mounted **read-only** from `./grafana/dashboards/` — the JSON files are the source of truth. UI edits are ephemeral (allowed for experimentation via `allowUiUpdates: true`, but lost on container restart); make lasting changes in the JSON.
+- **Store — Live floor** (`store-live`) — right now (waiting to accept, cooking, ready, out, late, scheduled), today so far vs the same weekday last week (orders, sales, ticket, accept time, prep promised vs actual, on-time %, delivery round trip, cancellations), store health (Pi, printers, tablets, POS link, unacked orders, unsynced changes), open orders and today's orders tables.
+- **Store — Trends** (`store-trends`) — the period vs the previous one, orders/sales/ticket per day, busy hours (hour × weekday), accept/prep/delivery p50/p90 per day, late % and cancellations, per-driver table, cancelled orders.
+- **Order pipeline** (`pipeline`) — every hop (online → SQS → main → outbox → SSE → Pi ack → accept): throughput, drops (one tile per Pushover rule), backlogs, latency, firing alerts, recent traces and error logs.
+- **Pi & printers** (`fleet`) — per-Pi table (version, last seen, disk, temp, SD errors, tablets, POS link), printer status timeline and failures, reprints/resends, SSE reconnects, POS link, Pi hardware, Pi logs.
+
+**Quicc Debug** (`grafana/dashboards/debug/`) — module/stack drill-downs:
+Collector & stack health, Logs explorer, Online relay health, Duplex RPC,
+Admin & catalog.
+
+Dashboards are bound-mounted **read-only** from `./grafana/dashboards/` — the JSON files are the source of truth. UI edits are ephemeral (allowed for experimentation via `allowUiUpdates: true`, but lost on container restart); make lasting changes in the JSON. Keep the provider paths disjoint: a file provider walks its path recursively, so one on the dashboards root would load `debug/` twice and duplicate UIDs block both providers.
+
+**Postgres datasources** `pg-prod` / `pg-staging` connect as `grafana_ro` with `GRAFANA_PG_{PROD,STAGING}_URL` (host:port), `_DB` and `_PASSWORD` from the `obv` Doppler config (empty → the datasource provisions, its panels error).
 
 ## Alerting — "an order failed on some module" → Pushover
 
@@ -118,7 +126,7 @@ move through any module, your phone buzzes.**
 
   Every rule is `noDataState=OK` on purpose — **no orders ≠ a problem**; these
   alert on *failures/backlog*, not on quiet traffic. Each maps 1:1 to a Drops
-  panel on the **Order flow funnel** dashboard, so a Pushover buzz has a
+  tile on the **Order pipeline** dashboard, so a Pushover buzz has a
   one-click drill-down.
 
 ## Prometheus metric naming (OTLP → Prometheus)

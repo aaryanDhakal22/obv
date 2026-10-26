@@ -1,5 +1,11 @@
 apiVersion: 1
 
+# Two folders, one sub-directory each. Dashboards are file-provisioned; the JSON
+# files are the source of truth. Keep the paths disjoint: a file provider walks
+# its path recursively, so a provider on the dashboards root would load debug/
+# twice (duplicate UIDs block both providers' writes).
+#   Quicc        - the store dashboards (Live floor, Trends, Order pipeline, Pi & printers)
+#   Quicc Debug  - the module/stack drill-downs (stack health, logs, online relay, duplex RPC, admin)
 providers:
   - name: quicc
     orgId: 1
@@ -10,5 +16,17 @@ providers:
     updateIntervalSeconds: 30
     allowUiUpdates: true
     options:
-      path: /var/lib/grafana/dashboards
+      path: /var/lib/grafana/dashboards/quicc
+      foldersFromFilesStructure: false
+
+  - name: quicc-debug
+    orgId: 1
+    folder: Quicc Debug
+    type: file
+    disableDeletion: false
+    editable: true
+    updateIntervalSeconds: 30
+    allowUiUpdates: true
+    options:
+      path: /var/lib/grafana/dashboards/debug
       foldersFromFilesStructure: false
