@@ -65,19 +65,22 @@ Transport is OTLP/**HTTP** (port `4318`). If `OTEL_EXPORTER_OTLP_ENDPOINT` is un
 
 Two folders, one sub-directory each (`grafana/provisioning/dashboards/quicc.yaml`):
 
-**Quicc** (`grafana/dashboards/quicc/`) — the store dashboards, scoped by `env`
-(prod / staging / dev) and `store` (multi-select from Postgres `reporting.stores`).
-Each leads with the few numbers that say whether the store is OK, then trends,
-then detail tables; every panel's description says what red means and what to do.
-Prometheus panels filter `tenant=~"${store:regex}|"` (the trailing `|` keeps
-series from releases without a `tenant` label); Postgres panels read main's
-`reporting.*` views through the `pg` variable, which follows `env`
-(`pg-prod` / `pg-staging`; dev has no Postgres datasource). See `TENANT-SCOPING.md`.
+**Quicc** (`grafana/dashboards/quicc/`) — store-scoped **infra and health**
+dashboards (no sales, item, ticket or driver numbers), built to the contract in
+`TENANT-SCOPING.md`. Variables: `env` (prod / staging / dev, default prod) and
+`store` (multi + All, `label_values(target_info{deployment_environment="$env"}, tenant)`).
+Every query is Prometheus, Loki or Tempo: everything arrives over OTLP, and
+Grafana never connects to an application database. Prometheus panels filter
+`deployment_environment="$env", tenant=~"${store:regex}|"` (the trailing `|`
+keeps series from builds that don't send `tenant` yet). Each dashboard leads
+with the few numbers that answer its question, then time series, then detail
+tables. Every panel's description says what it means and what to do when it's
+red. The four link to each other (carrying env and store) and have a Debug dropdown.
 
-- **Store — Live floor** (`store-live`) — right now (waiting to accept, cooking, ready, out, late, scheduled), today so far vs the same weekday last week (orders, sales, ticket, accept time, prep promised vs actual, on-time %, delivery round trip, cancellations), store health (Pi, printers, tablets, POS link, unacked orders, unsynced changes), open orders and today's orders tables.
-- **Store — Trends** (`store-trends`) — the period vs the previous one, orders/sales/ticket per day, busy hours (hour × weekday), accept/prep/delivery p50/p90 per day, late % and cancellations, per-driver table, cancelled orders.
-- **Order pipeline** (`pipeline`) — every hop (online → SQS → main → outbox → SSE → Pi ack → accept): throughput, drops (one tile per Pushover rule), backlogs, latency, firing alerts, recent traces and error logs.
-- **Pi & printers** (`fleet`) — per-Pi table (version, last seen, disk, temp, SD errors, tablets, POS link), printer status timeline and failures, reprints/resends, SSE reconnects, POS link, Pi hardware, Pi logs.
+- **Store health** (`store-health`, today): up/down tiles for main, Pi, Pi to main link, printers, tablets, POS link and SoftTouch; live bottlenecks (waiting to accept, unacked by the Pi, outbox pending, floor-sync backlog, hub status age, hub feed lag); order flow (received → saved → reached the Pi → accepted → printed, POS checks pulled, print failures); p95 per hop; open orders by state, orders per hop, machine-hop p95; recent errors from Loki.
+- **Latency & bottlenecks** (`latency`): p95 tiles per hop (SQS wait, ingest, dispatch, Pi ack, accept, print, floor sync, RPC round trip, hub poll and write, printer write) and current queues; average seconds per order by hop; p95 per store and hop; p50/p95/p99 time series per hop; main, Pi and hub queue depths; the slowest main, Pi and hub traces from Tempo.
+- **Uptime & incidents** (`reliability`): uptime over the range (worst store) and per store × component for 24 h / 7 d / 30 d; an up/down state timeline; alert conditions over time (recomputed from the rule queries) plus rules firing now; failures by kind across modules, error log lines by service, SSE reconnects, print failures, unaccepted-order pages, hub writes and checks pulled. main and Pi uptime is presence-based (no telemetry = down, counted from the first time each was seen in the window). Link, printers, tablets, POS link and SoftTouch uptime is the average of their 0/1 gauges while the Pi reports.
+- **Fleet & upgrades** (`fleet`): stores safe / not safe to upgrade, Pis gone quiet, agent and Quibase versions running and the newest seen, main version. **Upgrade checks per store** gives SAFE / WAIT plus each check's value: no open orders, printers up, disk ≥ 500 MB, temp < 80 °C, no alert conditions, Pi linked, a tablet connected, and whether the agent is behind the newest version. "Newest" is the version first seen most recently in prod or staging over 30 days. The dashboard also has Quibase tablets per version, the hub per store, a per-Pi table (version, last seen, agent and Pi uptime, disk, temp, SD errors, last good update, update results, reconnects), rollouts over time, Pi hardware and Pi/hub logs.
 
 **Quicc Debug** (`grafana/dashboards/debug/`) — module/stack drill-downs:
 Collector & stack health, Logs explorer, Online relay health, Duplex RPC,
@@ -85,7 +88,7 @@ Admin & catalog.
 
 Dashboards are bound-mounted **read-only** from `./grafana/dashboards/` — the JSON files are the source of truth. UI edits are ephemeral (allowed for experimentation via `allowUiUpdates: true`, but lost on container restart); make lasting changes in the JSON. Keep the provider paths disjoint: a file provider walks its path recursively, so one on the dashboards root would load `debug/` twice and duplicate UIDs block both providers.
 
-**Postgres datasources** `pg-prod` / `pg-staging` connect as `grafana_ro` with `GRAFANA_PG_{PROD,STAGING}_URL` (host:port), `_DB` and `_PASSWORD` from the `obv` Doppler config (empty → the datasource provisions, its panels error).
+The Postgres reporting datasources from the first version are gone; `datasources.yaml` lists `pg-prod` / `pg-staging` under `deleteDatasources` so a Grafana that provisioned them drops them.
 
 ## Alerting — "an order failed on some module" → Pushover
 
@@ -125,9 +128,9 @@ move through any module, your phone buzzes.**
   and auto-verifies the rule fires.
 
   Every rule is `noDataState=OK` on purpose — **no orders ≠ a problem**; these
-  alert on *failures/backlog*, not on quiet traffic. Each maps 1:1 to a Drops
-  tile on the **Order pipeline** dashboard, so a Pushover buzz has a
-  one-click drill-down.
+  alert on *failures/backlog*, not on quiet traffic. Each maps to a
+  row on the **Uptime & incidents** dashboard's "Alert conditions over time"
+  timeline and "Failures by kind" panel, so a Pushover buzz has a drill-down.
 
 ## Prometheus metric naming (OTLP → Prometheus)
 

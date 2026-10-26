@@ -111,15 +111,6 @@ services:
       # expansion) so the Pushover order-pipeline alerts can authenticate.
       PUSHOVER_APP_TOKEN: "${PUSHOVER_APP_TOKEN:-}"
       PUSHOVER_USER_KEY: "${PUSHOVER_USER_KEY:-}"
-      # Consumed by grafana/provisioning/datasources/datasources.yaml: main's
-      # Postgres per env, read as grafana_ro through the `reporting` views.
-      # *_URL is host:port, *_DB the database name (Doppler: obv).
-      GRAFANA_PG_PROD_URL: "${GRAFANA_PG_PROD_URL:-}"
-      GRAFANA_PG_PROD_DB: "${GRAFANA_PG_PROD_DB:-}"
-      GRAFANA_PG_PROD_PASSWORD: "${GRAFANA_PG_PROD_PASSWORD:-}"
-      GRAFANA_PG_STAGING_URL: "${GRAFANA_PG_STAGING_URL:-}"
-      GRAFANA_PG_STAGING_DB: "${GRAFANA_PG_STAGING_DB:-}"
-      GRAFANA_PG_STAGING_PASSWORD: "${GRAFANA_PG_STAGING_PASSWORD:-}"
     volumes:
       - ./grafana/provisioning:/etc/grafana/provisioning:ro
       - ./grafana/dashboards:/var/lib/grafana/dashboards:ro

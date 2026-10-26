@@ -1,47 +1,81 @@
-# Tenant-scoped observability — the shared contract
+# Store-scoped infra observability: the shared contract
 
-Written 2026-10-26. main, the agent and the dashboards all follow this file.
+Rewritten 2026-10-26. main, the agent, the hub and the dashboards all build against this file.
 
-## 1. Labels (Prometheus / Loki / Tempo)
+**Scope.** This covers infra and health only, per store: latency, order flow and throughput, bottlenecks, downtime, versions, and whether a store is safe to upgrade. **No business stats:** no sales, average ticket, items, customers or per-driver numbers.
 
-| Label | Who sets it | Value |
+Every number is **pushed** over OTLP, so Grafana never connects to an application database and the stack can move to the cloud by changing only the endpoint. The Postgres reporting views and the `grafana_ro` role from the first version are **dropped**.
+
+## 1. Labels
+
+| Label | Set by | Value |
 |---|---|---|
-| `deployment_environment` | the collector copies it from `deployment.environment.name` (what the SDKs send) | `dev` / `staging` / `prod` |
+| `deployment_environment` | the collector, copied from `deployment.environment.name` | `dev` / `staging` / `prod` |
 | `service_name` | SDK resource | `quicc-main`, `quicc-agent`, `quicc-online`, `quicc-hub` |
-| `tenant` | **main**: a metric attribute on every per-order / per-store instrument. **agent** (and later the hub): a **resource** attribute, which `resource_to_telemetry_conversion` turns into a label on every series | the tenant **slug** (`lombardis`); `unlinked` on an agent that has no store yet; never a UUID or a name |
-| `location` | same as `tenant` | the location slug (`main`) |
-| `service_instance_id` | agent resource | `<tenant>-<hostname>`, so two stores' Pis (both `quiccpos-pi`) never collide |
+| `tenant`, `location` | **main**: a metric attribute on every per-store instrument (`unrouted` when there's no store yet, `unknown` if a lookup fails). **agent, hub**: a **resource** attribute | slugs (`lombardis`, `main`); `unlinked` on an agent with no store |
+| `service_instance_id` | agent/hub resource | `<tenant>-<hostname>` |
 
-The `tenant` label keeps cardinality low: one value per store. Never put order IDs, customer data or driver names on a metric.
+Store-filtered queries use `tenant=~"${store:regex}|"`, so series from builds that don't send `tenant` yet still show up.
 
-Until the release that adds `tenant` reaches an environment, its series have **no** `tenant` label. Every dashboard query that filters on a store therefore uses `tenant=~"${store:regex}|"`. The trailing `|` also matches the empty label, so prod (one store) still shows data before the release.
+The `store` variable is `label_values(target_info{deployment_environment="$env"}, tenant)`.
 
-## 2. Reporting views (main's Postgres, schema `reporting`, no PII)
+## 2. Metrics
 
-A main goose migration (`00016_reporting.sql`) creates schema `reporting` and these views. Grafana reads them as role `grafana_ro`, which has USAGE on `reporting` and SELECT on its views **only**. It gets no grant on `public`, so customer names, phones, addresses and notes can't be read. The role itself is created once per database by `observability/postgres/grafana-ro.sql`, run by the operator. The migration only grants to it, and only if the role exists: `DO $$ BEGIN IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname='grafana_ro') THEN ... END IF; END $$`.
+Existing instruments are listed in `contract/main.md` §7.2 and `contract/agent.md` §7.1; the ones below are **new**. Durations are histograms in seconds. Use buckets that suit each hop: sub-second hops get 0.05…30 s, human hops get 5…1800 s.
 
-| View | Columns |
-|---|---|
-| `reporting.stores` | `tenant_id, tenant` (slug)`, store_name` (tenant name)`, location_id, location` (slug)`, timezone` |
-| `reporting.orders` | `order_id, tenant, location, store_name, timezone, source, fulfillment_type` (delivery/pickup/…)`, status, kitchen_order_number, subtotal_cents, tip_cents, total_cents, placed_at, received_at, promised_at, estimated_ready_at, accepted_at, ready_at, out_at, completed_at, cancelled_at, driver_name, prep_minutes_promised` (estimated_ready_at − accepted_at, minutes)`, accept_seconds` (accepted_at − received_at)`, prep_minutes_actual` (ready_at − accepted_at)`, wait_out_minutes` (out_at − ready_at)`, delivery_minutes` (completed_at − out_at, deliveries only)`, total_minutes` (completed_at − received_at)`, late` (bool: ready_at > estimated_ready_at, or still not ready and now() > estimated_ready_at)`, business_date` (received_at in the location's timezone, as a date) |
-| `reporting.driver_shifts` | `tenant, location, driver_name, started_at, ended_at` (whatever driver_shifts holds, with no PII) |
+### main (each carries `tenant`/`location`)
+- `orders.ingest.latency` (s, `source`): the vendor's `placed_at` → persisted in main. It covers the online relay and SQS. It's clamped at 0 to absorb clock skew.
+- `sqs.message.age` (s): the SQS `SentTimestamp` → received by main. This is the queue wait, readable without CloudWatch. Before routing the store is unknown, so it has no tenant.
+- `sqs.receive.errors` (counter, `reason`): `ReceiveMessage` failures, which today are only logged.
+- `orders.dispatch.latency` (s): persisted → the order frame delivered over SSE (the outbox lag).
+- `orders.ack.latency` (s): persisted → acked by the agent.
+- `floor.sync.latency` (s, `type`): the agent's floor-event time → applied by main.
+- `main.info` (gauge = 1, `version`, `commit`): no tenant.
 
-The `*_at` stage times are the first `status_events.at` with `to_status` = accepted / ready / on_delivery / completed / cancelled. Online orders only: POS orders pulled from SoftTouch are `local_only` on the Pi and never reach main.
+### agent (the resource carries `tenant`/`location`)
+- `sse.connected` (gauge 0/1): the Pi's SSE stream to main is up. This is the Pi-side downtime signal.
+- `orders.print.seconds` (s, `result`): accept → every ticket for that accept written (or given up).
+- `floor.tablets.version` (gauge, `app_version`): the number of connected tablets on each Quibase version.
+- `agent.uptime.seconds` (gauge): process uptime. Add `host.uptime.seconds` too, if the Pi health file has it.
+- `agent.update.runs` (counter, `result` = `ok`/`rolled_back`/`failed`), plus `agent.update.last_success` (gauge, unix seconds). These come from whatever the update path already records.
+- Already shipped earlier tonight:
+  - `floor.orders.open{state,source}`
+  - `floor.accept.seconds{source}`
+  - `floor.tablets.connected`
+  - `hub.link.up`
+  - `hub.status.age.seconds`
+  - `agent.info{version}`
 
-## 3. Agent-side metrics added (cover POS orders too)
+### hub (new OTEL setup like the agent's; the resource carries `tenant`/`location`)
+- `hub.info` (gauge = 1, `version`)
+- `hub.softtouch.up` (0/1)
+- `hub.agent.up` (0/1)
+- `hub.poll.seconds` (histogram, one SoftTouch poll cycle)
+- `hub.poll.errors` (counter, `stage`)
+- `hub.checks.pulled` (counter, `result` = `pulled`/`skipped_handkeyed`/`skipped_linked`/`withdrawn`/…)
+- `hub.writes` (counter, `kind` = `insert`/`assign`/`heal`, `mode` = `off`/`shadow`/`live`, `result`)
+- `hub.write.seconds` (histogram, `kind`)
+- `hub.feed.lag.seconds` (gauge: how far behind the Pi's cursor feed the hub is)
+- `hub.mapping.misses` (counter)
+- Logs over OTLP, like the agent.
 
-- `floor.orders.open` (gauge): attributes `state` (`new` = waiting for accept, `cooking`, `ready`, `out`, `scheduled`) and `source` (`online`, `pos`).
-- `floor.accept.seconds` (histogram): arrival → accept, by `source`.
-- `floor.tablets.connected` (gauge): paired tablets currently on the SSE stream.
-- `hub.link.up` (gauge 0/1) and `hub.status.age.seconds` (gauge): from the integration status the hub PUTs. Absent when the store has no hub.
-- `agent.info` (gauge = 1): attributes `version`. The Pi's agent version, for the fleet table.
+## 3. Dashboards (folder "Quicc"; variables `env` (default prod) and `store` (multi, All))
 
-## 4. Dashboards (folder "Quicc"; variables `env`, `store`)
-
-`env` is a custom variable (prod, staging, dev; default prod). `store` comes from `label_values(target_info{deployment_environment="$env"}, tenant)` or from the Postgres `reporting.stores` view; multi-select, include All.
-
-1. **Store — Live floor** (`store-live`). Right now: unaccepted orders, cooking, ready and waiting, out on delivery, late. Today so far: orders, sales, median accept time, prep promised vs actual, delivery round trip. Health: Pi online, printers up, tablets connected, POS link.
-2. **Store — Trends** (`store-trends`): daily orders and sales, average ticket, an hour × weekday heatmap, accept / prep / delivery time trends (p50 / p90), per-driver deliveries and average times, cancellations, late %.
-3. **Order pipeline** (`pipeline`): every hop's throughput and drops by env and store: online → SQS → main cast/persist → outbox → SSE → agent ack → accept. Also unacked, redelivered, DLQ, RPC failures, floor-sync backlog and firing alerts.
-4. **Pi & printers** (`fleet`): a per-store Pi table (version, disk, temp, SD errors, last seen), printer status timeline, print failures, SSE reconnects, tablets.
-5. Kept as the **Debug** folder: stack-health, logs-explorer, online-relay, duplex-rpc, admin-catalog.
+1. **Store health** (`store-health`): "is this store working right now?"
+   - Up/down tiles: main, the Pi's SSE link, printers, tablets, POS link (the hub), SoftTouch.
+   - Live bottlenecks: orders waiting to accept, unacked by the Pi, outbox pending, floor-sync backlog, hub status age.
+   - Order flow today: received → saved → reached the Pi → accepted → printed, by source.
+   - p95 for each hop, and recent errors (Loki).
+2. **Latency & bottlenecks** (`latency`):
+   - p50/p95/p99 per hop: ingest, SQS wait, dispatch, ack, accept, print, floor sync, RPC round trip, hub poll and writes, printer write.
+   - A "where the time goes" breakdown.
+   - Queue depths over time.
+   - The slowest traces (Tempo).
+3. **Uptime & incidents** (`reliability`):
+   - Uptime % per component per store over 24 h / 7 d / 30 d.
+   - A downtime state timeline.
+   - Reconnects, print failures, error rates and alert history.
+4. **Fleet & upgrades** (`fleet`):
+   - A per-store table: main / agent / Quibase / hub versions, Pi uptime, disk, temp, SD errors, last update result.
+   - **"Safe to upgrade now?"** checks per store: no open orders, all printers up, disk and temp OK, no firing alerts, Pi connected, tablets connected; with version drift vs the newest version seen.
+5. The **Quicc Debug** folder is unchanged: stack-health, logs-explorer, online-relay, duplex-rpc, admin-catalog.

@@ -1,13 +1,13 @@
 {
   "uid": "fleet",
-  "title": "Pi & printers",
-  "description": "The in-store hardware per store: each Pi's version, heartbeat, disk, temperature and SD card, printer status and failures, tablets, SSE reconnects and the POS link.",
+  "title": "Fleet & upgrades",
+  "description": "Per store: main / agent / Quibase / hub versions and drift, Pi uptime, disk, temperature, SD errors, update results, and a per-store SAFE / WAIT upgrade check.",
   "tags": [
     "quicc",
     "quicc-core",
     "fleet",
-    "agent",
-    "printers"
+    "upgrades",
+    "versions"
   ],
   "timezone": "browser",
   "schemaVersion": 39,
@@ -24,8 +24,8 @@
   "links": [
     {
       "type": "link",
-      "title": "Live floor",
-      "url": "/d/store-live",
+      "title": "Store health",
+      "url": "/d/store-health",
       "icon": "dashboard",
       "includeVars": true,
       "keepTime": false,
@@ -36,8 +36,8 @@
     },
     {
       "type": "link",
-      "title": "Trends",
-      "url": "/d/store-trends",
+      "title": "Latency & bottlenecks",
+      "url": "/d/latency",
       "icon": "dashboard",
       "includeVars": true,
       "keepTime": false,
@@ -48,8 +48,8 @@
     },
     {
       "type": "link",
-      "title": "Order pipeline",
-      "url": "/d/pipeline",
+      "title": "Uptime & incidents",
+      "url": "/d/reliability",
       "icon": "dashboard",
       "includeVars": true,
       "keepTime": false,
@@ -107,33 +107,19 @@
         "skipUrlSync": false
       },
       {
-        "name": "pg",
-        "label": "Store database",
-        "type": "datasource",
-        "query": "grafana-postgresql-datasource",
-        "regex": "/^pg-${env}$/",
-        "current": {
-          "selected": true,
-          "text": "pg-prod",
-          "value": "pg-prod"
-        },
-        "hide": 2,
-        "refresh": 1,
-        "multi": false,
-        "includeAll": false,
-        "skipUrlSync": false,
-        "description": "Follows env: pg-prod / pg-staging (no Postgres datasource for dev)."
-      },
-      {
         "name": "store",
         "label": "Store",
         "type": "query",
         "datasource": {
-          "type": "grafana-postgresql-datasource",
-          "uid": "${pg}"
+          "type": "prometheus",
+          "uid": "prometheus"
         },
-        "definition": "SELECT DISTINCT tenant AS __value, store_name AS __text FROM reporting.stores ORDER BY 2",
-        "query": "SELECT DISTINCT tenant AS __value, store_name AS __text FROM reporting.stores ORDER BY 2",
+        "definition": "label_values(target_info{deployment_environment=\"$env\"}, tenant)",
+        "query": {
+          "qryType": 1,
+          "query": "label_values(target_info{deployment_environment=\"$env\"}, tenant)",
+          "refId": "PrometheusVariableQueryEditor-VariableQuery"
+        },
         "current": {
           "selected": true,
           "text": [
@@ -143,12 +129,14 @@
             "$__all"
           ]
         },
-        "refresh": 1,
+        "refresh": 2,
         "multi": true,
         "includeAll": true,
-        "sort": 0,
+        "sort": 1,
         "hide": 0,
-        "skipUrlSync": false
+        "regex": "",
+        "skipUrlSync": false,
+        "description": "Store slug (tenant) from the Pis' and hubs' resource labels."
       }
     ]
   },
@@ -184,8 +172,8 @@
     },
     {
       "type": "stat",
-      "title": "Pis reporting",
-      "description": "Pis that sent a heartbeat in the last 5 minutes (unlinked Pis included).",
+      "title": "Safe to upgrade now",
+      "description": "Stores passing every check in the table below. Upgrade only these now; the others say why in their red cells.",
       "datasource": {
         "type": "prometheus",
         "uid": "prometheus"
@@ -196,8 +184,8 @@
             "type": "prometheus",
             "uid": "prometheus"
           },
-          "expr": "count(max by (tenant, service_instance_id) ({__name__=~\"agent_disk_free(_bytes)?\", deployment_environment=\"$env\", tenant=~\"${store:regex}|unlinked|\"})) or vector(0)",
-          "legendFormat": "Pis",
+          "expr": "sum(((sum by (tenant) ({__name__=~\"floor_orders_open(_ratio)?\", deployment_environment=\"$env\", tenant=~\"${store:regex}|\", state=~\"new|cooking|ready|out\"}) == bool 0) or ((max by (tenant) (max_over_time({__name__=~\"agent_info(_ratio)?\", deployment_environment=\"$env\", tenant=~\"${store:regex}|\"}[1d])) or max by (tenant) (max_over_time({__name__=~\"agent_disk_free(_bytes)?\", deployment_environment=\"$env\", tenant=~\"${store:regex}|\"}[1d]))) * 0 + 0)) * ((min by (tenant) (printer_status{deployment_environment=\"$env\", tenant=~\"${store:regex}|\"}) == bool 1) or ((max by (tenant) (max_over_time({__name__=~\"agent_info(_ratio)?\", deployment_environment=\"$env\", tenant=~\"${store:regex}|\"}[1d])) or max by (tenant) (max_over_time({__name__=~\"agent_disk_free(_bytes)?\", deployment_environment=\"$env\", tenant=~\"${store:regex}|\"}[1d]))) * 0 + 0)) * ((min by (tenant) ({__name__=~\"agent_disk_free(_bytes)?\", deployment_environment=\"$env\", tenant=~\"${store:regex}|\"}) >= bool 500000000) or ((max by (tenant) (max_over_time({__name__=~\"agent_info(_ratio)?\", deployment_environment=\"$env\", tenant=~\"${store:regex}|\"}[1d])) or max by (tenant) (max_over_time({__name__=~\"agent_disk_free(_bytes)?\", deployment_environment=\"$env\", tenant=~\"${store:regex}|\"}[1d]))) * 0 + 0)) * ((max by (tenant) ({__name__=~\"agent_temp(_celsius)?\", deployment_environment=\"$env\", tenant=~\"${store:regex}|\"}) < bool 80) or ((max by (tenant) (max_over_time({__name__=~\"agent_info(_ratio)?\", deployment_environment=\"$env\", tenant=~\"${store:regex}|\"}[1d])) or max by (tenant) (max_over_time({__name__=~\"agent_disk_free(_bytes)?\", deployment_environment=\"$env\", tenant=~\"${store:regex}|\"}[1d]))) * 0 + 1)) * (((((sum by (tenant) (increase(orders_print_failed_total{deployment_environment=\"$env\", tenant=~\"${store:regex}|\"}[10m]))) > bool 0) or ((max by (tenant) (max_over_time({__name__=~\"agent_info(_ratio)?\", deployment_environment=\"$env\", tenant=~\"${store:regex}|\"}[1d])) or max by (tenant) (max_over_time({__name__=~\"agent_disk_free(_bytes)?\", deployment_environment=\"$env\", tenant=~\"${store:regex}|\"}[1d]))) * 0 + 0)) + (((max by (tenant) (orders_unacked{deployment_environment=\"$env\", tenant=~\"${store:regex}|\"})) > bool 0) or ((max by (tenant) (max_over_time({__name__=~\"agent_info(_ratio)?\", deployment_environment=\"$env\", tenant=~\"${store:regex}|\"}[1d])) or max by (tenant) (max_over_time({__name__=~\"agent_disk_free(_bytes)?\", deployment_environment=\"$env\", tenant=~\"${store:regex}|\"}[1d]))) * 0 + 0)) + (((sum by (tenant) (increase(sse_events_broadcast_total{deployment_environment=\"$env\", tenant=~\"${store:regex}|\", event_type=\"order\", result=\"no_subscribers\"}[10m]))) > bool 0) or ((max by (tenant) (max_over_time({__name__=~\"agent_info(_ratio)?\", deployment_environment=\"$env\", tenant=~\"${store:regex}|\"}[1d])) or max by (tenant) (max_over_time({__name__=~\"agent_disk_free(_bytes)?\", deployment_environment=\"$env\", tenant=~\"${store:regex}|\"}[1d]))) * 0 + 0)) + (((sum by (tenant) (increase(rpc_timeouts_total{deployment_environment=\"$env\", tenant=~\"${store:regex}|\"}[10m]))) > bool 0) or ((max by (tenant) (max_over_time({__name__=~\"agent_info(_ratio)?\", deployment_environment=\"$env\", tenant=~\"${store:regex}|\"}[1d])) or max by (tenant) (max_over_time({__name__=~\"agent_disk_free(_bytes)?\", deployment_environment=\"$env\", tenant=~\"${store:regex}|\"}[1d]))) * 0 + 0)) + (((sum by (tenant) (increase(orders_persist_failed_total{deployment_environment=\"$env\", tenant=~\"${store:regex}|\"}[10m]))) > bool 0) or ((max by (tenant) (max_over_time({__name__=~\"agent_info(_ratio)?\", deployment_environment=\"$env\", tenant=~\"${store:regex}|\"}[1d])) or max by (tenant) (max_over_time({__name__=~\"agent_disk_free(_bytes)?\", deployment_environment=\"$env\", tenant=~\"${store:regex}|\"}[1d]))) * 0 + 0)) + (((sum by (tenant) (increase(outbox_events_failed_total{deployment_environment=\"$env\", tenant=~\"${store:regex}|\"}[10m]))) > bool 0) or ((max by (tenant) (max_over_time({__name__=~\"agent_info(_ratio)?\", deployment_environment=\"$env\", tenant=~\"${store:regex}|\"}[1d])) or max by (tenant) (max_over_time({__name__=~\"agent_disk_free(_bytes)?\", deployment_environment=\"$env\", tenant=~\"${store:regex}|\"}[1d]))) * 0 + 0)) + (((sum by (tenant) (min_over_time(outbox_events_pending{deployment_environment=\"$env\", tenant=~\"${store:regex}|\"}[15m]))) > bool 0) or ((max by (tenant) (max_over_time({__name__=~\"agent_info(_ratio)?\", deployment_environment=\"$env\", tenant=~\"${store:regex}|\"}[1d])) or max by (tenant) (max_over_time({__name__=~\"agent_disk_free(_bytes)?\", deployment_environment=\"$env\", tenant=~\"${store:regex}|\"}[1d]))) * 0 + 0)) + (((max by (tenant) (min_over_time(floor_sync_backlog{deployment_environment=\"$env\", tenant=~\"${store:regex}|\"}[15m]))) > bool 0) or ((max by (tenant) (max_over_time({__name__=~\"agent_info(_ratio)?\", deployment_environment=\"$env\", tenant=~\"${store:regex}|\"}[1d])) or max by (tenant) (max_over_time({__name__=~\"agent_disk_free(_bytes)?\", deployment_environment=\"$env\", tenant=~\"${store:regex}|\"}[1d]))) * 0 + 0)) + (((max by (tenant) ({__name__=~\"agent_sd_errors(_ratio)?\", deployment_environment=\"$env\", tenant=~\"${store:regex}|\"})) > bool 0) or ((max by (tenant) (max_over_time({__name__=~\"agent_info(_ratio)?\", deployment_environment=\"$env\", tenant=~\"${store:regex}|\"}[1d])) or max by (tenant) (max_over_time({__name__=~\"agent_disk_free(_bytes)?\", deployment_environment=\"$env\", tenant=~\"${store:regex}|\"}[1d]))) * 0 + 0))) == bool 0) * (((max by (tenant) ({__name__=~\"sse_connected(_ratio)?\", deployment_environment=\"$env\", tenant=~\"${store:regex}|\"}) or (max by (tenant) (sse_clients_active{deployment_environment=\"$env\", tenant=~\"${store:regex}|\", service_name=\"quicc-main\"}) > bool 0)) == bool 1) or ((max by (tenant) (max_over_time({__name__=~\"agent_info(_ratio)?\", deployment_environment=\"$env\", tenant=~\"${store:regex}|\"}[1d])) or max by (tenant) (max_over_time({__name__=~\"agent_disk_free(_bytes)?\", deployment_environment=\"$env\", tenant=~\"${store:regex}|\"}[1d]))) * 0 + 0)) * ((max by (tenant) ({__name__=~\"floor_tablets_connected(_ratio)?\", deployment_environment=\"$env\", tenant=~\"${store:regex}|\"}) >= bool 1) or ((max by (tenant) (max_over_time({__name__=~\"agent_info(_ratio)?\", deployment_environment=\"$env\", tenant=~\"${store:regex}|\"}[1d])) or max by (tenant) (max_over_time({__name__=~\"agent_disk_free(_bytes)?\", deployment_environment=\"$env\", tenant=~\"${store:regex}|\"}[1d]))) * 0 + 0))) or vector(0)",
+          "legendFormat": "safe",
           "range": false,
           "instant": true,
           "refId": "A"
@@ -210,34 +198,21 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "red",
-                "value": null
-              },
-              {
                 "color": "green",
-                "value": 1
+                "value": null
               }
             ]
           },
           "color": {
-            "mode": "thresholds"
+            "mode": "fixed",
+            "fixedColor": "text"
           },
-          "mappings": [
-            {
-              "type": "value",
-              "options": {
-                "0": {
-                  "text": "NONE",
-                  "color": "red"
-                }
-              }
-            }
-          ]
+          "decimals": 0
         },
         "overrides": []
       },
       "options": {
-        "colorMode": "background",
+        "colorMode": "value",
         "graphMode": "none",
         "justifyMode": "center",
         "textMode": "auto",
@@ -262,8 +237,8 @@
     },
     {
       "type": "stat",
-      "title": "Pis gone quiet",
-      "description": "Pis seen in the last 24 h that have not reported for 5+ minutes. Red: that store's orders cannot ring or print — power-cycle the Pi; if it does not come back, follow deploy/pi/RECOVERY.md.",
+      "title": "Not safe now",
+      "description": "Stores failing at least one upgrade check. Red: wait, or fix the red cell first (open orders, printer, disk, link).",
       "datasource": {
         "type": "prometheus",
         "uid": "prometheus"
@@ -274,8 +249,8 @@
             "type": "prometheus",
             "uid": "prometheus"
           },
-          "expr": "count((time() - max by (tenant, service_instance_id) (max_over_time(timestamp({__name__=~\"agent_disk_free(_bytes)?\", deployment_environment=\"$env\", tenant=~\"${store:regex}|unlinked|\"})[1d:1m]))) > 300) or vector(0)",
-          "legendFormat": "quiet",
+          "expr": "count(((sum by (tenant) ({__name__=~\"floor_orders_open(_ratio)?\", deployment_environment=\"$env\", tenant=~\"${store:regex}|\", state=~\"new|cooking|ready|out\"}) == bool 0) or ((max by (tenant) (max_over_time({__name__=~\"agent_info(_ratio)?\", deployment_environment=\"$env\", tenant=~\"${store:regex}|\"}[1d])) or max by (tenant) (max_over_time({__name__=~\"agent_disk_free(_bytes)?\", deployment_environment=\"$env\", tenant=~\"${store:regex}|\"}[1d]))) * 0 + 0)) * ((min by (tenant) (printer_status{deployment_environment=\"$env\", tenant=~\"${store:regex}|\"}) == bool 1) or ((max by (tenant) (max_over_time({__name__=~\"agent_info(_ratio)?\", deployment_environment=\"$env\", tenant=~\"${store:regex}|\"}[1d])) or max by (tenant) (max_over_time({__name__=~\"agent_disk_free(_bytes)?\", deployment_environment=\"$env\", tenant=~\"${store:regex}|\"}[1d]))) * 0 + 0)) * ((min by (tenant) ({__name__=~\"agent_disk_free(_bytes)?\", deployment_environment=\"$env\", tenant=~\"${store:regex}|\"}) >= bool 500000000) or ((max by (tenant) (max_over_time({__name__=~\"agent_info(_ratio)?\", deployment_environment=\"$env\", tenant=~\"${store:regex}|\"}[1d])) or max by (tenant) (max_over_time({__name__=~\"agent_disk_free(_bytes)?\", deployment_environment=\"$env\", tenant=~\"${store:regex}|\"}[1d]))) * 0 + 0)) * ((max by (tenant) ({__name__=~\"agent_temp(_celsius)?\", deployment_environment=\"$env\", tenant=~\"${store:regex}|\"}) < bool 80) or ((max by (tenant) (max_over_time({__name__=~\"agent_info(_ratio)?\", deployment_environment=\"$env\", tenant=~\"${store:regex}|\"}[1d])) or max by (tenant) (max_over_time({__name__=~\"agent_disk_free(_bytes)?\", deployment_environment=\"$env\", tenant=~\"${store:regex}|\"}[1d]))) * 0 + 1)) * (((((sum by (tenant) (increase(orders_print_failed_total{deployment_environment=\"$env\", tenant=~\"${store:regex}|\"}[10m]))) > bool 0) or ((max by (tenant) (max_over_time({__name__=~\"agent_info(_ratio)?\", deployment_environment=\"$env\", tenant=~\"${store:regex}|\"}[1d])) or max by (tenant) (max_over_time({__name__=~\"agent_disk_free(_bytes)?\", deployment_environment=\"$env\", tenant=~\"${store:regex}|\"}[1d]))) * 0 + 0)) + (((max by (tenant) (orders_unacked{deployment_environment=\"$env\", tenant=~\"${store:regex}|\"})) > bool 0) or ((max by (tenant) (max_over_time({__name__=~\"agent_info(_ratio)?\", deployment_environment=\"$env\", tenant=~\"${store:regex}|\"}[1d])) or max by (tenant) (max_over_time({__name__=~\"agent_disk_free(_bytes)?\", deployment_environment=\"$env\", tenant=~\"${store:regex}|\"}[1d]))) * 0 + 0)) + (((sum by (tenant) (increase(sse_events_broadcast_total{deployment_environment=\"$env\", tenant=~\"${store:regex}|\", event_type=\"order\", result=\"no_subscribers\"}[10m]))) > bool 0) or ((max by (tenant) (max_over_time({__name__=~\"agent_info(_ratio)?\", deployment_environment=\"$env\", tenant=~\"${store:regex}|\"}[1d])) or max by (tenant) (max_over_time({__name__=~\"agent_disk_free(_bytes)?\", deployment_environment=\"$env\", tenant=~\"${store:regex}|\"}[1d]))) * 0 + 0)) + (((sum by (tenant) (increase(rpc_timeouts_total{deployment_environment=\"$env\", tenant=~\"${store:regex}|\"}[10m]))) > bool 0) or ((max by (tenant) (max_over_time({__name__=~\"agent_info(_ratio)?\", deployment_environment=\"$env\", tenant=~\"${store:regex}|\"}[1d])) or max by (tenant) (max_over_time({__name__=~\"agent_disk_free(_bytes)?\", deployment_environment=\"$env\", tenant=~\"${store:regex}|\"}[1d]))) * 0 + 0)) + (((sum by (tenant) (increase(orders_persist_failed_total{deployment_environment=\"$env\", tenant=~\"${store:regex}|\"}[10m]))) > bool 0) or ((max by (tenant) (max_over_time({__name__=~\"agent_info(_ratio)?\", deployment_environment=\"$env\", tenant=~\"${store:regex}|\"}[1d])) or max by (tenant) (max_over_time({__name__=~\"agent_disk_free(_bytes)?\", deployment_environment=\"$env\", tenant=~\"${store:regex}|\"}[1d]))) * 0 + 0)) + (((sum by (tenant) (increase(outbox_events_failed_total{deployment_environment=\"$env\", tenant=~\"${store:regex}|\"}[10m]))) > bool 0) or ((max by (tenant) (max_over_time({__name__=~\"agent_info(_ratio)?\", deployment_environment=\"$env\", tenant=~\"${store:regex}|\"}[1d])) or max by (tenant) (max_over_time({__name__=~\"agent_disk_free(_bytes)?\", deployment_environment=\"$env\", tenant=~\"${store:regex}|\"}[1d]))) * 0 + 0)) + (((sum by (tenant) (min_over_time(outbox_events_pending{deployment_environment=\"$env\", tenant=~\"${store:regex}|\"}[15m]))) > bool 0) or ((max by (tenant) (max_over_time({__name__=~\"agent_info(_ratio)?\", deployment_environment=\"$env\", tenant=~\"${store:regex}|\"}[1d])) or max by (tenant) (max_over_time({__name__=~\"agent_disk_free(_bytes)?\", deployment_environment=\"$env\", tenant=~\"${store:regex}|\"}[1d]))) * 0 + 0)) + (((max by (tenant) (min_over_time(floor_sync_backlog{deployment_environment=\"$env\", tenant=~\"${store:regex}|\"}[15m]))) > bool 0) or ((max by (tenant) (max_over_time({__name__=~\"agent_info(_ratio)?\", deployment_environment=\"$env\", tenant=~\"${store:regex}|\"}[1d])) or max by (tenant) (max_over_time({__name__=~\"agent_disk_free(_bytes)?\", deployment_environment=\"$env\", tenant=~\"${store:regex}|\"}[1d]))) * 0 + 0)) + (((max by (tenant) ({__name__=~\"agent_sd_errors(_ratio)?\", deployment_environment=\"$env\", tenant=~\"${store:regex}|\"})) > bool 0) or ((max by (tenant) (max_over_time({__name__=~\"agent_info(_ratio)?\", deployment_environment=\"$env\", tenant=~\"${store:regex}|\"}[1d])) or max by (tenant) (max_over_time({__name__=~\"agent_disk_free(_bytes)?\", deployment_environment=\"$env\", tenant=~\"${store:regex}|\"}[1d]))) * 0 + 0))) == bool 0) * (((max by (tenant) ({__name__=~\"sse_connected(_ratio)?\", deployment_environment=\"$env\", tenant=~\"${store:regex}|\"}) or (max by (tenant) (sse_clients_active{deployment_environment=\"$env\", tenant=~\"${store:regex}|\", service_name=\"quicc-main\"}) > bool 0)) == bool 1) or ((max by (tenant) (max_over_time({__name__=~\"agent_info(_ratio)?\", deployment_environment=\"$env\", tenant=~\"${store:regex}|\"}[1d])) or max by (tenant) (max_over_time({__name__=~\"agent_disk_free(_bytes)?\", deployment_environment=\"$env\", tenant=~\"${store:regex}|\"}[1d]))) * 0 + 0)) * ((max by (tenant) ({__name__=~\"floor_tablets_connected(_ratio)?\", deployment_environment=\"$env\", tenant=~\"${store:regex}|\"}) >= bool 1) or ((max by (tenant) (max_over_time({__name__=~\"agent_info(_ratio)?\", deployment_environment=\"$env\", tenant=~\"${store:regex}|\"}[1d])) or max by (tenant) (max_over_time({__name__=~\"agent_disk_free(_bytes)?\", deployment_environment=\"$env\", tenant=~\"${store:regex}|\"}[1d]))) * 0 + 0)) == 0) or vector(0)",
+          "legendFormat": "blocked",
           "range": false,
           "instant": true,
           "refId": "A"
@@ -303,7 +278,8 @@
           },
           "color": {
             "mode": "thresholds"
-          }
+          },
+          "decimals": 0
         },
         "overrides": []
       },
@@ -333,8 +309,8 @@
     },
     {
       "type": "stat",
-      "title": "Printers down",
-      "description": "Printers the Pis currently probe as unreachable. Tickets reroute (REROUTED banner) while one is down; red: check power, paper and the network cable.",
+      "title": "Pis gone quiet",
+      "description": "Pis seen in the last day with no report for 5+ min. Red: that store cannot ring or print; power-cycle, then deploy/pi/RECOVERY.md.",
       "datasource": {
         "type": "prometheus",
         "uid": "prometheus"
@@ -345,8 +321,8 @@
             "type": "prometheus",
             "uid": "prometheus"
           },
-          "expr": "count(max by (tenant, printer_name) (printer_status{deployment_environment=\"$env\", tenant=~\"${store:regex}|unlinked|\"}) == 0) or vector(0)",
-          "legendFormat": "down",
+          "expr": "count((time() - max by (tenant) (max_over_time(timestamp(max by (tenant) ({__name__=~\"agent_info(_ratio)?|agent_disk_free(_bytes)?\", deployment_environment=\"$env\", tenant=~\"${store:regex}|\"}))[1d:1m]))) > 300) or vector(0)",
+          "legendFormat": "quiet",
           "range": false,
           "instant": true,
           "refId": "A"
@@ -374,7 +350,8 @@
           },
           "color": {
             "mode": "thresholds"
-          }
+          },
+          "decimals": 0
         },
         "overrides": []
       },
@@ -394,6 +371,12 @@
           "values": false
         }
       },
+      "links": [
+        {
+          "title": "Uptime & incidents",
+          "url": "/d/reliability?${env:queryparam}&${store:queryparam}&${__url_time_range}"
+        }
+      ],
       "id": 4,
       "gridPos": {
         "x": 6,
@@ -404,313 +387,8 @@
     },
     {
       "type": "stat",
-      "title": "SD-card errors",
-      "description": "Most SD-card I/O errors any Pi has seen since boot. Anything above 0 means a dying card: swap in the spare card soon.",
-      "datasource": {
-        "type": "prometheus",
-        "uid": "prometheus"
-      },
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "prometheus"
-          },
-          "expr": "max({__name__=~\"agent_sd_errors(_ratio)?\", deployment_environment=\"$env\", tenant=~\"${store:regex}|unlinked|\"})",
-          "legendFormat": "errors",
-          "range": false,
-          "instant": true,
-          "refId": "A"
-        }
-      ],
-      "fieldConfig": {
-        "defaults": {
-          "unit": "short",
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              },
-              {
-                "color": "yellow",
-                "value": 1
-              },
-              {
-                "color": "red",
-                "value": 1
-              }
-            ]
-          },
-          "color": {
-            "mode": "thresholds"
-          },
-          "noValue": "–"
-        },
-        "overrides": []
-      },
-      "options": {
-        "colorMode": "background",
-        "graphMode": "none",
-        "justifyMode": "center",
-        "textMode": "auto",
-        "wideLayout": true,
-        "showPercentChange": false,
-        "orientation": "auto",
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
-          "fields": "",
-          "values": false
-        }
-      },
-      "id": 5,
-      "gridPos": {
-        "x": 9,
-        "y": 1,
-        "w": 3,
-        "h": 4
-      }
-    },
-    {
-      "type": "stat",
-      "title": "Hottest Pi",
-      "description": "Highest SoC temperature across the Pis. Over 70 °C yellow, 80 °C red (throttling): give the Pi air, move it off the oven side.",
-      "datasource": {
-        "type": "prometheus",
-        "uid": "prometheus"
-      },
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "prometheus"
-          },
-          "expr": "max({__name__=~\"agent_temp(_celsius)?\", deployment_environment=\"$env\", tenant=~\"${store:regex}|unlinked|\"})",
-          "legendFormat": "temp",
-          "range": false,
-          "instant": true,
-          "refId": "A"
-        }
-      ],
-      "fieldConfig": {
-        "defaults": {
-          "unit": "celsius",
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "text",
-                "value": null
-              },
-              {
-                "color": "green",
-                "value": 1
-              },
-              {
-                "color": "yellow",
-                "value": 70
-              },
-              {
-                "color": "red",
-                "value": 80
-              }
-            ]
-          },
-          "color": {
-            "mode": "thresholds"
-          },
-          "decimals": 0,
-          "noValue": "–"
-        },
-        "overrides": []
-      },
-      "options": {
-        "colorMode": "background",
-        "graphMode": "none",
-        "justifyMode": "center",
-        "textMode": "auto",
-        "wideLayout": true,
-        "showPercentChange": false,
-        "orientation": "auto",
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
-          "fields": "",
-          "values": false
-        }
-      },
-      "id": 6,
-      "gridPos": {
-        "x": 12,
-        "y": 1,
-        "w": 3,
-        "h": 4
-      }
-    },
-    {
-      "type": "stat",
-      "title": "Least free disk",
-      "description": "Lowest free space on any Pi's data disk. Under 1 GB yellow, 500 MB red: old batches/logs are filling the card.",
-      "datasource": {
-        "type": "prometheus",
-        "uid": "prometheus"
-      },
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "prometheus"
-          },
-          "expr": "min({__name__=~\"agent_disk_free(_bytes)?\", deployment_environment=\"$env\", tenant=~\"${store:regex}|unlinked|\"})",
-          "legendFormat": "free",
-          "range": false,
-          "instant": true,
-          "refId": "A"
-        }
-      ],
-      "fieldConfig": {
-        "defaults": {
-          "unit": "bytes",
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "text",
-                "value": null
-              },
-              {
-                "color": "red",
-                "value": 1
-              },
-              {
-                "color": "yellow",
-                "value": 500000000.0
-              },
-              {
-                "color": "green",
-                "value": 1000000000.0
-              }
-            ]
-          },
-          "color": {
-            "mode": "thresholds"
-          },
-          "decimals": 1,
-          "noValue": "–"
-        },
-        "overrides": []
-      },
-      "options": {
-        "colorMode": "background",
-        "graphMode": "none",
-        "justifyMode": "center",
-        "textMode": "auto",
-        "wideLayout": true,
-        "showPercentChange": false,
-        "orientation": "auto",
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
-          "fields": "",
-          "values": false
-        }
-      },
-      "id": 7,
-      "gridPos": {
-        "x": 15,
-        "y": 1,
-        "w": 3,
-        "h": 4
-      }
-    },
-    {
-      "type": "stat",
-      "title": "Tablets connected",
-      "description": "Paired Quibase tablets listening across the selected stores. A store with 0 will not ring — see the table below.",
-      "datasource": {
-        "type": "prometheus",
-        "uid": "prometheus"
-      },
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "prometheus"
-          },
-          "expr": "sum({__name__=~\"floor_tablets_connected(_ratio)?\", deployment_environment=\"$env\", tenant=~\"${store:regex}|unlinked|\"})",
-          "legendFormat": "tablets",
-          "range": false,
-          "instant": true,
-          "refId": "A"
-        }
-      ],
-      "fieldConfig": {
-        "defaults": {
-          "unit": "short",
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "text",
-                "value": null
-              },
-              {
-                "color": "green",
-                "value": 1
-              }
-            ]
-          },
-          "color": {
-            "mode": "thresholds"
-          },
-          "mappings": [
-            {
-              "type": "value",
-              "options": {
-                "0": {
-                  "text": "NONE",
-                  "color": "red"
-                }
-              }
-            }
-          ],
-          "noValue": "–"
-        },
-        "overrides": []
-      },
-      "options": {
-        "colorMode": "background",
-        "graphMode": "none",
-        "justifyMode": "center",
-        "textMode": "auto",
-        "wideLayout": true,
-        "showPercentChange": false,
-        "orientation": "auto",
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
-          "fields": "",
-          "values": false
-        }
-      },
-      "id": 8,
-      "gridPos": {
-        "x": 18,
-        "y": 1,
-        "w": 3,
-        "h": 4
-      }
-    },
-    {
-      "type": "stat",
       "title": "Agent versions running",
-      "description": "Distinct agent versions across the selected Pis. More than 1 (yellow) is normal mid-rollout; for long it means a Pi missed an update — use its Update button.",
+      "description": "Distinct agent versions across the selected Pis. Above 1 is normal mid-rollout; for long, a Pi missed its update.",
       "datasource": {
         "type": "prometheus",
         "uid": "prometheus"
@@ -721,7 +399,7 @@
             "type": "prometheus",
             "uid": "prometheus"
           },
-          "expr": "count(count by (version) ({__name__=~\"agent_info(_ratio)?\", deployment_environment=\"$env\", tenant=~\"${store:regex}|unlinked|\"})) or count(count by (service_version) ({__name__=~\"agent_disk_free(_bytes)?\", deployment_environment=\"$env\", tenant=~\"${store:regex}|unlinked|\"}))",
+          "expr": "count(count by (version) ({__name__=~\"agent_info(_ratio)?\", deployment_environment=\"$env\", tenant=~\"${store:regex}|\"}))",
           "legendFormat": "versions",
           "range": false,
           "instant": true,
@@ -751,7 +429,7 @@
           "color": {
             "mode": "thresholds"
           },
-          "noValue": "–"
+          "noValue": "no data"
         },
         "overrides": []
       },
@@ -760,6 +438,273 @@
         "graphMode": "none",
         "justifyMode": "center",
         "textMode": "auto",
+        "wideLayout": true,
+        "showPercentChange": false,
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        }
+      },
+      "id": 5,
+      "gridPos": {
+        "x": 9,
+        "y": 1,
+        "w": 3,
+        "h": 4
+      }
+    },
+    {
+      "type": "stat",
+      "title": "Newest agent seen",
+      "description": "The agent version that appeared most recently in prod or staging (30 days). Stores on an older one show BEHIND below.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "topk(1, min by (version) (min_over_time(timestamp(max by (version) ({__name__=~\"agent_info(_ratio)?\", deployment_environment=~\"prod|staging\"}))[30d:1h])))",
+          "legendFormat": "{{version}}",
+          "range": false,
+          "instant": true,
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "text"
+          },
+          "noValue": "no data"
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "center",
+        "textMode": "name",
+        "wideLayout": true,
+        "showPercentChange": false,
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        }
+      },
+      "id": 6,
+      "gridPos": {
+        "x": 12,
+        "y": 1,
+        "w": 3,
+        "h": 4
+      }
+    },
+    {
+      "type": "stat",
+      "title": "main version",
+      "description": "The version and commit main reports for this env. Check it matches the release you meant to deploy.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "max by (version, commit) ({__name__=~\"main_info(_ratio)?\", deployment_environment=\"$env\"})",
+          "legendFormat": "{{version}} {{commit}}",
+          "range": false,
+          "instant": true,
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "text"
+          },
+          "noValue": "not reported"
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "center",
+        "textMode": "name",
+        "wideLayout": true,
+        "showPercentChange": false,
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        }
+      },
+      "id": 7,
+      "gridPos": {
+        "x": 15,
+        "y": 1,
+        "w": 3,
+        "h": 4
+      }
+    },
+    {
+      "type": "stat",
+      "title": "Quibase versions running",
+      "description": "Distinct Quibase versions on connected tablets. Above 1 for long: a tablet missed the forced update; check it at the counter.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "count(count by (app_version) ({__name__=~\"floor_tablets_version(_ratio)?\", deployment_environment=\"$env\", tenant=~\"${store:regex}|\"} > 0))",
+          "legendFormat": "versions",
+          "range": false,
+          "instant": true,
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "text",
+                "value": null
+              },
+              {
+                "color": "green",
+                "value": 1
+              },
+              {
+                "color": "yellow",
+                "value": 2
+              }
+            ]
+          },
+          "color": {
+            "mode": "thresholds"
+          },
+          "noValue": "unknown"
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "background",
+        "graphMode": "none",
+        "justifyMode": "center",
+        "textMode": "auto",
+        "wideLayout": true,
+        "showPercentChange": false,
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        }
+      },
+      "id": 8,
+      "gridPos": {
+        "x": 18,
+        "y": 1,
+        "w": 3,
+        "h": 4
+      }
+    },
+    {
+      "type": "stat",
+      "title": "Newest Quibase seen",
+      "description": "The Quibase version that appeared most recently in prod or staging (30 days). Tablets on older ones count as behind below.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "topk(1, min by (app_version) (min_over_time(timestamp(max by (app_version) ({__name__=~\"floor_tablets_version(_ratio)?\", deployment_environment=~\"prod|staging\"}))[30d:1h])))",
+          "legendFormat": "{{app_version}}",
+          "range": false,
+          "instant": true,
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "text"
+          },
+          "noValue": "unknown"
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "center",
+        "textMode": "name",
         "wideLayout": true,
         "showPercentChange": false,
         "orientation": "auto",
@@ -782,7 +727,7 @@
     {
       "id": 10,
       "type": "row",
-      "title": "Pis",
+      "title": "Safe to upgrade now?",
       "collapsed": false,
       "gridPos": {
         "x": 0,
@@ -794,8 +739,8 @@
     },
     {
       "type": "table",
-      "title": "Pis",
-      "description": "One row per Pi: agent version, last heartbeat, disk, temperature, SD errors, tablets and POS link. Read across a red cell: last seen > 5 min = offline; SD errors > 0 = swap the card; tablets 0 = nothing rings.",
+      "title": "Upgrade checks per store",
+      "description": "One row per store: verdict, then each check's value (red = the blocker). Checks: no open orders, printers up, disk >= 500 MB, temp < 80 C, no alert conditions, Pi linked, a tablet connected.",
       "datasource": {
         "type": "prometheus",
         "uid": "prometheus"
@@ -806,7 +751,7 @@
             "type": "prometheus",
             "uid": "prometheus"
           },
-          "expr": "max by (tenant, service_instance_id, version) ({__name__=~\"agent_info(_ratio)?\", deployment_environment=\"$env\", tenant=~\"${store:regex}|unlinked|\"}) or on (tenant, service_instance_id) max by (tenant, service_instance_id, version) (label_replace({__name__=~\"agent_disk_free(_bytes)?\", deployment_environment=\"$env\", tenant=~\"${store:regex}|unlinked|\"}, \"version\", \"$1\", \"service_version\", \"(.*)\"))",
+          "expr": "((sum by (tenant) ({__name__=~\"floor_orders_open(_ratio)?\", deployment_environment=\"$env\", tenant=~\"${store:regex}|\", state=~\"new|cooking|ready|out\"}) == bool 0) or ((max by (tenant) (max_over_time({__name__=~\"agent_info(_ratio)?\", deployment_environment=\"$env\", tenant=~\"${store:regex}|\"}[1d])) or max by (tenant) (max_over_time({__name__=~\"agent_disk_free(_bytes)?\", deployment_environment=\"$env\", tenant=~\"${store:regex}|\"}[1d]))) * 0 + 0)) * ((min by (tenant) (printer_status{deployment_environment=\"$env\", tenant=~\"${store:regex}|\"}) == bool 1) or ((max by (tenant) (max_over_time({__name__=~\"agent_info(_ratio)?\", deployment_environment=\"$env\", tenant=~\"${store:regex}|\"}[1d])) or max by (tenant) (max_over_time({__name__=~\"agent_disk_free(_bytes)?\", deployment_environment=\"$env\", tenant=~\"${store:regex}|\"}[1d]))) * 0 + 0)) * ((min by (tenant) ({__name__=~\"agent_disk_free(_bytes)?\", deployment_environment=\"$env\", tenant=~\"${store:regex}|\"}) >= bool 500000000) or ((max by (tenant) (max_over_time({__name__=~\"agent_info(_ratio)?\", deployment_environment=\"$env\", tenant=~\"${store:regex}|\"}[1d])) or max by (tenant) (max_over_time({__name__=~\"agent_disk_free(_bytes)?\", deployment_environment=\"$env\", tenant=~\"${store:regex}|\"}[1d]))) * 0 + 0)) * ((max by (tenant) ({__name__=~\"agent_temp(_celsius)?\", deployment_environment=\"$env\", tenant=~\"${store:regex}|\"}) < bool 80) or ((max by (tenant) (max_over_time({__name__=~\"agent_info(_ratio)?\", deployment_environment=\"$env\", tenant=~\"${store:regex}|\"}[1d])) or max by (tenant) (max_over_time({__name__=~\"agent_disk_free(_bytes)?\", deployment_environment=\"$env\", tenant=~\"${store:regex}|\"}[1d]))) * 0 + 1)) * (((((sum by (tenant) (increase(orders_print_failed_total{deployment_environment=\"$env\", tenant=~\"${store:regex}|\"}[10m]))) > bool 0) or ((max by (tenant) (max_over_time({__name__=~\"agent_info(_ratio)?\", deployment_environment=\"$env\", tenant=~\"${store:regex}|\"}[1d])) or max by (tenant) (max_over_time({__name__=~\"agent_disk_free(_bytes)?\", deployment_environment=\"$env\", tenant=~\"${store:regex}|\"}[1d]))) * 0 + 0)) + (((max by (tenant) (orders_unacked{deployment_environment=\"$env\", tenant=~\"${store:regex}|\"})) > bool 0) or ((max by (tenant) (max_over_time({__name__=~\"agent_info(_ratio)?\", deployment_environment=\"$env\", tenant=~\"${store:regex}|\"}[1d])) or max by (tenant) (max_over_time({__name__=~\"agent_disk_free(_bytes)?\", deployment_environment=\"$env\", tenant=~\"${store:regex}|\"}[1d]))) * 0 + 0)) + (((sum by (tenant) (increase(sse_events_broadcast_total{deployment_environment=\"$env\", tenant=~\"${store:regex}|\", event_type=\"order\", result=\"no_subscribers\"}[10m]))) > bool 0) or ((max by (tenant) (max_over_time({__name__=~\"agent_info(_ratio)?\", deployment_environment=\"$env\", tenant=~\"${store:regex}|\"}[1d])) or max by (tenant) (max_over_time({__name__=~\"agent_disk_free(_bytes)?\", deployment_environment=\"$env\", tenant=~\"${store:regex}|\"}[1d]))) * 0 + 0)) + (((sum by (tenant) (increase(rpc_timeouts_total{deployment_environment=\"$env\", tenant=~\"${store:regex}|\"}[10m]))) > bool 0) or ((max by (tenant) (max_over_time({__name__=~\"agent_info(_ratio)?\", deployment_environment=\"$env\", tenant=~\"${store:regex}|\"}[1d])) or max by (tenant) (max_over_time({__name__=~\"agent_disk_free(_bytes)?\", deployment_environment=\"$env\", tenant=~\"${store:regex}|\"}[1d]))) * 0 + 0)) + (((sum by (tenant) (increase(orders_persist_failed_total{deployment_environment=\"$env\", tenant=~\"${store:regex}|\"}[10m]))) > bool 0) or ((max by (tenant) (max_over_time({__name__=~\"agent_info(_ratio)?\", deployment_environment=\"$env\", tenant=~\"${store:regex}|\"}[1d])) or max by (tenant) (max_over_time({__name__=~\"agent_disk_free(_bytes)?\", deployment_environment=\"$env\", tenant=~\"${store:regex}|\"}[1d]))) * 0 + 0)) + (((sum by (tenant) (increase(outbox_events_failed_total{deployment_environment=\"$env\", tenant=~\"${store:regex}|\"}[10m]))) > bool 0) or ((max by (tenant) (max_over_time({__name__=~\"agent_info(_ratio)?\", deployment_environment=\"$env\", tenant=~\"${store:regex}|\"}[1d])) or max by (tenant) (max_over_time({__name__=~\"agent_disk_free(_bytes)?\", deployment_environment=\"$env\", tenant=~\"${store:regex}|\"}[1d]))) * 0 + 0)) + (((sum by (tenant) (min_over_time(outbox_events_pending{deployment_environment=\"$env\", tenant=~\"${store:regex}|\"}[15m]))) > bool 0) or ((max by (tenant) (max_over_time({__name__=~\"agent_info(_ratio)?\", deployment_environment=\"$env\", tenant=~\"${store:regex}|\"}[1d])) or max by (tenant) (max_over_time({__name__=~\"agent_disk_free(_bytes)?\", deployment_environment=\"$env\", tenant=~\"${store:regex}|\"}[1d]))) * 0 + 0)) + (((max by (tenant) (min_over_time(floor_sync_backlog{deployment_environment=\"$env\", tenant=~\"${store:regex}|\"}[15m]))) > bool 0) or ((max by (tenant) (max_over_time({__name__=~\"agent_info(_ratio)?\", deployment_environment=\"$env\", tenant=~\"${store:regex}|\"}[1d])) or max by (tenant) (max_over_time({__name__=~\"agent_disk_free(_bytes)?\", deployment_environment=\"$env\", tenant=~\"${store:regex}|\"}[1d]))) * 0 + 0)) + (((max by (tenant) ({__name__=~\"agent_sd_errors(_ratio)?\", deployment_environment=\"$env\", tenant=~\"${store:regex}|\"})) > bool 0) or ((max by (tenant) (max_over_time({__name__=~\"agent_info(_ratio)?\", deployment_environment=\"$env\", tenant=~\"${store:regex}|\"}[1d])) or max by (tenant) (max_over_time({__name__=~\"agent_disk_free(_bytes)?\", deployment_environment=\"$env\", tenant=~\"${store:regex}|\"}[1d]))) * 0 + 0))) == bool 0) * (((max by (tenant) ({__name__=~\"sse_connected(_ratio)?\", deployment_environment=\"$env\", tenant=~\"${store:regex}|\"}) or (max by (tenant) (sse_clients_active{deployment_environment=\"$env\", tenant=~\"${store:regex}|\", service_name=\"quicc-main\"}) > bool 0)) == bool 1) or ((max by (tenant) (max_over_time({__name__=~\"agent_info(_ratio)?\", deployment_environment=\"$env\", tenant=~\"${store:regex}|\"}[1d])) or max by (tenant) (max_over_time({__name__=~\"agent_disk_free(_bytes)?\", deployment_environment=\"$env\", tenant=~\"${store:regex}|\"}[1d]))) * 0 + 0)) * ((max by (tenant) ({__name__=~\"floor_tablets_connected(_ratio)?\", deployment_environment=\"$env\", tenant=~\"${store:regex}|\"}) >= bool 1) or ((max by (tenant) (max_over_time({__name__=~\"agent_info(_ratio)?\", deployment_environment=\"$env\", tenant=~\"${store:regex}|\"}[1d])) or max by (tenant) (max_over_time({__name__=~\"agent_disk_free(_bytes)?\", deployment_environment=\"$env\", tenant=~\"${store:regex}|\"}[1d]))) * 0 + 0))",
           "legendFormat": "",
           "range": false,
           "instant": true,
@@ -818,7 +763,7 @@
             "type": "prometheus",
             "uid": "prometheus"
           },
-          "expr": "time() - max by (tenant, service_instance_id) (max_over_time(timestamp({__name__=~\"agent_disk_free(_bytes)?\", deployment_environment=\"$env\", tenant=~\"${store:regex}|unlinked|\"})[1d:1m]))",
+          "expr": "sum by (tenant) ({__name__=~\"floor_orders_open(_ratio)?\", deployment_environment=\"$env\", tenant=~\"${store:regex}|\", state=~\"new|cooking|ready|out\"})",
           "legendFormat": "",
           "range": false,
           "instant": true,
@@ -830,7 +775,7 @@
             "type": "prometheus",
             "uid": "prometheus"
           },
-          "expr": "max by (tenant, service_instance_id) ({__name__=~\"agent_disk_free(_bytes)?\", deployment_environment=\"$env\", tenant=~\"${store:regex}|unlinked|\"})",
+          "expr": "sum by (tenant) (printer_status{deployment_environment=\"$env\", tenant=~\"${store:regex}|\"} == bool 0)",
           "legendFormat": "",
           "range": false,
           "instant": true,
@@ -842,7 +787,7 @@
             "type": "prometheus",
             "uid": "prometheus"
           },
-          "expr": "max by (tenant, service_instance_id) ({__name__=~\"agent_temp(_celsius)?\", deployment_environment=\"$env\", tenant=~\"${store:regex}|unlinked|\"})",
+          "expr": "min by (tenant) ({__name__=~\"agent_disk_free(_bytes)?\", deployment_environment=\"$env\", tenant=~\"${store:regex}|\"})",
           "legendFormat": "",
           "range": false,
           "instant": true,
@@ -854,7 +799,7 @@
             "type": "prometheus",
             "uid": "prometheus"
           },
-          "expr": "max by (tenant, service_instance_id) ({__name__=~\"agent_sd_errors(_ratio)?\", deployment_environment=\"$env\", tenant=~\"${store:regex}|unlinked|\"})",
+          "expr": "max by (tenant) ({__name__=~\"agent_temp(_celsius)?\", deployment_environment=\"$env\", tenant=~\"${store:regex}|\"})",
           "legendFormat": "",
           "range": false,
           "instant": true,
@@ -866,7 +811,7 @@
             "type": "prometheus",
             "uid": "prometheus"
           },
-          "expr": "max by (tenant, service_instance_id) ({__name__=~\"floor_tablets_connected(_ratio)?\", deployment_environment=\"$env\", tenant=~\"${store:regex}|unlinked|\"})",
+          "expr": "(((sum by (tenant) (increase(orders_print_failed_total{deployment_environment=\"$env\", tenant=~\"${store:regex}|\"}[10m]))) > bool 0) or ((max by (tenant) (max_over_time({__name__=~\"agent_info(_ratio)?\", deployment_environment=\"$env\", tenant=~\"${store:regex}|\"}[1d])) or max by (tenant) (max_over_time({__name__=~\"agent_disk_free(_bytes)?\", deployment_environment=\"$env\", tenant=~\"${store:regex}|\"}[1d]))) * 0 + 0)) + (((max by (tenant) (orders_unacked{deployment_environment=\"$env\", tenant=~\"${store:regex}|\"})) > bool 0) or ((max by (tenant) (max_over_time({__name__=~\"agent_info(_ratio)?\", deployment_environment=\"$env\", tenant=~\"${store:regex}|\"}[1d])) or max by (tenant) (max_over_time({__name__=~\"agent_disk_free(_bytes)?\", deployment_environment=\"$env\", tenant=~\"${store:regex}|\"}[1d]))) * 0 + 0)) + (((sum by (tenant) (increase(sse_events_broadcast_total{deployment_environment=\"$env\", tenant=~\"${store:regex}|\", event_type=\"order\", result=\"no_subscribers\"}[10m]))) > bool 0) or ((max by (tenant) (max_over_time({__name__=~\"agent_info(_ratio)?\", deployment_environment=\"$env\", tenant=~\"${store:regex}|\"}[1d])) or max by (tenant) (max_over_time({__name__=~\"agent_disk_free(_bytes)?\", deployment_environment=\"$env\", tenant=~\"${store:regex}|\"}[1d]))) * 0 + 0)) + (((sum by (tenant) (increase(rpc_timeouts_total{deployment_environment=\"$env\", tenant=~\"${store:regex}|\"}[10m]))) > bool 0) or ((max by (tenant) (max_over_time({__name__=~\"agent_info(_ratio)?\", deployment_environment=\"$env\", tenant=~\"${store:regex}|\"}[1d])) or max by (tenant) (max_over_time({__name__=~\"agent_disk_free(_bytes)?\", deployment_environment=\"$env\", tenant=~\"${store:regex}|\"}[1d]))) * 0 + 0)) + (((sum by (tenant) (increase(orders_persist_failed_total{deployment_environment=\"$env\", tenant=~\"${store:regex}|\"}[10m]))) > bool 0) or ((max by (tenant) (max_over_time({__name__=~\"agent_info(_ratio)?\", deployment_environment=\"$env\", tenant=~\"${store:regex}|\"}[1d])) or max by (tenant) (max_over_time({__name__=~\"agent_disk_free(_bytes)?\", deployment_environment=\"$env\", tenant=~\"${store:regex}|\"}[1d]))) * 0 + 0)) + (((sum by (tenant) (increase(outbox_events_failed_total{deployment_environment=\"$env\", tenant=~\"${store:regex}|\"}[10m]))) > bool 0) or ((max by (tenant) (max_over_time({__name__=~\"agent_info(_ratio)?\", deployment_environment=\"$env\", tenant=~\"${store:regex}|\"}[1d])) or max by (tenant) (max_over_time({__name__=~\"agent_disk_free(_bytes)?\", deployment_environment=\"$env\", tenant=~\"${store:regex}|\"}[1d]))) * 0 + 0)) + (((sum by (tenant) (min_over_time(outbox_events_pending{deployment_environment=\"$env\", tenant=~\"${store:regex}|\"}[15m]))) > bool 0) or ((max by (tenant) (max_over_time({__name__=~\"agent_info(_ratio)?\", deployment_environment=\"$env\", tenant=~\"${store:regex}|\"}[1d])) or max by (tenant) (max_over_time({__name__=~\"agent_disk_free(_bytes)?\", deployment_environment=\"$env\", tenant=~\"${store:regex}|\"}[1d]))) * 0 + 0)) + (((max by (tenant) (min_over_time(floor_sync_backlog{deployment_environment=\"$env\", tenant=~\"${store:regex}|\"}[15m]))) > bool 0) or ((max by (tenant) (max_over_time({__name__=~\"agent_info(_ratio)?\", deployment_environment=\"$env\", tenant=~\"${store:regex}|\"}[1d])) or max by (tenant) (max_over_time({__name__=~\"agent_disk_free(_bytes)?\", deployment_environment=\"$env\", tenant=~\"${store:regex}|\"}[1d]))) * 0 + 0)) + (((max by (tenant) ({__name__=~\"agent_sd_errors(_ratio)?\", deployment_environment=\"$env\", tenant=~\"${store:regex}|\"})) > bool 0) or ((max by (tenant) (max_over_time({__name__=~\"agent_info(_ratio)?\", deployment_environment=\"$env\", tenant=~\"${store:regex}|\"}[1d])) or max by (tenant) (max_over_time({__name__=~\"agent_disk_free(_bytes)?\", deployment_environment=\"$env\", tenant=~\"${store:regex}|\"}[1d]))) * 0 + 0))",
           "legendFormat": "",
           "range": false,
           "instant": true,
@@ -878,7 +823,7 @@
             "type": "prometheus",
             "uid": "prometheus"
           },
-          "expr": "min by (tenant, service_instance_id) ({__name__=~\"hub_link_up(_ratio)?\", deployment_environment=\"$env\", tenant=~\"${store:regex}|unlinked|\"})",
+          "expr": "(max by (tenant) ({__name__=~\"sse_connected(_ratio)?\", deployment_environment=\"$env\", tenant=~\"${store:regex}|\"}) or (max by (tenant) (sse_clients_active{deployment_environment=\"$env\", tenant=~\"${store:regex}|\", service_name=\"quicc-main\"}) > bool 0))",
           "legendFormat": "",
           "range": false,
           "instant": true,
@@ -890,7 +835,7 @@
             "type": "prometheus",
             "uid": "prometheus"
           },
-          "expr": "max by (tenant, service_instance_id) (sum by (tenant, service_instance_id, printer_name) (printer_status{deployment_environment=\"$env\", tenant=~\"${store:regex}|unlinked|\"}))",
+          "expr": "max by (tenant) ({__name__=~\"floor_tablets_connected(_ratio)?\", deployment_environment=\"$env\", tenant=~\"${store:regex}|\"})",
           "legendFormat": "",
           "range": false,
           "instant": true,
@@ -902,12 +847,1074 @@
             "type": "prometheus",
             "uid": "prometheus"
           },
-          "expr": "sum by (tenant, service_instance_id) (increase(sse_reconnects_total{deployment_environment=\"$env\", tenant=~\"${store:regex}|unlinked|\"}[24h]))",
+          "expr": "max by (tenant, version) ({__name__=~\"agent_info(_ratio)?\", deployment_environment=\"$env\", tenant=~\"${store:regex}|\"})",
           "legendFormat": "",
           "range": false,
           "instant": true,
           "format": "table",
           "refId": "I"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "(scalar(max(min by (version) (min_over_time(timestamp(max by (version) ({__name__=~\"agent_info(_ratio)?\", deployment_environment=~\"prod|staging\"}))[30d:1h])))) - min by (tenant) (max by (tenant, version) ({__name__=~\"agent_info(_ratio)?\", deployment_environment=\"$env\", tenant=~\"${store:regex}|\"}) * on (version) group_left min by (version) (min_over_time(timestamp(max by (version) ({__name__=~\"agent_info(_ratio)?\", deployment_environment=~\"prod|staging\"}))[30d:1h])))) > bool 0",
+          "legendFormat": "",
+          "range": false,
+          "instant": true,
+          "format": "table",
+          "refId": "J"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "align": "auto",
+            "cellOptions": {
+              "type": "auto"
+            },
+            "filterable": false
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "color": {
+            "mode": "thresholds"
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "verdict"
+            },
+            "properties": [
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "color-background",
+                  "mode": "basic"
+                }
+              },
+              {
+                "id": "custom.width",
+                "value": 110
+              },
+              {
+                "id": "mappings",
+                "value": [
+                  {
+                    "type": "value",
+                    "options": {
+                      "1": {
+                        "text": "SAFE",
+                        "color": "green"
+                      }
+                    }
+                  },
+                  {
+                    "type": "value",
+                    "options": {
+                      "0": {
+                        "text": "WAIT",
+                        "color": "red"
+                      }
+                    }
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "open orders"
+            },
+            "properties": [
+              {
+                "id": "decimals",
+                "value": 0
+              },
+              {
+                "id": "thresholds",
+                "value": {
+                  "mode": "absolute",
+                  "steps": [
+                    {
+                      "color": "green",
+                      "value": null
+                    },
+                    {
+                      "color": "red",
+                      "value": 1
+                    }
+                  ]
+                }
+              },
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "color-background",
+                  "mode": "basic"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "printers down"
+            },
+            "properties": [
+              {
+                "id": "decimals",
+                "value": 0
+              },
+              {
+                "id": "thresholds",
+                "value": {
+                  "mode": "absolute",
+                  "steps": [
+                    {
+                      "color": "green",
+                      "value": null
+                    },
+                    {
+                      "color": "red",
+                      "value": 1
+                    }
+                  ]
+                }
+              },
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "color-background",
+                  "mode": "basic"
+                }
+              },
+              {
+                "id": "noValue",
+                "value": "none"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "disk free"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "bytes"
+              },
+              {
+                "id": "decimals",
+                "value": 1
+              },
+              {
+                "id": "thresholds",
+                "value": {
+                  "mode": "absolute",
+                  "steps": [
+                    {
+                      "color": "red",
+                      "value": null
+                    },
+                    {
+                      "color": "green",
+                      "value": 500000000.0
+                    }
+                  ]
+                }
+              },
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "color-background",
+                  "mode": "basic"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "temp"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "celsius"
+              },
+              {
+                "id": "decimals",
+                "value": 0
+              },
+              {
+                "id": "thresholds",
+                "value": {
+                  "mode": "absolute",
+                  "steps": [
+                    {
+                      "color": "green",
+                      "value": null
+                    },
+                    {
+                      "color": "red",
+                      "value": 80
+                    }
+                  ]
+                }
+              },
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "color-background",
+                  "mode": "basic"
+                }
+              },
+              {
+                "id": "noValue",
+                "value": "n/a"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "alert conditions"
+            },
+            "properties": [
+              {
+                "id": "decimals",
+                "value": 0
+              },
+              {
+                "id": "thresholds",
+                "value": {
+                  "mode": "absolute",
+                  "steps": [
+                    {
+                      "color": "green",
+                      "value": null
+                    },
+                    {
+                      "color": "red",
+                      "value": 1
+                    }
+                  ]
+                }
+              },
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "color-background",
+                  "mode": "basic"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Pi link"
+            },
+            "properties": [
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "color-background",
+                  "mode": "basic"
+                }
+              },
+              {
+                "id": "mappings",
+                "value": [
+                  {
+                    "type": "value",
+                    "options": {
+                      "1": {
+                        "text": "UP",
+                        "color": "green"
+                      }
+                    }
+                  },
+                  {
+                    "type": "value",
+                    "options": {
+                      "0": {
+                        "text": "DOWN",
+                        "color": "red"
+                      }
+                    }
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "tablets"
+            },
+            "properties": [
+              {
+                "id": "decimals",
+                "value": 0
+              },
+              {
+                "id": "thresholds",
+                "value": {
+                  "mode": "absolute",
+                  "steps": [
+                    {
+                      "color": "red",
+                      "value": null
+                    },
+                    {
+                      "color": "green",
+                      "value": 1
+                    }
+                  ]
+                }
+              },
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "color-background",
+                  "mode": "basic"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "agent behind"
+            },
+            "properties": [
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "color-text"
+                }
+              },
+              {
+                "id": "mappings",
+                "value": [
+                  {
+                    "type": "value",
+                    "options": {
+                      "0": {
+                        "text": "latest",
+                        "color": "green"
+                      }
+                    }
+                  },
+                  {
+                    "type": "value",
+                    "options": {
+                      "1": {
+                        "text": "BEHIND",
+                        "color": "orange"
+                      }
+                    }
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "showHeader": true,
+        "cellHeight": "sm",
+        "footer": {
+          "show": false,
+          "reducer": [
+            "sum"
+          ],
+          "countRows": false,
+          "fields": ""
+        },
+        "sortBy": [
+          {
+            "displayName": "verdict",
+            "desc": false
+          }
+        ]
+      },
+      "transformations": [
+        {
+          "id": "merge",
+          "options": {}
+        },
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {
+              "Time": true,
+              "Value #I": true
+            },
+            "indexByName": {
+              "tenant": 0,
+              "Value #A": 1,
+              "Value #B": 2,
+              "Value #C": 3,
+              "Value #D": 4,
+              "Value #E": 5,
+              "Value #F": 6,
+              "Value #G": 7,
+              "Value #H": 8,
+              "Value #I": 9,
+              "Value #J": 10,
+              "version": 11
+            },
+            "renameByName": {
+              "tenant": "store",
+              "version": "agent version",
+              "Value #A": "verdict",
+              "Value #B": "open orders",
+              "Value #C": "printers down",
+              "Value #D": "disk free",
+              "Value #E": "temp",
+              "Value #F": "alert conditions",
+              "Value #G": "Pi link",
+              "Value #H": "tablets",
+              "Value #I": "_ver",
+              "Value #J": "agent behind"
+            }
+          }
+        }
+      ],
+      "id": 11,
+      "gridPos": {
+        "x": 0,
+        "y": 6,
+        "w": 24,
+        "h": 7
+      }
+    },
+    {
+      "type": "alertlist",
+      "title": "Alerts firing now",
+      "description": "Grafana alert rules firing or pending for this env. Anything here is a reason to wait with an upgrade.",
+      "options": {
+        "viewMode": "list",
+        "groupMode": "default",
+        "groupBy": [],
+        "maxItems": 10,
+        "sortOrder": 1,
+        "dashboardAlerts": false,
+        "alertName": "",
+        "showInstances": true,
+        "alertInstanceLabelFilter": "{deployment_environment=\"$env\"}",
+        "stateFilter": {
+          "firing": true,
+          "pending": true,
+          "noData": false,
+          "normal": false,
+          "error": true
+        }
+      },
+      "id": 12,
+      "gridPos": {
+        "x": 0,
+        "y": 13,
+        "w": 8,
+        "h": 8
+      }
+    },
+    {
+      "type": "table",
+      "title": "Quibase tablets per version",
+      "description": "Connected tablets by store and Quibase version. Tablets behind the newest version lock until they update; a stuck one needs a look.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "sum by (tenant, app_version) ({__name__=~\"floor_tablets_version(_ratio)?\", deployment_environment=\"$env\", tenant=~\"${store:regex}|\"})",
+          "legendFormat": "",
+          "range": false,
+          "instant": true,
+          "format": "table",
+          "refId": "A"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "sum by (tenant) ({__name__=~\"floor_tablets_version(_ratio)?\", deployment_environment=\"$env\", tenant=~\"${store:regex}|\"} * on (app_version) group_left () (min by (app_version) (min_over_time(timestamp(max by (app_version) ({__name__=~\"floor_tablets_version(_ratio)?\", deployment_environment=~\"prod|staging\"}))[30d:1h])) < bool scalar(max(min by (app_version) (min_over_time(timestamp(max by (app_version) ({__name__=~\"floor_tablets_version(_ratio)?\", deployment_environment=~\"prod|staging\"}))[30d:1h]))))))",
+          "legendFormat": "",
+          "range": false,
+          "instant": true,
+          "format": "table",
+          "refId": "B"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "align": "auto",
+            "cellOptions": {
+              "type": "auto"
+            },
+            "filterable": false
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "color": {
+            "mode": "thresholds"
+          },
+          "noValue": "unknown (no tablet versions reported yet)"
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "store tablets behind"
+            },
+            "properties": [
+              {
+                "id": "decimals",
+                "value": 0
+              },
+              {
+                "id": "thresholds",
+                "value": {
+                  "mode": "absolute",
+                  "steps": [
+                    {
+                      "color": "green",
+                      "value": null
+                    },
+                    {
+                      "color": "orange",
+                      "value": 1
+                    }
+                  ]
+                }
+              },
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "color-text"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "showHeader": true,
+        "cellHeight": "sm",
+        "footer": {
+          "show": false,
+          "reducer": [
+            "sum"
+          ],
+          "countRows": false,
+          "fields": ""
+        }
+      },
+      "transformations": [
+        {
+          "id": "merge",
+          "options": {}
+        },
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {
+              "Time": true
+            },
+            "renameByName": {
+              "tenant": "store",
+              "app_version": "Quibase",
+              "Value #A": "tablets",
+              "Value #B": "store tablets behind"
+            }
+          }
+        }
+      ],
+      "id": 13,
+      "gridPos": {
+        "x": 8,
+        "y": 13,
+        "w": 8,
+        "h": 8
+      }
+    },
+    {
+      "type": "table",
+      "title": "Hub per store",
+      "description": "Hub version, link and SoftTouch state per store. BEHIND: a newer hub is running elsewhere; upgrade during closed hours.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "max by (tenant, version) ({__name__=~\"hub_info(_ratio)?\", deployment_environment=\"$env\", tenant=~\"${store:regex}|\"})",
+          "legendFormat": "",
+          "range": false,
+          "instant": true,
+          "format": "table",
+          "refId": "A"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "(scalar(max(min by (version) (min_over_time(timestamp(max by (version) ({__name__=~\"hub_info(_ratio)?\", deployment_environment=~\"prod|staging\"}))[30d:1h])))) - min by (tenant) (max by (tenant, version) ({__name__=~\"hub_info(_ratio)?\", deployment_environment=\"$env\", tenant=~\"${store:regex}|\"}) * on (version) group_left min by (version) (min_over_time(timestamp(max by (version) ({__name__=~\"hub_info(_ratio)?\", deployment_environment=~\"prod|staging\"}))[30d:1h])))) > bool 0",
+          "legendFormat": "",
+          "range": false,
+          "instant": true,
+          "format": "table",
+          "refId": "B"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "min by (tenant) ({__name__=~\"hub_link_up(_ratio)?\", deployment_environment=\"$env\", tenant=~\"${store:regex}|\"})",
+          "legendFormat": "",
+          "range": false,
+          "instant": true,
+          "format": "table",
+          "refId": "C"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "min by (tenant) ({__name__=~\"hub_softtouch_up(_ratio)?\", deployment_environment=\"$env\", tenant=~\"${store:regex}|\"})",
+          "legendFormat": "",
+          "range": false,
+          "instant": true,
+          "format": "table",
+          "refId": "D"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "min by (tenant) ({__name__=~\"hub_agent_up(_ratio)?\", deployment_environment=\"$env\", tenant=~\"${store:regex}|\"})",
+          "legendFormat": "",
+          "range": false,
+          "instant": true,
+          "format": "table",
+          "refId": "E"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "align": "auto",
+            "cellOptions": {
+              "type": "auto"
+            },
+            "filterable": false
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "color": {
+            "mode": "thresholds"
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "hub behind"
+            },
+            "properties": [
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "color-text"
+                }
+              },
+              {
+                "id": "mappings",
+                "value": [
+                  {
+                    "type": "value",
+                    "options": {
+                      "0": {
+                        "text": "latest",
+                        "color": "green"
+                      }
+                    }
+                  },
+                  {
+                    "type": "value",
+                    "options": {
+                      "1": {
+                        "text": "BEHIND",
+                        "color": "orange"
+                      }
+                    }
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "POS link"
+            },
+            "properties": [
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "color-text"
+                }
+              },
+              {
+                "id": "mappings",
+                "value": [
+                  {
+                    "type": "value",
+                    "options": {
+                      "1": {
+                        "text": "UP",
+                        "color": "green"
+                      }
+                    }
+                  },
+                  {
+                    "type": "value",
+                    "options": {
+                      "0": {
+                        "text": "DOWN",
+                        "color": "red"
+                      }
+                    }
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "SoftTouch"
+            },
+            "properties": [
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "color-text"
+                }
+              },
+              {
+                "id": "mappings",
+                "value": [
+                  {
+                    "type": "value",
+                    "options": {
+                      "1": {
+                        "text": "UP",
+                        "color": "green"
+                      }
+                    }
+                  },
+                  {
+                    "type": "value",
+                    "options": {
+                      "0": {
+                        "text": "DOWN",
+                        "color": "red"
+                      }
+                    }
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "hub sees Pi"
+            },
+            "properties": [
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "color-text"
+                }
+              },
+              {
+                "id": "mappings",
+                "value": [
+                  {
+                    "type": "value",
+                    "options": {
+                      "1": {
+                        "text": "UP",
+                        "color": "green"
+                      }
+                    }
+                  },
+                  {
+                    "type": "value",
+                    "options": {
+                      "0": {
+                        "text": "DOWN",
+                        "color": "red"
+                      }
+                    }
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "showHeader": true,
+        "cellHeight": "sm",
+        "footer": {
+          "show": false,
+          "reducer": [
+            "sum"
+          ],
+          "countRows": false,
+          "fields": ""
+        }
+      },
+      "transformations": [
+        {
+          "id": "merge",
+          "options": {}
+        },
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {
+              "Time": true,
+              "Value #A": true
+            },
+            "indexByName": {
+              "tenant": 0,
+              "version": 1,
+              "Value #B": 2,
+              "Value #C": 3,
+              "Value #D": 4,
+              "Value #E": 5
+            },
+            "renameByName": {
+              "tenant": "store",
+              "version": "hub version",
+              "Value #B": "hub behind",
+              "Value #C": "POS link",
+              "Value #D": "SoftTouch",
+              "Value #E": "hub sees Pi"
+            }
+          }
+        }
+      ],
+      "id": 14,
+      "gridPos": {
+        "x": 16,
+        "y": 13,
+        "w": 8,
+        "h": 8
+      }
+    },
+    {
+      "id": 15,
+      "type": "row",
+      "title": "Pis: versions & hardware",
+      "collapsed": false,
+      "gridPos": {
+        "x": 0,
+        "y": 21,
+        "w": 24,
+        "h": 1
+      },
+      "panels": []
+    },
+    {
+      "type": "table",
+      "title": "Pis",
+      "description": "One row per store's Pi. Red cells: last seen over 5 min (offline), disk under 500 MB, temp over 80 C, SD errors above 0 (swap the card), failed updates.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "max by (tenant, version) ({__name__=~\"agent_info(_ratio)?\", deployment_environment=\"$env\", tenant=~\"${store:regex}|\"})",
+          "legendFormat": "",
+          "range": false,
+          "instant": true,
+          "format": "table",
+          "refId": "A"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "time() - max by (tenant) (max_over_time(timestamp(max by (tenant) ({__name__=~\"agent_info(_ratio)?|agent_disk_free(_bytes)?\", deployment_environment=\"$env\", tenant=~\"${store:regex}|\"}))[1d:1m]))",
+          "legendFormat": "",
+          "range": false,
+          "instant": true,
+          "format": "table",
+          "refId": "B"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "max by (tenant) (agent_uptime_seconds{deployment_environment=\"$env\", tenant=~\"${store:regex}|\"})",
+          "legendFormat": "",
+          "range": false,
+          "instant": true,
+          "format": "table",
+          "refId": "C"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "max by (tenant) (host_uptime_seconds{deployment_environment=\"$env\", tenant=~\"${store:regex}|\"})",
+          "legendFormat": "",
+          "range": false,
+          "instant": true,
+          "format": "table",
+          "refId": "D"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "min by (tenant) ({__name__=~\"agent_disk_free(_bytes)?\", deployment_environment=\"$env\", tenant=~\"${store:regex}|\"})",
+          "legendFormat": "",
+          "range": false,
+          "instant": true,
+          "format": "table",
+          "refId": "E"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "max by (tenant) ({__name__=~\"agent_temp(_celsius)?\", deployment_environment=\"$env\", tenant=~\"${store:regex}|\"})",
+          "legendFormat": "",
+          "range": false,
+          "instant": true,
+          "format": "table",
+          "refId": "F"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "max by (tenant) ({__name__=~\"agent_sd_errors(_ratio)?\", deployment_environment=\"$env\", tenant=~\"${store:regex}|\"})",
+          "legendFormat": "",
+          "range": false,
+          "instant": true,
+          "format": "table",
+          "refId": "G"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "time() - max by (tenant) ({__name__=~\"agent_update_last_success(_seconds)?\", deployment_environment=\"$env\", tenant=~\"${store:regex}|\"})",
+          "legendFormat": "",
+          "range": false,
+          "instant": true,
+          "format": "table",
+          "refId": "H"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "sum by (tenant) (increase(agent_update_runs_total{deployment_environment=\"$env\", tenant=~\"${store:regex}|\", result=\"ok\"}[30d]))",
+          "legendFormat": "",
+          "range": false,
+          "instant": true,
+          "format": "table",
+          "refId": "I"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "sum by (tenant) (increase(agent_update_runs_total{deployment_environment=\"$env\", tenant=~\"${store:regex}|\", result=~\"rolled_back|failed\"}[30d]))",
+          "legendFormat": "",
+          "range": false,
+          "instant": true,
+          "format": "table",
+          "refId": "J"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "sum by (tenant) (increase(sse_reconnects_total{deployment_environment=\"$env\", tenant=~\"${store:regex}|\"}[24h]))",
+          "legendFormat": "",
+          "range": false,
+          "instant": true,
+          "format": "table",
+          "refId": "K"
         }
       ],
       "fieldConfig": {
@@ -973,6 +1980,38 @@
                   "type": "color-background",
                   "mode": "basic"
                 }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "agent uptime"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "s"
+              },
+              {
+                "id": "decimals",
+                "value": 0
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Pi uptime"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "s"
+              },
+              {
+                "id": "decimals",
+                "value": 0
               }
             ]
           },
@@ -1102,7 +2141,39 @@
           {
             "matcher": {
               "id": "byName",
-              "options": "tablets"
+              "options": "last good update"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "s"
+              },
+              {
+                "id": "decimals",
+                "value": 0
+              },
+              {
+                "id": "noValue",
+                "value": "never"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "updates ok 30d"
+            },
+            "properties": [
+              {
+                "id": "decimals",
+                "value": 0
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "updates failed 30d"
             },
             "properties": [
               {
@@ -1115,11 +2186,15 @@
                   "mode": "absolute",
                   "steps": [
                     {
-                      "color": "red",
+                      "color": "green",
                       "value": null
                     },
                     {
-                      "color": "green",
+                      "color": "yellow",
+                      "value": 1
+                    },
+                    {
+                      "color": "red",
                       "value": 1
                     }
                   ]
@@ -1136,48 +2211,7 @@
           {
             "matcher": {
               "id": "byName",
-              "options": "POS link"
-            },
-            "properties": [
-              {
-                "id": "mappings",
-                "value": [
-                  {
-                    "type": "value",
-                    "options": {
-                      "1": {
-                        "text": "UP",
-                        "color": "green"
-                      }
-                    }
-                  },
-                  {
-                    "type": "value",
-                    "options": {
-                      "0": {
-                        "text": "DOWN",
-                        "color": "red"
-                      }
-                    }
-                  }
-                ]
-              },
-              {
-                "id": "custom.cellOptions",
-                "value": {
-                  "type": "color-text"
-                }
-              },
-              {
-                "id": "noValue",
-                "value": "no hub"
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "SSE reconnects 24h"
+              "options": "reconnects 24h"
             },
             "properties": [
               {
@@ -1211,18 +2245,6 @@
                 }
               }
             ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "printers up"
-            },
-            "properties": [
-              {
-                "id": "decimals",
-                "value": 0
-              }
-            ]
           }
         ]
       },
@@ -1252,146 +2274,60 @@
             },
             "indexByName": {
               "tenant": 0,
-              "service_instance_id": 1,
-              "version": 2,
-              "Value #B": 3,
-              "Value #C": 4,
-              "Value #D": 5,
-              "Value #E": 6,
-              "Value #F": 7,
+              "version": 1,
+              "Value #B": 2,
+              "Value #C": 3,
+              "Value #D": 4,
+              "Value #E": 5,
+              "Value #F": 6,
+              "Value #G": 7,
               "Value #H": 8,
-              "Value #G": 9,
-              "Value #I": 10
+              "Value #I": 9,
+              "Value #J": 10,
+              "Value #K": 11
             },
             "renameByName": {
               "tenant": "store",
-              "service_instance_id": "Pi",
+              "version": "agent version",
               "Value #B": "last seen",
-              "Value #C": "disk free",
-              "Value #D": "temp",
-              "Value #E": "SD errors",
-              "Value #F": "tablets",
-              "Value #G": "POS link",
-              "Value #H": "printers up",
-              "Value #I": "SSE reconnects 24h"
+              "Value #C": "agent uptime",
+              "Value #D": "Pi uptime",
+              "Value #E": "disk free",
+              "Value #F": "temp",
+              "Value #G": "SD errors",
+              "Value #H": "last good update",
+              "Value #I": "updates ok 30d",
+              "Value #J": "updates failed 30d",
+              "Value #K": "reconnects 24h"
             }
           }
         }
       ],
-      "id": 11,
+      "id": 16,
       "gridPos": {
         "x": 0,
-        "y": 6,
+        "y": 22,
         "w": 24,
         "h": 7
       }
     },
     {
-      "id": 12,
+      "id": 17,
       "type": "row",
-      "title": "Printers",
+      "title": "Rollouts & hardware over time",
       "collapsed": false,
       "gridPos": {
         "x": 0,
-        "y": 13,
+        "y": 29,
         "w": 24,
         "h": 1
       },
       "panels": []
     },
     {
-      "type": "state-timeline",
-      "title": "Printer status",
-      "description": "Each printer's reachability over time as probed by the Pi. Red stretches are outages (tickets were rerouted); frequent short flips mean a loose cable or a weak network link to that printer.",
-      "datasource": {
-        "type": "prometheus",
-        "uid": "prometheus"
-      },
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "prometheus"
-          },
-          "expr": "max by (tenant, printer_name) (printer_status{deployment_environment=\"$env\", tenant=~\"${store:regex}|unlinked|\"})",
-          "legendFormat": "{{tenant}} · {{printer_name}}",
-          "range": true,
-          "instant": false,
-          "refId": "A"
-        }
-      ],
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "thresholds"
-          },
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "red",
-                "value": null
-              },
-              {
-                "color": "green",
-                "value": 1
-              }
-            ]
-          },
-          "mappings": [
-            {
-              "type": "value",
-              "options": {
-                "1": {
-                  "text": "UP",
-                  "color": "green"
-                }
-              }
-            },
-            {
-              "type": "value",
-              "options": {
-                "0": {
-                  "text": "DOWN",
-                  "color": "red"
-                }
-              }
-            }
-          ],
-          "custom": {
-            "fillOpacity": 80,
-            "lineWidth": 0
-          }
-        },
-        "overrides": []
-      },
-      "options": {
-        "showValue": "never",
-        "mergeValues": true,
-        "alignValue": "left",
-        "rowHeight": 0.8,
-        "legend": {
-          "showLegend": false,
-          "displayMode": "list",
-          "placement": "bottom"
-        },
-        "tooltip": {
-          "mode": "single",
-          "sort": "none"
-        }
-      },
-      "id": 13,
-      "gridPos": {
-        "x": 0,
-        "y": 14,
-        "w": 24,
-        "h": 7
-      }
-    },
-    {
       "type": "timeseries",
-      "title": "Print failures",
-      "description": "Print attempts where some ticket printed nowhere, by reason (no_printer / write_error / ticket_failed) and store. Any bar is a ticket the kitchen may not have — check the tablet and resend.",
+      "title": "Pis per agent version",
+      "description": "How many Pis run each agent version. A rollout shows as one band handing over to the next; a band that lingers is a Pi that did not update.",
       "datasource": {
         "type": "prometheus",
         "uid": "prometheus"
@@ -1402,8 +2338,8 @@
             "type": "prometheus",
             "uid": "prometheus"
           },
-          "expr": "sum by (tenant, reason) (increase(orders_print_failed_total{deployment_environment=\"$env\", tenant=~\"${store:regex}|unlinked|\"}[$__interval]))",
-          "legendFormat": "{{tenant}} {{reason}}",
+          "expr": "count by (version) ({__name__=~\"agent_info(_ratio)?\", deployment_environment=\"$env\", tenant=~\"${store:regex}|\"})",
+          "legendFormat": "{{version}}",
           "range": true,
           "instant": false,
           "refId": "A"
@@ -1412,156 +2348,6 @@
       "fieldConfig": {
         "defaults": {
           "unit": "short",
-          "custom": {
-            "drawStyle": "bars",
-            "lineWidth": 2,
-            "fillOpacity": 70,
-            "showPoints": "never",
-            "spanNulls": false,
-            "barAlignment": 0,
-            "gradientMode": "none",
-            "stacking": {
-              "mode": "normal",
-              "group": "A"
-            },
-            "axisSoftMin": 0
-          },
-          "color": {
-            "mode": "palette-classic"
-          },
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              }
-            ]
-          },
-          "decimals": 0
-        },
-        "overrides": []
-      },
-      "options": {
-        "legend": {
-          "displayMode": "list",
-          "placement": "bottom",
-          "showLegend": true,
-          "calcs": []
-        },
-        "tooltip": {
-          "mode": "multi",
-          "sort": "desc"
-        }
-      },
-      "interval": "5m",
-      "id": 14,
-      "gridPos": {
-        "x": 0,
-        "y": 21,
-        "w": 12,
-        "h": 8
-      }
-    },
-    {
-      "type": "timeseries",
-      "title": "Print errors per printer",
-      "description": "Prints that failed at a specific printer (error / detect_failed). One printer dominating = that printer's hardware or network.",
-      "datasource": {
-        "type": "prometheus",
-        "uid": "prometheus"
-      },
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "prometheus"
-          },
-          "expr": "sum by (tenant, printer_name, result) (increase(orders_printed_total{deployment_environment=\"$env\", tenant=~\"${store:regex}|unlinked|\", result!=\"ok\"}[$__interval]))",
-          "legendFormat": "{{tenant}} {{printer_name}} {{result}}",
-          "range": true,
-          "instant": false,
-          "refId": "A"
-        }
-      ],
-      "fieldConfig": {
-        "defaults": {
-          "unit": "short",
-          "custom": {
-            "drawStyle": "bars",
-            "lineWidth": 2,
-            "fillOpacity": 70,
-            "showPoints": "never",
-            "spanNulls": false,
-            "barAlignment": 0,
-            "gradientMode": "none",
-            "stacking": {
-              "mode": "normal",
-              "group": "A"
-            },
-            "axisSoftMin": 0
-          },
-          "color": {
-            "mode": "palette-classic"
-          },
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              }
-            ]
-          },
-          "decimals": 0
-        },
-        "overrides": []
-      },
-      "options": {
-        "legend": {
-          "displayMode": "list",
-          "placement": "bottom",
-          "showLegend": true,
-          "calcs": []
-        },
-        "tooltip": {
-          "mode": "multi",
-          "sort": "desc"
-        }
-      },
-      "interval": "5m",
-      "id": 15,
-      "gridPos": {
-        "x": 12,
-        "y": 21,
-        "w": 12,
-        "h": 8
-      }
-    },
-    {
-      "type": "timeseries",
-      "title": "Printer write time p95",
-      "description": "TCP write latency to each printer. A printer creeping up toward seconds is about to drop off the network.",
-      "datasource": {
-        "type": "prometheus",
-        "uid": "prometheus"
-      },
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "prometheus"
-          },
-          "expr": "histogram_quantile(0.95, sum by (le, tenant, printer_name) (rate(printer_write_duration_milliseconds_bucket{deployment_environment=\"$env\", tenant=~\"${store:regex}|unlinked|\"}[$__rate_interval])))",
-          "legendFormat": "{{tenant}} {{printer_name}}",
-          "range": true,
-          "instant": false,
-          "refId": "A"
-        }
-      ],
-      "fieldConfig": {
-        "defaults": {
-          "unit": "ms",
           "custom": {
             "drawStyle": "line",
             "lineWidth": 2,
@@ -1571,7 +2357,7 @@
             "barAlignment": 0,
             "gradientMode": "none",
             "stacking": {
-              "mode": "none",
+              "mode": "normal",
               "group": "A"
             },
             "axisSoftMin": 0
@@ -1587,7 +2373,8 @@
                 "value": null
               }
             ]
-          }
+          },
+          "decimals": 0
         },
         "overrides": []
       },
@@ -1603,18 +2390,18 @@
           "sort": "desc"
         }
       },
-      "id": 16,
+      "id": 18,
       "gridPos": {
         "x": 0,
-        "y": 29,
-        "w": 12,
+        "y": 30,
+        "w": 8,
         "h": 8
       }
     },
     {
       "type": "timeseries",
-      "title": "Reprints & kitchen resends",
-      "description": "Receipt reprints and kitchen-ticket resends by where they came from. A rise in kitchen_resend means tickets are getting lost (paper out, printer down) — staff are working around a printer problem.",
+      "title": "Tablets per Quibase version",
+      "description": "Connected tablets per Quibase version. After a release the old band should drain within minutes as tablets self-update.",
       "datasource": {
         "type": "prometheus",
         "uid": "prometheus"
@@ -1625,11 +2412,107 @@
             "type": "prometheus",
             "uid": "prometheus"
           },
-          "expr": "sum by (tenant, source) (increase(orders_reprinted_total{deployment_environment=\"$env\", tenant=~\"${store:regex}|unlinked|\"}[$__interval]))",
-          "legendFormat": "{{tenant}} {{source}}",
+          "expr": "sum by (app_version) ({__name__=~\"floor_tablets_version(_ratio)?\", deployment_environment=\"$env\", tenant=~\"${store:regex}|\"})",
+          "legendFormat": "{{app_version}}",
           "range": true,
           "instant": false,
           "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 2,
+            "fillOpacity": 10,
+            "showPoints": "never",
+            "spanNulls": false,
+            "barAlignment": 0,
+            "gradientMode": "none",
+            "stacking": {
+              "mode": "normal",
+              "group": "A"
+            },
+            "axisSoftMin": 0
+          },
+          "color": {
+            "mode": "palette-classic"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "decimals": 0
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true,
+          "calcs": []
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "id": 19,
+      "gridPos": {
+        "x": 8,
+        "y": 30,
+        "w": 8,
+        "h": 8
+      }
+    },
+    {
+      "type": "timeseries",
+      "title": "Updates and restarts",
+      "description": "Agent update runs by result, and agent/Pi restarts (uptime resets). Restarts without an update mean crashes or power loss.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "sum by (tenant, result) (increase(agent_update_runs_total{deployment_environment=\"$env\", tenant=~\"${store:regex}|\"}[$__interval]))",
+          "legendFormat": "update {{result}} {{tenant}}",
+          "range": true,
+          "instant": false,
+          "refId": "A"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "sum by (tenant) (resets(agent_uptime_seconds{deployment_environment=\"$env\", tenant=~\"${store:regex}|\"}[$__interval]))",
+          "legendFormat": "agent restart {{tenant}}",
+          "range": true,
+          "instant": false,
+          "refId": "B"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "sum by (tenant) (resets(host_uptime_seconds{deployment_environment=\"$env\", tenant=~\"${store:regex}|\"}[$__interval]))",
+          "legendFormat": "Pi reboot {{tenant}}",
+          "range": true,
+          "instant": false,
+          "refId": "C"
         }
       ],
       "fieldConfig": {
@@ -1678,368 +2561,18 @@
         }
       },
       "interval": "15m",
-      "id": 17,
-      "gridPos": {
-        "x": 12,
-        "y": 29,
-        "w": 12,
-        "h": 8
-      }
-    },
-    {
-      "id": 18,
-      "type": "row",
-      "title": "Connectivity",
-      "collapsed": false,
-      "gridPos": {
-        "x": 0,
-        "y": 37,
-        "w": 24,
-        "h": 1
-      },
-      "panels": []
-    },
-    {
-      "type": "timeseries",
-      "title": "SSE reconnects per hour",
-      "description": "How often each Pi had to reconnect to main. A few per day is normal; a steady stream means the store's internet or main is unstable.",
-      "datasource": {
-        "type": "prometheus",
-        "uid": "prometheus"
-      },
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "prometheus"
-          },
-          "expr": "sum by (tenant) (increase(sse_reconnects_total{deployment_environment=\"$env\", tenant=~\"${store:regex}|unlinked|\"}[1h]))",
-          "legendFormat": "{{tenant}}",
-          "range": true,
-          "instant": false,
-          "refId": "A"
-        }
-      ],
-      "fieldConfig": {
-        "defaults": {
-          "unit": "short",
-          "custom": {
-            "drawStyle": "line",
-            "lineWidth": 2,
-            "fillOpacity": 10,
-            "showPoints": "never",
-            "spanNulls": false,
-            "barAlignment": 0,
-            "gradientMode": "none",
-            "stacking": {
-              "mode": "none",
-              "group": "A"
-            },
-            "axisSoftMin": 0
-          },
-          "color": {
-            "mode": "palette-classic"
-          },
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              }
-            ]
-          },
-          "decimals": 0
-        },
-        "overrides": []
-      },
-      "options": {
-        "legend": {
-          "displayMode": "list",
-          "placement": "bottom",
-          "showLegend": true,
-          "calcs": []
-        },
-        "tooltip": {
-          "mode": "multi",
-          "sort": "desc"
-        }
-      },
-      "id": 19,
-      "gridPos": {
-        "x": 0,
-        "y": 38,
-        "w": 12,
-        "h": 8
-      }
-    },
-    {
-      "type": "timeseries",
-      "title": "Tablets connected",
-      "description": "Paired tablets on each Pi's live stream. Dropping to 0 during open hours means nothing rang for new orders.",
-      "datasource": {
-        "type": "prometheus",
-        "uid": "prometheus"
-      },
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "prometheus"
-          },
-          "expr": "sum by (tenant) ({__name__=~\"floor_tablets_connected(_ratio)?\", deployment_environment=\"$env\", tenant=~\"${store:regex}|unlinked|\"})",
-          "legendFormat": "{{tenant}}",
-          "range": true,
-          "instant": false,
-          "refId": "A"
-        }
-      ],
-      "fieldConfig": {
-        "defaults": {
-          "unit": "short",
-          "custom": {
-            "drawStyle": "line",
-            "lineWidth": 2,
-            "fillOpacity": 10,
-            "showPoints": "never",
-            "spanNulls": false,
-            "barAlignment": 0,
-            "gradientMode": "none",
-            "stacking": {
-              "mode": "none",
-              "group": "A"
-            },
-            "axisSoftMin": 0,
-            "thresholdsStyle": {
-              "mode": "dashed"
-            }
-          },
-          "color": {
-            "mode": "palette-classic"
-          },
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "red",
-                "value": null
-              },
-              {
-                "color": "transparent",
-                "value": 1
-              }
-            ]
-          },
-          "decimals": 0
-        },
-        "overrides": []
-      },
-      "options": {
-        "legend": {
-          "displayMode": "list",
-          "placement": "bottom",
-          "showLegend": true,
-          "calcs": []
-        },
-        "tooltip": {
-          "mode": "multi",
-          "sort": "desc"
-        }
-      },
       "id": 20,
       "gridPos": {
-        "x": 12,
-        "y": 38,
-        "w": 12,
+        "x": 16,
+        "y": 30,
+        "w": 8,
         "h": 8
       }
-    },
-    {
-      "type": "state-timeline",
-      "title": "POS link",
-      "description": "Whether each store's hub could reach the SoftTouch POS. Red stretches = POS orders stopped appearing on the tablet; restart quicc-hub on the store box if it stays down.",
-      "datasource": {
-        "type": "prometheus",
-        "uid": "prometheus"
-      },
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "prometheus"
-          },
-          "expr": "min by (tenant) ({__name__=~\"hub_link_up(_ratio)?\", deployment_environment=\"$env\", tenant=~\"${store:regex}|unlinked|\"})",
-          "legendFormat": "{{tenant}}",
-          "range": true,
-          "instant": false,
-          "refId": "A"
-        }
-      ],
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "thresholds"
-          },
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "red",
-                "value": null
-              },
-              {
-                "color": "green",
-                "value": 1
-              }
-            ]
-          },
-          "mappings": [
-            {
-              "type": "value",
-              "options": {
-                "1": {
-                  "text": "UP",
-                  "color": "green"
-                }
-              }
-            },
-            {
-              "type": "value",
-              "options": {
-                "0": {
-                  "text": "DOWN",
-                  "color": "red"
-                }
-              }
-            }
-          ],
-          "custom": {
-            "fillOpacity": 80,
-            "lineWidth": 0
-          }
-        },
-        "overrides": []
-      },
-      "options": {
-        "showValue": "never",
-        "mergeValues": true,
-        "alignValue": "left",
-        "rowHeight": 0.8,
-        "legend": {
-          "showLegend": false,
-          "displayMode": "list",
-          "placement": "bottom"
-        },
-        "tooltip": {
-          "mode": "single",
-          "sort": "none"
-        }
-      },
-      "id": 21,
-      "gridPos": {
-        "x": 0,
-        "y": 46,
-        "w": 12,
-        "h": 6
-      }
-    },
-    {
-      "type": "timeseries",
-      "title": "POS status age",
-      "description": "Seconds since each store's hub last reported to its Pi. Above 5 min (red line) the hub is stuck or off.",
-      "datasource": {
-        "type": "prometheus",
-        "uid": "prometheus"
-      },
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "prometheus"
-          },
-          "expr": "max by (tenant) (hub_status_age_seconds{deployment_environment=\"$env\", tenant=~\"${store:regex}|unlinked|\"})",
-          "legendFormat": "{{tenant}}",
-          "range": true,
-          "instant": false,
-          "refId": "A"
-        }
-      ],
-      "fieldConfig": {
-        "defaults": {
-          "unit": "s",
-          "custom": {
-            "drawStyle": "line",
-            "lineWidth": 2,
-            "fillOpacity": 10,
-            "showPoints": "never",
-            "spanNulls": false,
-            "barAlignment": 0,
-            "gradientMode": "none",
-            "stacking": {
-              "mode": "none",
-              "group": "A"
-            },
-            "axisSoftMin": 0,
-            "thresholdsStyle": {
-              "mode": "dashed"
-            }
-          },
-          "color": {
-            "mode": "palette-classic"
-          },
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "transparent",
-                "value": null
-              },
-              {
-                "color": "red",
-                "value": 300
-              }
-            ]
-          }
-        },
-        "overrides": []
-      },
-      "options": {
-        "legend": {
-          "displayMode": "list",
-          "placement": "bottom",
-          "showLegend": true,
-          "calcs": []
-        },
-        "tooltip": {
-          "mode": "multi",
-          "sort": "desc"
-        }
-      },
-      "id": 22,
-      "gridPos": {
-        "x": 12,
-        "y": 46,
-        "w": 12,
-        "h": 6
-      }
-    },
-    {
-      "id": 23,
-      "type": "row",
-      "title": "Pi hardware",
-      "collapsed": false,
-      "gridPos": {
-        "x": 0,
-        "y": 52,
-        "w": 24,
-        "h": 1
-      },
-      "panels": []
     },
     {
       "type": "timeseries",
       "title": "Temperature",
-      "description": "SoC temperature per Pi. Sustained 80 °C (red line) throttles the Pi.",
+      "description": "SoC temperature per Pi. Sustained 80 C (red line) throttles the Pi; move it away from heat.",
       "datasource": {
         "type": "prometheus",
         "uid": "prometheus"
@@ -2050,7 +2583,7 @@
             "type": "prometheus",
             "uid": "prometheus"
           },
-          "expr": "max by (tenant) ({__name__=~\"agent_temp(_celsius)?\", deployment_environment=\"$env\", tenant=~\"${store:regex}|unlinked|\"})",
+          "expr": "max by (tenant) ({__name__=~\"agent_temp(_celsius)?\", deployment_environment=\"$env\", tenant=~\"${store:regex}|\"})",
           "legendFormat": "{{tenant}}",
           "range": true,
           "instant": false,
@@ -2108,10 +2641,10 @@
           "sort": "desc"
         }
       },
-      "id": 24,
+      "id": 21,
       "gridPos": {
         "x": 0,
-        "y": 53,
+        "y": 38,
         "w": 8,
         "h": 7
       }
@@ -2119,7 +2652,7 @@
     {
       "type": "timeseries",
       "title": "Disk free",
-      "description": "Free bytes on each Pi's data disk. A steady downward slope reaching 500 MB (red line) needs attention before the card fills.",
+      "description": "Free bytes on each Pi's data disk. A steady slope toward 500 MB (red line) needs a cleanup before the card fills.",
       "datasource": {
         "type": "prometheus",
         "uid": "prometheus"
@@ -2130,7 +2663,7 @@
             "type": "prometheus",
             "uid": "prometheus"
           },
-          "expr": "min by (tenant) ({__name__=~\"agent_disk_free(_bytes)?\", deployment_environment=\"$env\", tenant=~\"${store:regex}|unlinked|\"})",
+          "expr": "min by (tenant) ({__name__=~\"agent_disk_free(_bytes)?\", deployment_environment=\"$env\", tenant=~\"${store:regex}|\"})",
           "legendFormat": "{{tenant}}",
           "range": true,
           "instant": false,
@@ -2188,10 +2721,10 @@
           "sort": "desc"
         }
       },
-      "id": 25,
+      "id": 22,
       "gridPos": {
         "x": 8,
-        "y": 53,
+        "y": 38,
         "w": 8,
         "h": 7
       }
@@ -2199,7 +2732,7 @@
     {
       "type": "timeseries",
       "title": "SD-card errors",
-      "description": "SD-card I/O errors since boot per Pi. Any step up means the card is failing — swap in the spare.",
+      "description": "SD-card I/O errors since boot per Pi. Any step up means the card is failing; swap in the spare.",
       "datasource": {
         "type": "prometheus",
         "uid": "prometheus"
@@ -2210,7 +2743,7 @@
             "type": "prometheus",
             "uid": "prometheus"
           },
-          "expr": "max by (tenant) ({__name__=~\"agent_sd_errors(_ratio)?\", deployment_environment=\"$env\", tenant=~\"${store:regex}|unlinked|\"})",
+          "expr": "max by (tenant) ({__name__=~\"agent_sd_errors(_ratio)?\", deployment_environment=\"$env\", tenant=~\"${store:regex}|\"})",
           "legendFormat": "{{tenant}}",
           "range": true,
           "instant": false,
@@ -2269,22 +2802,22 @@
           "sort": "desc"
         }
       },
-      "id": 26,
+      "id": 23,
       "gridPos": {
         "x": 16,
-        "y": 53,
+        "y": 38,
         "w": 8,
         "h": 7
       }
     },
     {
-      "id": 27,
+      "id": 24,
       "type": "row",
       "title": "Pi logs",
       "collapsed": false,
       "gridPos": {
         "x": 0,
-        "y": 60,
+        "y": 45,
         "w": 24,
         "h": 1
       },
@@ -2292,8 +2825,8 @@
     },
     {
       "type": "logs",
-      "title": "Pi warnings & errors",
-      "description": "Warning and error lines from the selected stores' Pis. Printer, SSE and sync problems show up here first; click a TraceID to open the trace.",
+      "title": "Pi and hub warnings & errors",
+      "description": "Warning and error lines from the selected stores' Pis and hubs. Update, printer and link problems show here first.",
       "datasource": {
         "type": "loki",
         "uid": "loki"
@@ -2306,7 +2839,7 @@
             "uid": "loki"
           },
           "queryType": "range",
-          "expr": "{deployment_environment=\"$env\", service_name=\"quicc-agent\"} | detected_level=~\"warn|error|fatal|panic\" | tenant=~\"${store:regex}|unlinked|\""
+          "expr": "{deployment_environment=\"$env\", service_name=~\"quicc-(agent|hub)\"} | detected_level=~\"warn|error|fatal|panic\" | tenant=~\"${store:regex}|\""
         }
       ],
       "options": {
@@ -2324,10 +2857,10 @@
           "targetBlank": false
         }
       ],
-      "id": 28,
+      "id": 25,
       "gridPos": {
         "x": 0,
-        "y": 61,
+        "y": 46,
         "w": 24,
         "h": 9
       }

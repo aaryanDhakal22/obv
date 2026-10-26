@@ -1,5 +1,14 @@
 apiVersion: 1
 
+# The Postgres reporting datasources (pg-prod / pg-staging) are gone: every
+# number reaches Grafana over OTLP (TENANT-SCOPING.md). Listed here so a Grafana
+# that provisioned them earlier drops them too.
+deleteDatasources:
+  - name: pg-prod
+    orgId: 1
+  - name: pg-staging
+    orgId: 1
+
 datasources:
   - name: Tempo
     type: tempo
@@ -68,47 +77,3 @@ datasources:
       exemplarTraceIdDestinations:
         - name: trace_id
           datasourceUid: tempo
-
-  # main's Postgres, read through the `reporting` views only (no PII). Role
-  # grafana_ro has USAGE on schema reporting + SELECT on its views and nothing
-  # on public (observability/postgres/grafana-ro.sql; TENANT-SCOPING.md §2).
-  # Connection values come from the `obv` Doppler config via docker-compose;
-  # left empty, the datasource still provisions and its panels just error.
-  # The store dashboards pick one through the `pg` variable (/^pg-${env}$/).
-  - name: pg-prod
-    type: grafana-postgresql-datasource
-    uid: pg-prod
-    access: proxy
-    url: ${GRAFANA_PG_PROD_URL}            # host:port
-    user: grafana_ro
-    jsonData:
-      database: ${GRAFANA_PG_PROD_DB}
-      sslmode: disable
-      postgresVersion: 1500
-      timescaledb: false
-      timeInterval: 1m
-      maxOpenConns: 5
-      maxIdleConns: 2
-      connMaxLifetime: 14400
-    secureJsonData:
-      password: ${GRAFANA_PG_PROD_PASSWORD}
-    editable: false
-
-  - name: pg-staging
-    type: grafana-postgresql-datasource
-    uid: pg-staging
-    access: proxy
-    url: ${GRAFANA_PG_STAGING_URL}         # host:port
-    user: grafana_ro
-    jsonData:
-      database: ${GRAFANA_PG_STAGING_DB}
-      sslmode: disable
-      postgresVersion: 1500
-      timescaledb: false
-      timeInterval: 1m
-      maxOpenConns: 5
-      maxIdleConns: 2
-      connMaxLifetime: 14400
-    secureJsonData:
-      password: ${GRAFANA_PG_STAGING_PASSWORD}
-    editable: false
