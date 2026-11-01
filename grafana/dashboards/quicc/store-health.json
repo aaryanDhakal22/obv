@@ -58,6 +58,18 @@
       "tooltip": ""
     },
     {
+      "type": "link",
+      "title": "Store floor & devices",
+      "url": "/d/store-floor",
+      "icon": "dashboard",
+      "includeVars": true,
+      "keepTime": false,
+      "asDropdown": false,
+      "targetBlank": false,
+      "tags": [],
+      "tooltip": ""
+    },
+    {
       "type": "dashboards",
       "title": "Debug",
       "tags": [
@@ -1843,8 +1855,8 @@
     },
     {
       "type": "stat",
-      "title": "Ingest p95",
-      "description": "Vendor placed_at to saved in main (online relay + SQS). Red over 30 s: see SQS wait on the Latency dashboard.",
+      "title": "Vendor → saved p95",
+      "description": "Vendor placed_at to saved in main. Mostly the vendor's own hand-over delay (normally 1–4 min) plus up to 59 s because its timestamp has no seconds; our part (online relay + SQS) is SQS wait, under a second. Red over 10 min: ask the vendor; if SQS wait is also high, it's us.",
       "datasource": {
         "type": "prometheus",
         "uid": "prometheus"
@@ -1874,18 +1886,18 @@
               },
               {
                 "color": "yellow",
-                "value": 10
+                "value": 300
               },
               {
                 "color": "red",
-                "value": 30
+                "value": 600
               }
             ]
           },
           "color": {
             "mode": "thresholds"
           },
-          "decimals": 1,
+          "decimals": 0,
           "noValue": "no data"
         },
         "overrides": []
@@ -2535,7 +2547,7 @@
     {
       "type": "timeseries",
       "title": "Machine hops p95",
-      "description": "p95 of each automated hop (rolling 15 min). The line that jumps is the bottleneck; open Latency & bottlenecks for p50/p99.",
+      "description": "p95 of each automated hop we run (rolling 15 min). The line that jumps is the bottleneck; open Latency & bottlenecks for p50/p99. The vendor's hand-over delay (Vendor → saved) is left out: it is minutes, not ours, and would flatten the other lines.",
       "datasource": {
         "type": "prometheus",
         "uid": "prometheus"
@@ -2546,8 +2558,8 @@
             "type": "prometheus",
             "uid": "prometheus"
           },
-          "expr": "histogram_quantile(0.95, sum by (le) (rate({__name__=~\"orders_ingest_latency(_seconds)?_bucket\", deployment_environment=\"$env\", tenant=~\"${store:regex}|\"}[15m])))",
-          "legendFormat": "Ingest",
+          "expr": "histogram_quantile(0.95, sum by (le) (rate({__name__=~\"sqs_message_age(_seconds)?_bucket\", deployment_environment=\"$env\"}[15m])))",
+          "legendFormat": "SQS wait",
           "range": true,
           "instant": false,
           "refId": "A"

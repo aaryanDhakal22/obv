@@ -58,6 +58,18 @@
       "tooltip": ""
     },
     {
+      "type": "link",
+      "title": "Store floor & devices",
+      "url": "/d/store-floor",
+      "icon": "dashboard",
+      "includeVars": true,
+      "keepTime": false,
+      "asDropdown": false,
+      "targetBlank": false,
+      "tags": [],
+      "tooltip": ""
+    },
+    {
       "type": "dashboards",
       "title": "Debug",
       "tags": [

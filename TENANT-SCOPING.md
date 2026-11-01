@@ -24,7 +24,7 @@ The `store` variable is `label_values(target_info{deployment_environment="$env"}
 Existing instruments are listed in `contract/main.md` §7.2 and `contract/agent.md` §7.1; the ones below are **new**. Durations are histograms in seconds. Use buckets that suit each hop: sub-second hops get 0.05…30 s, human hops get 5…1800 s.
 
 ### main (each carries `tenant`/`location`)
-- `orders.ingest.latency` (s, `source`): the vendor's `placed_at` → persisted in main. It covers the online relay and SQS. It's clamped at 0 to absorb clock skew.
+- `orders.ingest.latency` (s, `source`): the vendor's `placed_at` → persisted in main. It covers the online relay and SQS, but mostly measures the vendor's own hand-over delay (1–4 min, measured 2026-11-01; the vendor's timestamp has minute precision, adding up to 59 s). Dashboards call it **Vendor → saved**. It's clamped at 0 to absorb clock skew.
 - `sqs.message.age` (s): the SQS `SentTimestamp` → received by main. This is the queue wait, readable without CloudWatch. Before routing the store is unknown, so it has no tenant.
 - `sqs.receive.errors` (counter, `reason`): `ReceiveMessage` failures, which today are only logged.
 - `orders.dispatch.latency` (s): persisted → the order frame delivered over SSE (the outbox lag).
