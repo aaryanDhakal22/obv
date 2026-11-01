@@ -58,6 +58,18 @@
       "tooltip": ""
     },
     {
+      "type": "link",
+      "title": "Store floor & devices",
+      "url": "/d/store-floor",
+      "icon": "dashboard",
+      "includeVars": true,
+      "keepTime": false,
+      "asDropdown": false,
+      "targetBlank": false,
+      "tags": [],
+      "tooltip": ""
+    },
+    {
       "type": "dashboards",
       "title": "Debug",
       "tags": [
@@ -244,8 +256,8 @@
     },
     {
       "type": "stat",
-      "title": "Ingest p95",
-      "description": "Vendor placed_at to saved in main, incl. the online relay and SQS. Red over 30 s: compare with SQS wait to find the slow part.",
+      "title": "Vendor → saved p95",
+      "description": "Vendor placed_at to saved in main. Mostly the vendor's own hand-over delay (normally 1–4 min) plus up to 59 s because its timestamp has no seconds; our part (online relay + SQS) is SQS wait, under a second. Red over 10 min: ask the vendor; if SQS wait is also high, it's us.",
       "datasource": {
         "type": "prometheus",
         "uid": "prometheus"
@@ -275,11 +287,11 @@
               },
               {
                 "color": "yellow",
-                "value": 10
+                "value": 300
               },
               {
                 "color": "red",
-                "value": 30
+                "value": 600
               }
             ]
           },
@@ -1201,7 +1213,7 @@
     {
       "type": "bargauge",
       "title": "Average seconds per order, by hop",
-      "description": "Mean time per order in each hop over the range (ingest includes SQS wait; Pi ack includes dispatch). The longest machine bar is the bottleneck to fix first.",
+      "description": "Mean time per order in each hop over the range (Pi ack includes dispatch). Vendor → saved is mostly the vendor's own delay, so leave it out when looking for our bottleneck: the longest of the other bars is the one to fix first.",
       "datasource": {
         "type": "prometheus",
         "uid": "prometheus"
@@ -1224,7 +1236,7 @@
             "uid": "prometheus"
           },
           "expr": "(sum(increase({__name__=~\"orders_ingest_latency(_seconds)?_sum\", deployment_environment=\"$env\", tenant=~\"${store:regex}|\"}[$__range])) / sum(increase({__name__=~\"orders_ingest_latency(_seconds)?_count\", deployment_environment=\"$env\", tenant=~\"${store:regex}|\"}[$__range])))",
-          "legendFormat": "Ingest",
+          "legendFormat": "Vendor → saved",
           "range": false,
           "instant": true,
           "refId": "B"
@@ -1487,7 +1499,7 @@
           {
             "matcher": {
               "id": "byName",
-              "options": "Ingest"
+              "options": "Vendor → saved"
             },
             "properties": [
               {
@@ -1496,7 +1508,7 @@
               },
               {
                 "id": "decimals",
-                "value": 2
+                "value": 0
               },
               {
                 "id": "thresholds",
@@ -1509,11 +1521,11 @@
                     },
                     {
                       "color": "yellow",
-                      "value": 10
+                      "value": 300
                     },
                     {
                       "color": "red",
-                      "value": 30
+                      "value": 600
                     }
                   ]
                 }
@@ -1944,7 +1956,7 @@
             },
             "renameByName": {
               "tenant": "store",
-              "Value #A": "Ingest",
+              "Value #A": "Vendor → saved",
               "Value #B": "Dispatch",
               "Value #C": "Pi ack",
               "Value #D": "Accept",
@@ -2083,8 +2095,8 @@
     },
     {
       "type": "timeseries",
-      "title": "Ingest",
-      "description": "Vendor placed_at to saved in main, incl. Dashed red line = the red threshold.",
+      "title": "Vendor → saved (vendor delay)",
+      "description": "Vendor placed_at to saved in main. Mostly the vendor's own hand-over delay (normally 1–4 min) plus up to 59 s because its timestamp has no seconds; our part (online relay + SQS) is SQS wait, under a second. Red over 10 min: ask the vendor; if SQS wait is also high, it's us. Dashed red line = the red threshold.",
       "datasource": {
         "type": "prometheus",
         "uid": "prometheus"
@@ -2156,7 +2168,7 @@
               },
               {
                 "color": "red",
-                "value": 30
+                "value": 600
               }
             ]
           }
