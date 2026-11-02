@@ -121,6 +121,14 @@ move through any module, your phone buzzes.**
   | agent received > printed (funnel gap) | agent `orders_received` − `orders_printed` > 0 for 30m | agent |
   | agent command channel timing out | `increase(rpc_timeouts_total[10m]) > 0` | main |
   | **order could not reach the agent (SSE down)** | `increase(sse_events_broadcast_total{event_type="order",result="no_subscribers"}[10m]) > 0` | main |
+  | store hub stopped reporting | no `hub_info` from a prod hub seen in the last day for 10m | hub |
+  | store hub can't reach SoftTouch | `hub_softtouch_up < 1` for 3m | hub |
+  | store hub can't reach the Pi | `hub_agent_up < 1` for 5m | hub |
+  | store hub falling behind the Pi's orders | `hub_feed_lag_seconds > 120` for 3m | hub |
+
+  The **store-hub** group (hub 0.3.3) covers the hub itself; the hub pages its
+  own per-order insert problems (refused, read back wrong, voided at the
+  terminal, keyed twice, paused) and sends a summary at Close batch.
 
   The **SSE-down** rule is the headline "the agent went offline while an order
   arrived" alarm: `main` keeps the order (outbox retries, replays on reconnect —
