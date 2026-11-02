@@ -264,6 +264,93 @@ groups:
             datasourceUid: __expr__
             model: { refId: C, type: threshold, expression: A, conditions: [ { evaluator: { type: gt, params: [0] } } ] }
 
+  # The store hub (quicc-hub on iris, Lombardi's): it inserts online cash
+  # orders into SoftTouch and writes drivers back. If it stops, can't reach
+  # SoftTouch or the Pi, or falls behind the Pi's feed, inserts silently stop
+  # (the Pi prints kitchen tickets for orders nobody puts into SoftTouch). The
+  # hub pages its own per-order problems (refused, read back wrong, voided,
+  # keyed twice, paused) and sends a summary at Close batch.
+  - orgId: 1
+    name: store-hub
+    folder: Order pipeline
+    interval: 1m
+    rules:
+      - uid: quicc-hub-silent
+        title: store hub stopped reporting
+        condition: C
+        for: 5m
+        labels: { team: orders, module: hub, severity: critical }
+        annotations:
+          summary: "Store {{ $labels.tenant }}: the store hub sent nothing for 10 minutes (stopped, iris off, or OTLP broken). Online cash orders are not going into SoftTouch — restart it on iris (tmux session hub)."
+        noDataState: OK
+        execErrState: Error
+        data:
+          - refId: A
+            relativeTimeRange: { from: 86400, to: 0 }
+            datasourceUid: prometheus
+            model:
+              refId: A
+              instant: true
+              # Every hub seen in the last day, minus the ones heard from in the last 10 min.
+              expr: "(max by (deployment_environment, tenant) (max_over_time(hub_info{deployment_environment=\"prod\"}[1d])) * 0 + 1) unless (max by (deployment_environment, tenant) (max_over_time(hub_info{deployment_environment=\"prod\"}[10m])))"
+          - refId: C
+            datasourceUid: __expr__
+            model: { refId: C, type: threshold, expression: A, conditions: [ { evaluator: { type: gt, params: [0] } } ] }
+
+      - uid: quicc-hub-softtouch-down
+        title: store hub can't reach SoftTouch
+        condition: C
+        for: 3m
+        labels: { team: orders, module: hub, severity: page }
+        annotations:
+          summary: "Store {{ $labels.tenant }}: the hub can't read SoftTouch (server 192.168.0.100 down or the network). Inserts are paused — staff key online cash orders by hand until it's back."
+        noDataState: OK
+        execErrState: Error
+        data:
+          - refId: A
+            relativeTimeRange: { from: 300, to: 0 }
+            datasourceUid: prometheus
+            model: { refId: A, instant: true, expr: "min by (deployment_environment, tenant) (hub_softtouch_up{deployment_environment=~\"prod|staging\"})" }
+          - refId: C
+            datasourceUid: __expr__
+            model: { refId: C, type: threshold, expression: A, conditions: [ { evaluator: { type: lt, params: [1] } } ] }
+
+      - uid: quicc-hub-pi-down
+        title: store hub can't reach the Pi
+        condition: C
+        for: 5m
+        labels: { team: orders, module: hub, severity: page }
+        annotations:
+          summary: "Store {{ $labels.tenant }}: the hub's status calls to the Pi have failed for 5 minutes. The hub gets no orders to insert and the tablets show POS link down."
+        noDataState: OK
+        execErrState: Error
+        data:
+          - refId: A
+            relativeTimeRange: { from: 300, to: 0 }
+            datasourceUid: prometheus
+            model: { refId: A, instant: true, expr: "min by (deployment_environment, tenant) (hub_agent_up{deployment_environment=~\"prod|staging\"})" }
+          - refId: C
+            datasourceUid: __expr__
+            model: { refId: C, type: threshold, expression: A, conditions: [ { evaluator: { type: lt, params: [1] } } ] }
+
+      - uid: quicc-hub-feed-lag
+        title: store hub falling behind the Pi's orders
+        condition: C
+        for: 3m
+        labels: { team: orders, module: hub, severity: page }
+        annotations:
+          summary: "Store {{ $labels.tenant }}: the hub is {{ printf \"%.0f\" $values.A.Value }}s behind the Pi's feed (normally under 40 s). Accepted online orders are waiting to go into SoftTouch."
+        noDataState: OK
+        execErrState: Error
+        data:
+          - refId: A
+            relativeTimeRange: { from: 300, to: 0 }
+            datasourceUid: prometheus
+            model: { refId: A, instant: true, expr: "max by (deployment_environment, tenant) (hub_feed_lag_seconds{deployment_environment=~\"prod|staging\"})" }
+          - refId: C
+            datasourceUid: __expr__
+            model: { refId: C, type: threshold, expression: A, conditions: [ { evaluator: { type: gt, params: [120] } } ] }
+
   # Dead-man rules: an outage that stops telemetry must page, not look green.
   # Each watches a heartbeat series that is always present while the piece is
   # up (gauges are re-exported every interval even with no traffic).
