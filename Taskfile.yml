@@ -42,11 +42,6 @@ tasks:
     cmds:
       - "{{.COMPOSE}} logs -f --tail=200 {{.CLI_ARGS}}"
 
-  ps:
-    desc: Show running services
-    cmds:
-      - "{{.COMPOSE}} ps"
-
   config:
     desc: Print resolved docker-compose config (with Doppler-injected secrets)
     cmds:
