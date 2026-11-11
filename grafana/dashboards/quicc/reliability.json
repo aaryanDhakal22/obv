@@ -1318,6 +1318,39 @@
           "range": true,
           "instant": false,
           "refId": "I"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "((sum by (tenant) (increase(orders_refusals_total{deployment_environment=\"$env\", tenant=~\"${store:regex}|\", reason=\"kitchen_offline\"}[10m]))) > 0) * 0 + 1",
+          "legendFormat": "{{tenant}} online orders refused, Pi offline",
+          "range": true,
+          "instant": false,
+          "refId": "J"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "((sum by (tenant) (increase(orders_placements_total{deployment_environment=\"$env\", tenant=~\"${store:regex}|\", result=\"expired\"}[10m]) or increase(orders_placements_sweeps_total{deployment_environment=\"$env\", tenant=~\"${store:regex}|\", action=~\"expired|parked_expired\"}[10m]))) > 0) * 0 + 1",
+          "legendFormat": "{{tenant}} online order expired unplaced",
+          "range": true,
+          "instant": false,
+          "refId": "K"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "((sum by (tenant) (increase(orders_placements_sweeps_total{deployment_environment=\"$env\", tenant=~\"${store:regex}|\", action=\"voided\"}[10m]))) > 0) * 0 + 1",
+          "legendFormat": "{{tenant}} online order voided by the sweeper",
+          "range": true,
+          "instant": false,
+          "refId": "L"
         }
       ],
       "fieldConfig": {

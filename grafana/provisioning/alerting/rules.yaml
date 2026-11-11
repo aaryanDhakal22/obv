@@ -264,6 +264,73 @@ groups:
             datasourceUid: __expr__
             model: { refId: C, type: threshold, expression: A, conditions: [ { evaluator: { type: gt, params: [0] } } ] }
 
+      # 14 — channel orders refused because the store's Pi is offline (main
+      #      DURABILITY: 409 kitchen_offline when a store with an active agent
+      #      key has had no Pi stream for ~30 s). Customers are told to call.
+      #      A retired Pi whose key was never revoked causes this forever:
+      #      admin shows "Kitchen offline" on the store; revoke the old key.
+      - uid: quicc-ord-kitchen-offline
+        title: online orders refused, store's Pi offline
+        condition: C
+        for: 0m
+        labels: { team: orders, module: main, severity: page }
+        annotations:
+          summary: "main/ refused {{ printf \"%.0f\" $values.A.Value }} online order(s) in 10m with kitchen_offline — the store's Pi has no live connection. If the Pi was retired or replaced, revoke its old key (admin → store → Pi & device keys)."
+        noDataState: OK
+        execErrState: Error
+        data:
+          - refId: A
+            relativeTimeRange: { from: 600, to: 0 }
+            datasourceUid: prometheus
+            model: { refId: A, instant: true, expr: "sum by (deployment_environment, tenant) (increase(orders_refusals_total{reason=\"kitchen_offline\"}[10m]))" }
+          - refId: C
+            datasourceUid: __expr__
+            model: { refId: C, type: threshold, expression: A, conditions: [ { evaluator: { type: gt, params: [0] } } ] }
+
+      # 15 — a channel order passed its deadline (expires_at) before main
+      #      could place it: at intake, on the customer's retry, or in the
+      #      sweeper (stuck or parked placements). Never charged / hold voided;
+      #      the customer is emailed that it wasn't placed.
+      - uid: quicc-ord-placement-expired
+        title: online order expired before it was placed
+        condition: C
+        for: 0m
+        labels: { team: orders, module: main, severity: warn }
+        annotations:
+          summary: "main/ let {{ printf \"%.0f\" $values.A.Value }} online order(s) expire unplaced in 10m — main couldn't finish them before their deadline (check main's logs / the placement sweeper)."
+        noDataState: OK
+        execErrState: Error
+        data:
+          - refId: A
+            relativeTimeRange: { from: 600, to: 0 }
+            datasourceUid: prometheus
+            model: { refId: A, instant: true, expr: "sum by (deployment_environment, tenant) (increase(orders_placements_total{result=\"expired\"}[10m]) or increase(orders_placements_sweeps_total{action=~\"expired|parked_expired\"}[10m]))" }
+          - refId: C
+            datasourceUid: __expr__
+            model: { refId: C, type: threshold, expression: A, conditions: [ { evaluator: { type: gt, params: [0] } } ] }
+
+      # 16 — the placement sweeper voided a placement: a card hold was made but
+      #      the order couldn't be saved (or ran past its deadline mid-charge),
+      #      so the hold was released. The customer was not charged and got no
+      #      order.
+      - uid: quicc-ord-placement-voided
+        title: online order voided by the placement sweeper
+        condition: C
+        for: 0m
+        labels: { team: orders, module: main, severity: page }
+        annotations:
+          summary: "main/'s placement sweeper voided {{ printf \"%.0f\" $values.A.Value }} online order(s) in 10m — a card was held but the order couldn't be saved; the hold was released and the customer has no order."
+        noDataState: OK
+        execErrState: Error
+        data:
+          - refId: A
+            relativeTimeRange: { from: 600, to: 0 }
+            datasourceUid: prometheus
+            model: { refId: A, instant: true, expr: "sum by (deployment_environment, tenant) (increase(orders_placements_sweeps_total{action=\"voided\"}[10m]))" }
+          - refId: C
+            datasourceUid: __expr__
+            model: { refId: C, type: threshold, expression: A, conditions: [ { evaluator: { type: gt, params: [0] } } ] }
+
   # The store hub (quicc-hub on iris, Lombardi's): it inserts online cash
   # orders into SoftTouch and writes drivers back. If it stops, can't reach
   # SoftTouch or the Pi, or falls behind the Pi's feed, inserts silently stop

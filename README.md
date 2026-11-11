@@ -121,6 +121,9 @@ move through any module, your phone buzzes.**
   | agent received > printed (funnel gap) | agent `orders_received` − `orders_printed` > 0 for 30m | agent |
   | agent command channel timing out | `increase(rpc_timeouts_total[10m]) > 0` | main |
   | **order could not reach the agent (SSE down)** | `increase(sse_events_broadcast_total{event_type="order",result="no_subscribers"}[10m]) > 0` | main |
+  | online orders refused, store's Pi offline | `increase(orders_refusals_total{reason="kitchen_offline"}[10m]) > 0` | main |
+  | online order expired before it was placed | `increase(orders_placements_total{result="expired"}[10m])` or sweeper `expired`/`parked_expired` > 0 | main |
+  | online order voided by the placement sweeper | `increase(orders_placements_sweeps_total{action="voided"}[10m]) > 0` | main |
   | store hub stopped reporting | no `hub_info` from a prod hub seen in the last day for 10m | hub |
   | store hub can't reach SoftTouch | `hub_softtouch_up < 1` for 3m | hub |
   | store hub can't reach the Pi | `hub_agent_up < 1` for 5m | hub |
@@ -129,6 +132,12 @@ move through any module, your phone buzzes.**
   The **store-hub** group (hub 0.3.3) covers the hub itself; the hub pages its
   own per-order insert problems (refused, read back wrong, voided at the
   terminal, keyed twice, paused) and sends a summary at Close batch.
+
+  The three **placement** rules (main's channel orders, `DURABILITY-PLAN.md`)
+  read main's `orders.refusals` / `orders.placements` / `orders.placements.sweeps`
+  counters (store-labelled). A kitchen_offline that never clears is usually a
+  retired Pi whose agent key was never revoked: main's admin shows a **Kitchen
+  offline** badge on that store; revoke the old key.
 
   The **SSE-down** rule is the headline "the agent went offline while an order
   arrived" alarm: `main` keeps the order (outbox retries, replays on reconnect —
