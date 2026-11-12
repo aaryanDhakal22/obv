@@ -157,7 +157,8 @@ groups:
           - refId: A
             relativeTimeRange: { from: 600, to: 0 }
             datasourceUid: prometheus
-            model: { refId: A, instant: true, expr: "sum by (deployment_environment, tenant, type) (increase(rpc_timeouts_total[10m]))" }
+            # terminal.relay (the call center's remote terminal) has its own rule: quicc-cc-relay-failing
+            model: { refId: A, instant: true, expr: "sum by (deployment_environment, tenant, type) (increase(rpc_timeouts_total{type!=\"terminal.relay\"}[10m]))" }
           - refId: C
             datasourceUid: __expr__
             model: { refId: C, type: threshold, expression: A, conditions: [ { evaluator: { type: gt, params: [0] } } ] }
@@ -585,6 +586,86 @@ groups:
             datasourceUid: __expr__
             # COUNTER_LOCKOUT_HITS_MAX = 2 (pages on the 3rd in 15 min)
             model: { refId: C, type: threshold, expression: A, conditions: [ { evaluator: { type: gt, params: [2] } } ] }
+
+  # The call center's remote terminal (quicc-ops CALLCENTER-PLAN.md, contract/main.md
+  # §2.5zh): every call from callcenter.quiccpos.com is one duplex RPC main → Pi →
+  # main of type terminal.relay. A failed relay is an order a phone agent could not
+  # take, so the first rule pages (while the store is open); the second warns when
+  # the relay is slow; the third pages on PIN guessing from a call-center computer.
+  - orgId: 1
+    name: callcenter
+    folder: Order pipeline
+    interval: 1m
+    rules:
+      # main could not reach the store's Pi for a call-center call: no stream
+      # (rpc.offline) or no answer in time (rpc.timeouts; 12 s, 35 s for a typed
+      # card's charge). The app shows "store offline" and places nothing. A main
+      # deploy or a Pi reconnect gives a few of these within seconds: the 2-minute
+      # window held for 2 minutes pages only when calls keep failing, never on one
+      # burst.
+      - uid: quicc-cc-relay-failing
+        title: call center can't reach the store
+        condition: C
+        for: 2m
+        labels: { team: orders, module: callcenter, severity: page, hours: opening }
+        annotations:
+          summary: "Store {{ $labels.tenant }}: {{ printf \"%.0f\" $values.A.Value }} call-center call(s) could not reach the Pi in the last 2m, and it has gone on for 2m (no stream or no answer). The call-center app shows \"store offline\": phone orders can't be placed until the Pi is back on main."
+        noDataState: OK
+        execErrState: Error
+        data:
+          - refId: A
+            relativeTimeRange: { from: 120, to: 0 }
+            datasourceUid: prometheus
+            model: { refId: A, instant: true, expr: "sum by (deployment_environment, tenant) (increase({__name__=~\"rpc_timeouts_total|rpc_offline_total\", type=\"terminal.relay\"}[2m]))" }
+          - refId: C
+            datasourceUid: __expr__
+            # CC_RELAY_FAILS_MAX = 2 (3+ failed calls in every 2-minute window, for CC_RELAY_FAILS_FOR = 2m)
+            model: { refId: C, type: threshold, expression: A, conditions: [ { evaluator: { type: gt, params: [2] } } ] }
+
+      # The relay answers, but slowly: every quote, menu and order call waits on
+      # it. p95 of the round trip main → Pi → main; a typed card's charge (Square,
+      # seconds) is in the same series, so the rule needs it slow for 5 minutes.
+      - uid: quicc-cc-relay-slow
+        title: call center relay is slow
+        condition: C
+        for: 5m
+        labels: { team: orders, module: callcenter, severity: warn, hours: opening }
+        annotations:
+          summary: "Store {{ $labels.tenant }}: call-center calls take {{ printf \"%.0f\" $values.A.Value }} ms (p95, main → Pi → main) for 5m. Agents wait on every price and Send: check the store's internet and the Pi (Duplex RPC dashboard, Call center relay)."
+        noDataState: OK
+        execErrState: Error
+        data:
+          - refId: A
+            relativeTimeRange: { from: 300, to: 0 }
+            datasourceUid: prometheus
+            model: { refId: A, instant: true, expr: "histogram_quantile(0.95, sum by (deployment_environment, tenant, le) (rate(rpc_roundtrip_duration_milliseconds_bucket{type=\"terminal.relay\"}[5m])))" }
+          - refId: C
+            datasourceUid: __expr__
+            # CC_RELAY_P95_MS = 2500
+            model: { refId: C, type: threshold, expression: A, conditions: [ { evaluator: { type: gt, params: [2500] } } ] }
+
+      # Someone is guessing PINs in the call-center app (a 4-digit PIN: 10,000
+      # tries). main locks the computer after 5 wrong PINs and revokes it after 20
+      # in a row. Waits for main's log lines `callcenter: PIN lockout` /
+      # `callcenter: device revoked (PIN guessing)`: no such line = no data = OK.
+      - uid: quicc-cc-pin-guessing
+        title: PIN guessing in the call-center app
+        condition: C
+        for: 0m
+        labels: { team: orders, module: callcenter, severity: page }
+        annotations:
+          summary: "{{ printf \"%.0f\" $values.A.Value }} call-center PIN lockout(s) / revoked computer(s) on main in 15m. Someone is guessing PINs at callcenter.quiccpos.com: Store › Staff → Call center devices shows which computer; revoke it."
+        noDataState: OK
+        execErrState: Error
+        data:
+          - refId: A
+            relativeTimeRange: { from: 900, to: 0 }
+            datasourceUid: loki
+            model: { refId: A, queryType: instant, expr: "sum by (deployment_environment) (count_over_time({deployment_environment=\"prod\", service_name=\"quicc-main\"} |~ `callcenter: PIN lockout|callcenter: device revoked \\(PIN guessing\\)` [15m]))" }
+          - refId: C
+            datasourceUid: __expr__
+            # CC_PIN_LOCKOUTS_MAX = 1 (pages on the 2nd lockout in 15 min; one is a tired agent)
+            model: { refId: C, type: threshold, expression: A, conditions: [ { evaluator: { type: gt, params: [1] } } ] }
 
   # Dead-man rules: an outage that stops telemetry must page, not look green.
   # Each watches a heartbeat series that is always present while the piece is

@@ -132,7 +132,7 @@ move through any module, your phone buzzes.**
   | main outbox backlog not draining | `outbox_events_pending > 0` for 15m | main |
   | agent failed to print | orders printed nowhere even after failover (`orders_print_failed_total`, never a rerouted ticket): ≥ `PRINT_MISSES_PAGE` (2) in 10 min, or 1 while a printer has been down `PRINTER_DOWN_FOR` (2 min, no up sample); `for: 1m` — a short blip never pages | agent |
   | agent received > printed (funnel gap) | agent `orders_received` − `orders_printed` > 0 for 30m | agent |
-  | agent command channel timing out | `increase(rpc_timeouts_total[10m]) > 0` | main |
+  | agent command channel timing out | `increase(rpc_timeouts_total{type!="terminal.relay"}[10m]) > 0` (the call center's relay has its own rule, below) | main |
   | **order could not reach the agent (SSE down)** | `increase(sse_events_broadcast_total{event_type="order",result="no_subscribers"}[10m]) > 0` | main |
   | online orders refused, store's Pi offline | `increase(orders_refusals_total{reason="kitchen_offline"}[10m]) > 0` | main |
   | online order expired before it was placed | `increase(orders_placements_total{result="expired"}[10m])` or sweeper `expired`/`parked_expired` > 0 | main |
@@ -186,6 +186,25 @@ move through any module, your phone buzzes.**
   **Staging is muted for the counter rules** by their prod-only queries. To mute
   every staging page as well (all groups), delete the `pushover-staging` route
   in `policies.yaml`; staging alerts then fall to `default-noop`.
+
+  **Call center** group (`callcenter`, 2026-11-12): the call center's remote
+  terminal (quicc-ops `CALLCENTER-PLAN.md`). Every call from
+  `callcenter.quiccpos.com` is one duplex RPC main → Pi → main of type
+  `terminal.relay`, so the rules read the existing `rpc.*` meters; panels are
+  the **Call center relay** row of the Duplex RPC dashboard.
+
+  | Rule | Fires on | Source |
+  |---|---|---|
+  | call center can't reach the store | relayed calls that found no Pi stream or got no answer: more than `CC_RELAY_FAILS_MAX` in every 2-minute window for `CC_RELAY_FAILS_FOR` (one burst from a main deploy or a Pi reconnect never pages); store hours only (`hours=opening`) | main `rpc_timeouts_total` + `rpc_offline_total` `{type="terminal.relay"}` |
+  | call center relay is slow | p95 round trip main → Pi → main over `CC_RELAY_P95_MS` for 5 min (warn; a typed card's charge is in the same series); store hours only | main `rpc_roundtrip_duration_milliseconds` |
+  | PIN guessing in the call-center app | main's log lines `callcenter: PIN lockout` / `callcenter: device revoked (PIN guessing)` in 15 min > `CC_PIN_LOCKOUTS_MAX`; prod only. *Waits* for main to log those lines (no line = OK) | Loki (main) |
+
+  | Name | Default | Meaning |
+  |---|---|---|
+  | `CC_RELAY_FAILS_MAX` | 2 | failed relayed calls allowed per 2-minute window (pages on 3+ ...) |
+  | `CC_RELAY_FAILS_FOR` | 2m | ... kept up this long |
+  | `CC_RELAY_P95_MS` | 2500 | the relay's p95 round trip that warns after 5 min |
+  | `CC_PIN_LOCKOUTS_MAX` | 1 | PIN lockouts / revoked computers allowed in 15 min (pages on the 2nd) |
 
   The **store-hub** group covers the hub, now only the store's callout box
   (spoken callouts + the store TVs). Its SoftTouch rule and the hub's own

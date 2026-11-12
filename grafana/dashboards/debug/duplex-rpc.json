@@ -4,7 +4,7 @@
   "tags": ["quicc", "rpc", "main", "agent", "quicc-debug"],
   "timezone": "browser",
   "schemaVersion": 39,
-  "version": 1,
+  "version": 2,
   "refresh": "1m",
   "time": { "from": "now-6h", "to": "now" },
   "links": [
@@ -100,6 +100,64 @@
       "datasource": { "type": "prometheus", "uid": "prometheus" },
       "fieldConfig": { "defaults": { "unit": "ops", "custom": { "fillOpacity": 10 } } },
       "targets": [ { "expr": "sum by (type, result) (rate(rpc_inbound_total{deployment_environment=\"$env\"}[$__rate_interval]))", "legendFormat": "{{type}} · {{result}}" } ]
+    },
+    {
+      "id": 102, "type": "row", "title": "Call center relay (terminal.relay)",
+      "gridPos": { "x": 0, "y": 32, "w": 24, "h": 1 }, "collapsed": false, "panels": []
+    },
+    {
+      "id": 9, "type": "timeseries", "title": "Relayed calls: answered, offline, timed out",
+      "description": "Every call from the call-center app (callcenter.quiccpos.com) is one command of type terminal.relay: main → the store's Pi → main. answered = the Pi replied (whatever its status); offline = the Pi had no stream; timed out = no reply in 12 s (35 s for a typed card's charge). The app shows \"store offline\" for the last two. Alert: call center can't reach the store.",
+      "gridPos": { "x": 0, "y": 33, "w": 12, "h": 8 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": { "defaults": { "unit": "ops", "custom": { "fillOpacity": 20, "drawStyle": "bars", "stacking": { "mode": "normal" } } }, "overrides": [
+        { "matcher": { "id": "byRegexp", "options": "^answered.*" }, "properties": [{ "id": "color", "value": { "mode": "fixed", "fixedColor": "green" } }] },
+        { "matcher": { "id": "byRegexp", "options": "^offline.*" }, "properties": [{ "id": "color", "value": { "mode": "fixed", "fixedColor": "orange" } }] },
+        { "matcher": { "id": "byRegexp", "options": "^timed out.*" }, "properties": [{ "id": "color", "value": { "mode": "fixed", "fixedColor": "red" } }] } ] },
+      "targets": [
+        { "expr": "sum by (tenant) (rate(rpc_replies_total{result=\"ok\", type=\"terminal.relay\", deployment_environment=\"$env\"}[$__rate_interval]))", "legendFormat": "answered · {{tenant}}" },
+        { "expr": "sum by (tenant) (rate(rpc_offline_total{type=\"terminal.relay\", deployment_environment=\"$env\"}[$__rate_interval]))", "legendFormat": "offline · {{tenant}}" },
+        { "expr": "sum by (tenant) (rate(rpc_timeouts_total{type=\"terminal.relay\", deployment_environment=\"$env\"}[$__rate_interval]))", "legendFormat": "timed out · {{tenant}}" }
+      ]
+    },
+    {
+      "id": 10, "type": "timeseries", "title": "Relay round trip p50 / p95 (ms)",
+      "description": "rpc.roundtrip.duration for terminal.relay: main sends the command → the Pi's reply is matched. What an agent waits for on every price, menu and Send, without the browser's own hop. A typed card's charge (Square, seconds) is in the same series. Alert: call center relay is slow (p95 over 2500 ms for 5 min).",
+      "gridPos": { "x": 12, "y": 33, "w": 12, "h": 8 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": { "defaults": { "unit": "ms", "custom": { "fillOpacity": 10 }, "thresholds": { "mode": "absolute", "steps": [{ "color": "green" }, { "color": "yellow", "value": 1000 }, { "color": "red", "value": 2500 }] } } },
+      "targets": [
+        { "expr": "histogram_quantile(0.5, sum by (tenant, le) (rate(rpc_roundtrip_duration_milliseconds_bucket{type=\"terminal.relay\", deployment_environment=\"$env\"}[$__rate_interval])))", "legendFormat": "p50 · {{tenant}}" },
+        { "expr": "histogram_quantile(0.95, sum by (tenant, le) (rate(rpc_roundtrip_duration_milliseconds_bucket{type=\"terminal.relay\", deployment_environment=\"$env\"}[$__rate_interval])))", "legendFormat": "p95 · {{tenant}}", "exemplar": true }
+      ]
+    },
+    {
+      "id": 11, "type": "stat", "title": "Relayed calls that failed (range)",
+      "description": "Offline + timed out relayed calls in the selected range: each one is a call-center click that got \"store offline\".",
+      "gridPos": { "x": 0, "y": 41, "w": 6, "h": 7 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "options": { "colorMode": "background", "graphMode": "none", "reduceOptions": { "calcs": ["last"] } },
+      "fieldConfig": { "defaults": { "unit": "short", "decimals": 0, "noValue": "0", "thresholds": { "mode": "absolute", "steps": [{ "color": "green" }, { "color": "yellow", "value": 1 }, { "color": "red", "value": 10 }] } } },
+      "targets": [ { "expr": "sum(increase({__name__=~\"rpc_timeouts_total|rpc_offline_total\", type=\"terminal.relay\", deployment_environment=\"$env\"}[$__range]))", "legendFormat": "failed" } ]
+    },
+    {
+      "id": 12, "type": "timeseries", "title": "Pi's share: handling a relayed call p95 (ms)",
+      "description": "rpc.handle.duration on the Pi for terminal.relay: the terminal handler plus posting the reply to main. Round trip minus this = the network (main → Pi on the stream, Pi → main over HTTPS).",
+      "gridPos": { "x": 6, "y": 41, "w": 9, "h": 7 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": { "defaults": { "unit": "ms", "custom": { "fillOpacity": 10 } } },
+      "targets": [ { "expr": "histogram_quantile(0.95, sum by (tenant, le) (rate(rpc_handle_duration_milliseconds_bucket{type=\"terminal.relay\", deployment_environment=\"$env\"}[$__rate_interval])))", "legendFormat": "p95 · {{tenant}}" } ]
+    },
+    {
+      "id": 13, "type": "timeseries", "title": "Terminal events for the call center",
+      "description": "While a call-center browser listens, main asks the Pi for its terminal events (command terminal.events.want, every 60 s) and the Pi reports them in batches (terminal.events). No batches while browsers are open = their lists go stale until the next reconnect.",
+      "gridPos": { "x": 15, "y": 41, "w": 9, "h": 7 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": { "defaults": { "unit": "ops", "custom": { "fillOpacity": 10 } } },
+      "targets": [
+        { "expr": "sum by (result) (rate(rpc_inbound_total{type=\"terminal.events\", deployment_environment=\"$env\"}[$__rate_interval]))", "legendFormat": "event batches from the Pi · {{result}}" },
+        { "expr": "sum(rate(rpc_requests_total{type=\"terminal.events.want\", deployment_environment=\"$env\"}[$__rate_interval]))", "legendFormat": "main asks (events.want)" }
+      ]
     }
   ]
 }
