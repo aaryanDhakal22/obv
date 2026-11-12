@@ -1,7 +1,7 @@
 {
   "uid": "store-health",
   "title": "Store health",
-  "description": "Is this store working right now: up/down of main, Pi, link, printers, tablets, POS link and SoftTouch; live bottlenecks; today's order flow and p95 per hop; recent errors.",
+  "description": "Is this store working right now: up/down of main, Pi, link, printers, tablets and POS link (the Pi sees the hub); live bottlenecks; today's order flow and p95 per hop; recent errors.",
   "tags": [
     "quicc",
     "quicc-core",
@@ -630,7 +630,7 @@
     {
       "type": "stat",
       "title": "POS link",
-      "description": "Whether the store hub's status reaches the Pi (hub.link.up). DOWN: POS checks stop appearing on the tablet; check the hub box.",
+      "description": "Whether the store hub's status reaches the Pi (hub.link.up). DOWN: order callouts stop; check the hub box.",
       "datasource": {
         "type": "prometheus",
         "uid": "prometheus"
@@ -711,95 +711,7 @@
       "gridPos": {
         "x": 18,
         "y": 1,
-        "w": 3,
-        "h": 4
-      }
-    },
-    {
-      "type": "stat",
-      "title": "SoftTouch",
-      "description": "Whether the hub can query the SoftTouch Firebird server. DOWN: no POS checks or driver write-back; check the POS server.",
-      "datasource": {
-        "type": "prometheus",
-        "uid": "prometheus"
-      },
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "prometheus"
-          },
-          "expr": "min by (tenant) ({__name__=~\"hub_softtouch_up(_ratio)?\", deployment_environment=\"$env\", tenant=~\"${store:regex}|\"})",
-          "legendFormat": "{{tenant}}",
-          "range": false,
-          "instant": true,
-          "refId": "A"
-        }
-      ],
-      "fieldConfig": {
-        "defaults": {
-          "unit": "short",
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "red",
-                "value": null
-              },
-              {
-                "color": "green",
-                "value": 1
-              }
-            ]
-          },
-          "color": {
-            "mode": "thresholds"
-          },
-          "mappings": [
-            {
-              "type": "value",
-              "options": {
-                "1": {
-                  "text": "UP",
-                  "color": "green"
-                }
-              }
-            },
-            {
-              "type": "value",
-              "options": {
-                "0": {
-                  "text": "DOWN",
-                  "color": "red"
-                }
-              }
-            }
-          ],
-          "noValue": "no hub"
-        },
-        "overrides": []
-      },
-      "options": {
-        "colorMode": "background",
-        "graphMode": "none",
-        "justifyMode": "center",
-        "textMode": "auto",
-        "wideLayout": true,
-        "showPercentChange": false,
-        "orientation": "auto",
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
-          "fields": "",
-          "values": false
-        }
-      },
-      "id": 8,
-      "gridPos": {
-        "x": 21,
-        "y": 1,
-        "w": 3,
+        "w": 6,
         "h": 4
       }
     },
@@ -1198,7 +1110,7 @@
     {
       "type": "stat",
       "title": "Hub feed lag",
-      "description": "How far the hub is behind the Pi's cursor feed. Red over 2 min: driver write-back and POS updates are delayed; restart quicc-hub.",
+      "description": "How far the hub is behind the Pi's cursor feed. Red over 2 min: order callouts are late; restart quicc-hub.",
       "datasource": {
         "type": "prometheus",
         "uid": "prometheus"
@@ -1699,71 +1611,6 @@
     },
     {
       "type": "stat",
-      "title": "POS checks pulled",
-      "description": "SoftTouch checks the hub pulled onto the Pi. Zero while the POS is busy: check the POS link and SoftTouch tiles.",
-      "datasource": {
-        "type": "prometheus",
-        "uid": "prometheus"
-      },
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "prometheus"
-          },
-          "expr": "sum(increase(hub_checks_pulled_total{deployment_environment=\"$env\", tenant=~\"${store:regex}|\", result=\"pulled\"}[$__range])) or vector(0)",
-          "legendFormat": "pulled",
-          "range": false,
-          "instant": true,
-          "refId": "A"
-        }
-      ],
-      "fieldConfig": {
-        "defaults": {
-          "unit": "short",
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              }
-            ]
-          },
-          "color": {
-            "mode": "fixed",
-            "fixedColor": "text"
-          },
-          "decimals": 0
-        },
-        "overrides": []
-      },
-      "options": {
-        "colorMode": "value",
-        "graphMode": "none",
-        "justifyMode": "center",
-        "textMode": "auto",
-        "wideLayout": true,
-        "showPercentChange": false,
-        "orientation": "auto",
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
-          "fields": "",
-          "values": false
-        }
-      },
-      "id": 23,
-      "gridPos": {
-        "x": 18,
-        "y": 11,
-        "w": 3,
-        "h": 4
-      }
-    },
-    {
-      "type": "stat",
       "title": "Print failures",
       "description": "Print attempts where some ticket printed nowhere. Above 0: a printer is down or out of paper; resend from the tablet.",
       "datasource": {
@@ -1834,9 +1681,9 @@
       ],
       "id": 24,
       "gridPos": {
-        "x": 21,
+        "x": 18,
         "y": 11,
-        "w": 3,
+        "w": 6,
         "h": 4
       }
     },
@@ -2477,17 +2324,6 @@
           "range": true,
           "instant": false,
           "refId": "E"
-        },
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "prometheus"
-          },
-          "expr": "sum(increase(hub_checks_pulled_total{deployment_environment=\"$env\", tenant=~\"${store:regex}|\", result=\"pulled\"}[$__interval]))",
-          "legendFormat": "POS pulled",
-          "range": true,
-          "instant": false,
-          "refId": "F"
         }
       ],
       "fieldConfig": {

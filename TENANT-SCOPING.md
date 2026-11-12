@@ -48,26 +48,22 @@ Existing instruments are listed in `contract/main.md` §7.2 and `contract/agent.
 
 ### hub (new OTEL setup like the agent's; the resource carries `tenant`/`location`)
 - `hub.info` (gauge = 1, `version`)
-- `hub.softtouch.up` (0/1)
 - `hub.agent.up` (0/1)
-- `hub.poll.seconds` (histogram, one SoftTouch poll cycle)
-- `hub.poll.errors` (counter, `stage`)
-- `hub.checks.pulled` (counter, `result` = `pulled`/`skipped_handkeyed`/`skipped_linked`/`withdrawn`/…)
-- `hub.writes` (counter, `kind` = `insert`/`assign`/`heal`, `mode` = `off`/`shadow`/`live`, `result`)
-- `hub.write.seconds` (histogram, `kind`)
 - `hub.feed.lag.seconds` (gauge: how far behind the Pi's cursor feed the hub is)
-- `hub.mapping.misses` (counter)
 - Logs over OTLP, like the agent.
+- Gone with SoftTouch (2026-11-11, the hub is now only the callout box): `hub.softtouch.up`,
+  `hub.poll.seconds`, `hub.poll.errors`, `hub.checks.pulled`, `hub.checks.keyed_twice`, `hub.writes`,
+  `hub.write.seconds`, `hub.mapping.misses`, the `hub.write <kind>` spans.
 
 ## 3. Dashboards (folder "Quicc"; variables `env` (default prod) and `store` (multi, All))
 
 1. **Store health** (`store-health`): "is this store working right now?"
-   - Up/down tiles: main, the Pi's SSE link, printers, tablets, POS link (the hub), SoftTouch.
+   - Up/down tiles: main, the Pi's SSE link, printers, tablets, POS link (the hub).
    - Live bottlenecks: orders waiting to accept, unacked by the Pi, outbox pending, floor-sync backlog, hub status age.
    - Order flow today: received → saved → reached the Pi → accepted → printed, by source.
    - p95 for each hop, and recent errors (Loki).
 2. **Latency & bottlenecks** (`latency`):
-   - p50/p95/p99 per hop: ingest, SQS wait, dispatch, ack, accept, print, floor sync, RPC round trip, hub poll and writes, printer write.
+   - p50/p95/p99 per hop: ingest, SQS wait, dispatch, ack, accept, print, floor sync, RPC round trip, printer write.
    - A "where the time goes" breakdown.
    - Queue depths over time.
    - The slowest traces (Tempo).

@@ -1483,7 +1483,7 @@
     {
       "type": "table",
       "title": "Hub per store",
-      "description": "Hub version, link and SoftTouch state per store. BEHIND: a newer hub is running elsewhere; upgrade during closed hours.",
+      "description": "Hub version and link state per store. BEHIND: a newer hub is running elsewhere; upgrade during closed hours.",
       "datasource": {
         "type": "prometheus",
         "uid": "prometheus"
@@ -1524,18 +1524,6 @@
           "instant": true,
           "format": "table",
           "refId": "C"
-        },
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "prometheus"
-          },
-          "expr": "min by (tenant) ({__name__=~\"hub_softtouch_up(_ratio)?\", deployment_environment=\"$env\", tenant=~\"${store:regex}|\"})",
-          "legendFormat": "",
-          "range": false,
-          "instant": true,
-          "format": "table",
-          "refId": "D"
         },
         {
           "datasource": {
@@ -1650,43 +1638,6 @@
           {
             "matcher": {
               "id": "byName",
-              "options": "SoftTouch"
-            },
-            "properties": [
-              {
-                "id": "custom.cellOptions",
-                "value": {
-                  "type": "color-text"
-                }
-              },
-              {
-                "id": "mappings",
-                "value": [
-                  {
-                    "type": "value",
-                    "options": {
-                      "1": {
-                        "text": "UP",
-                        "color": "green"
-                      }
-                    }
-                  },
-                  {
-                    "type": "value",
-                    "options": {
-                      "0": {
-                        "text": "DOWN",
-                        "color": "red"
-                      }
-                    }
-                  }
-                ]
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
               "options": "hub sees Pi"
             },
             "properties": [
@@ -1752,15 +1703,13 @@
               "version": 1,
               "Value #B": 2,
               "Value #C": 3,
-              "Value #D": 4,
-              "Value #E": 5
+              "Value #E": 4
             },
             "renameByName": {
               "tenant": "store",
               "version": "hub version",
               "Value #B": "hub behind",
               "Value #C": "POS link",
-              "Value #D": "SoftTouch",
               "Value #E": "hub sees Pi"
             }
           }

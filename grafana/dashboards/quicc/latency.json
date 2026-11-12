@@ -767,152 +767,6 @@
     },
     {
       "type": "stat",
-      "title": "Hub poll p95",
-      "description": "One SoftTouch poll cycle in the hub. Red over 10 s: the POS database is slow or the store network is congested.",
-      "datasource": {
-        "type": "prometheus",
-        "uid": "prometheus"
-      },
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "prometheus"
-          },
-          "expr": "histogram_quantile(0.95, sum by (le) (increase({__name__=~\"hub_poll_seconds_bucket\", deployment_environment=\"$env\", tenant=~\"${store:regex}|\"}[$__range])))",
-          "legendFormat": "p95",
-          "range": false,
-          "instant": true,
-          "refId": "A"
-        }
-      ],
-      "fieldConfig": {
-        "defaults": {
-          "unit": "s",
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              },
-              {
-                "color": "yellow",
-                "value": 2
-              },
-              {
-                "color": "red",
-                "value": 10
-              }
-            ]
-          },
-          "color": {
-            "mode": "thresholds"
-          },
-          "decimals": 2,
-          "noValue": "no data"
-        },
-        "overrides": []
-      },
-      "options": {
-        "colorMode": "background",
-        "graphMode": "none",
-        "justifyMode": "center",
-        "textMode": "auto",
-        "wideLayout": true,
-        "showPercentChange": false,
-        "orientation": "auto",
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
-          "fields": "",
-          "values": false
-        }
-      },
-      "id": 10,
-      "gridPos": {
-        "x": 0,
-        "y": 5,
-        "w": 4,
-        "h": 4
-      }
-    },
-    {
-      "type": "stat",
-      "title": "Hub write p95",
-      "description": "One SoftTouch write by the hub (insert, assign, heal). Red over 10 s: writes may time out; check SoftTouch.",
-      "datasource": {
-        "type": "prometheus",
-        "uid": "prometheus"
-      },
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "prometheus"
-          },
-          "expr": "histogram_quantile(0.95, sum by (le) (increase({__name__=~\"hub_write_seconds_bucket\", deployment_environment=\"$env\", tenant=~\"${store:regex}|\"}[$__range])))",
-          "legendFormat": "p95",
-          "range": false,
-          "instant": true,
-          "refId": "A"
-        }
-      ],
-      "fieldConfig": {
-        "defaults": {
-          "unit": "s",
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              },
-              {
-                "color": "yellow",
-                "value": 2
-              },
-              {
-                "color": "red",
-                "value": 10
-              }
-            ]
-          },
-          "color": {
-            "mode": "thresholds"
-          },
-          "decimals": 2,
-          "noValue": "no data"
-        },
-        "overrides": []
-      },
-      "options": {
-        "colorMode": "background",
-        "graphMode": "none",
-        "justifyMode": "center",
-        "textMode": "auto",
-        "wideLayout": true,
-        "showPercentChange": false,
-        "orientation": "auto",
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
-          "fields": "",
-          "values": false
-        }
-      },
-      "id": 11,
-      "gridPos": {
-        "x": 4,
-        "y": 5,
-        "w": 4,
-        "h": 4
-      }
-    },
-    {
-      "type": "stat",
       "title": "Printer write p95",
       "description": "TCP write to a printer. Red over 2 s: that printer is about to drop off the network.",
       "datasource": {
@@ -978,9 +832,9 @@
       },
       "id": 12,
       "gridPos": {
-        "x": 8,
+        "x": 0,
         "y": 5,
-        "w": 4,
+        "w": 6,
         "h": 4
       }
     },
@@ -1049,9 +903,9 @@
       },
       "id": 13,
       "gridPos": {
-        "x": 12,
+        "x": 6,
         "y": 5,
-        "w": 4,
+        "w": 6,
         "h": 4
       }
     },
@@ -1120,9 +974,9 @@
       },
       "id": 14,
       "gridPos": {
-        "x": 16,
+        "x": 12,
         "y": 5,
-        "w": 4,
+        "w": 6,
         "h": 4
       }
     },
@@ -1191,9 +1045,9 @@
       },
       "id": 15,
       "gridPos": {
-        "x": 20,
+        "x": 18,
         "y": 5,
-        "w": 4,
+        "w": 6,
         "h": 4
       }
     },
@@ -1435,30 +1289,6 @@
           "instant": true,
           "format": "table",
           "refId": "G"
-        },
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "prometheus"
-          },
-          "expr": "histogram_quantile(0.95, sum by (le, tenant) (increase({__name__=~\"hub_poll_seconds_bucket\", deployment_environment=\"$env\", tenant=~\"${store:regex}|\"}[$__range])))",
-          "legendFormat": "",
-          "range": false,
-          "instant": true,
-          "format": "table",
-          "refId": "H"
-        },
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "prometheus"
-          },
-          "expr": "histogram_quantile(0.95, sum by (le, tenant) (increase({__name__=~\"hub_write_seconds_bucket\", deployment_environment=\"$env\", tenant=~\"${store:regex}|\"}[$__range])))",
-          "legendFormat": "",
-          "range": false,
-          "instant": true,
-          "format": "table",
-          "refId": "I"
         },
         {
           "datasource": {
@@ -1793,90 +1623,6 @@
           {
             "matcher": {
               "id": "byName",
-              "options": "Hub poll"
-            },
-            "properties": [
-              {
-                "id": "unit",
-                "value": "s"
-              },
-              {
-                "id": "decimals",
-                "value": 2
-              },
-              {
-                "id": "thresholds",
-                "value": {
-                  "mode": "absolute",
-                  "steps": [
-                    {
-                      "color": "green",
-                      "value": null
-                    },
-                    {
-                      "color": "yellow",
-                      "value": 2
-                    },
-                    {
-                      "color": "red",
-                      "value": 10
-                    }
-                  ]
-                }
-              },
-              {
-                "id": "custom.cellOptions",
-                "value": {
-                  "type": "color-text"
-                }
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "Hub write"
-            },
-            "properties": [
-              {
-                "id": "unit",
-                "value": "s"
-              },
-              {
-                "id": "decimals",
-                "value": 2
-              },
-              {
-                "id": "thresholds",
-                "value": {
-                  "mode": "absolute",
-                  "steps": [
-                    {
-                      "color": "green",
-                      "value": null
-                    },
-                    {
-                      "color": "yellow",
-                      "value": 2
-                    },
-                    {
-                      "color": "red",
-                      "value": 10
-                    }
-                  ]
-                }
-              },
-              {
-                "id": "custom.cellOptions",
-                "value": {
-                  "type": "color-text"
-                }
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
               "options": "Printer write"
             },
             "properties": [
@@ -1950,9 +1696,7 @@
               "Value #E": 5,
               "Value #F": 6,
               "Value #G": 7,
-              "Value #H": 8,
-              "Value #I": 9,
-              "Value #J": 10
+              "Value #J": 8
             },
             "renameByName": {
               "tenant": "store",
@@ -1963,8 +1707,6 @@
               "Value #E": "Print",
               "Value #F": "Floor sync",
               "Value #G": "RPC round trip",
-              "Value #H": "Hub poll",
-              "Value #I": "Hub write",
               "Value #J": "Printer write"
             }
           }
@@ -2809,210 +2551,6 @@
     },
     {
       "type": "timeseries",
-      "title": "Hub poll",
-      "description": "One SoftTouch poll cycle in the hub. Dashed red line = the red threshold.",
-      "datasource": {
-        "type": "prometheus",
-        "uid": "prometheus"
-      },
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "prometheus"
-          },
-          "expr": "histogram_quantile(0.5, sum by (le) (rate({__name__=~\"hub_poll_seconds_bucket\", deployment_environment=\"$env\", tenant=~\"${store:regex}|\"}[$__rate_interval])))",
-          "legendFormat": "p50",
-          "range": true,
-          "instant": false,
-          "refId": "A"
-        },
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "prometheus"
-          },
-          "expr": "histogram_quantile(0.95, sum by (le) (rate({__name__=~\"hub_poll_seconds_bucket\", deployment_environment=\"$env\", tenant=~\"${store:regex}|\"}[$__rate_interval])))",
-          "legendFormat": "p95",
-          "range": true,
-          "instant": false,
-          "refId": "B"
-        },
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "prometheus"
-          },
-          "expr": "histogram_quantile(0.99, sum by (le) (rate({__name__=~\"hub_poll_seconds_bucket\", deployment_environment=\"$env\", tenant=~\"${store:regex}|\"}[$__rate_interval])))",
-          "legendFormat": "p99",
-          "range": true,
-          "instant": false,
-          "refId": "C"
-        }
-      ],
-      "fieldConfig": {
-        "defaults": {
-          "unit": "s",
-          "custom": {
-            "drawStyle": "line",
-            "lineWidth": 2,
-            "fillOpacity": 10,
-            "showPoints": "never",
-            "spanNulls": false,
-            "barAlignment": 0,
-            "gradientMode": "none",
-            "stacking": {
-              "mode": "none",
-              "group": "A"
-            },
-            "axisSoftMin": 0,
-            "thresholdsStyle": {
-              "mode": "dashed"
-            }
-          },
-          "color": {
-            "mode": "palette-classic"
-          },
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "transparent",
-                "value": null
-              },
-              {
-                "color": "red",
-                "value": 10
-              }
-            ]
-          }
-        },
-        "overrides": []
-      },
-      "options": {
-        "legend": {
-          "displayMode": "list",
-          "placement": "bottom",
-          "showLegend": true,
-          "calcs": []
-        },
-        "tooltip": {
-          "mode": "multi",
-          "sort": "desc"
-        }
-      },
-      "id": 28,
-      "gridPos": {
-        "x": 16,
-        "y": 34,
-        "w": 8,
-        "h": 7
-      }
-    },
-    {
-      "type": "timeseries",
-      "title": "Hub write",
-      "description": "One SoftTouch write by the hub (insert, assign, heal). Dashed red line = the red threshold.",
-      "datasource": {
-        "type": "prometheus",
-        "uid": "prometheus"
-      },
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "prometheus"
-          },
-          "expr": "histogram_quantile(0.5, sum by (le) (rate({__name__=~\"hub_write_seconds_bucket\", deployment_environment=\"$env\", tenant=~\"${store:regex}|\"}[$__rate_interval])))",
-          "legendFormat": "p50",
-          "range": true,
-          "instant": false,
-          "refId": "A"
-        },
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "prometheus"
-          },
-          "expr": "histogram_quantile(0.95, sum by (le) (rate({__name__=~\"hub_write_seconds_bucket\", deployment_environment=\"$env\", tenant=~\"${store:regex}|\"}[$__rate_interval])))",
-          "legendFormat": "p95",
-          "range": true,
-          "instant": false,
-          "refId": "B"
-        },
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "prometheus"
-          },
-          "expr": "histogram_quantile(0.99, sum by (le) (rate({__name__=~\"hub_write_seconds_bucket\", deployment_environment=\"$env\", tenant=~\"${store:regex}|\"}[$__rate_interval])))",
-          "legendFormat": "p99",
-          "range": true,
-          "instant": false,
-          "refId": "C"
-        }
-      ],
-      "fieldConfig": {
-        "defaults": {
-          "unit": "s",
-          "custom": {
-            "drawStyle": "line",
-            "lineWidth": 2,
-            "fillOpacity": 10,
-            "showPoints": "never",
-            "spanNulls": false,
-            "barAlignment": 0,
-            "gradientMode": "none",
-            "stacking": {
-              "mode": "none",
-              "group": "A"
-            },
-            "axisSoftMin": 0,
-            "thresholdsStyle": {
-              "mode": "dashed"
-            }
-          },
-          "color": {
-            "mode": "palette-classic"
-          },
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "transparent",
-                "value": null
-              },
-              {
-                "color": "red",
-                "value": 10
-              }
-            ]
-          }
-        },
-        "overrides": []
-      },
-      "options": {
-        "legend": {
-          "displayMode": "list",
-          "placement": "bottom",
-          "showLegend": true,
-          "calcs": []
-        },
-        "tooltip": {
-          "mode": "multi",
-          "sort": "desc"
-        }
-      },
-      "id": 29,
-      "gridPos": {
-        "x": 0,
-        "y": 41,
-        "w": 8,
-        "h": 7
-      }
-    },
-    {
-      "type": "timeseries",
       "title": "Printer write",
       "description": "TCP write to a printer. Dashed red line = the red threshold.",
       "datasource": {
@@ -3107,8 +2645,8 @@
       },
       "id": 30,
       "gridPos": {
-        "x": 8,
-        "y": 41,
+        "x": 16,
+        "y": 34,
         "w": 8,
         "h": 7
       }
@@ -3120,7 +2658,7 @@
       "collapsed": false,
       "gridPos": {
         "x": 0,
-        "y": 48,
+        "y": 41,
         "w": 24,
         "h": 1
       },
@@ -3217,7 +2755,7 @@
       "id": 32,
       "gridPos": {
         "x": 0,
-        "y": 49,
+        "y": 42,
         "w": 8,
         "h": 8
       }
@@ -3302,7 +2840,7 @@
       "id": 33,
       "gridPos": {
         "x": 8,
-        "y": 49,
+        "y": 42,
         "w": 8,
         "h": 8
       }
@@ -3393,7 +2931,7 @@
       "id": 34,
       "gridPos": {
         "x": 16,
-        "y": 49,
+        "y": 42,
         "w": 8,
         "h": 8
       }
@@ -3405,7 +2943,7 @@
       "collapsed": false,
       "gridPos": {
         "x": 0,
-        "y": 57,
+        "y": 50,
         "w": 24,
         "h": 1
       },
@@ -3455,8 +2993,8 @@
       "id": 36,
       "gridPos": {
         "x": 0,
-        "y": 58,
-        "w": 8,
+        "y": 51,
+        "w": 12,
         "h": 10
       }
     },
@@ -3503,58 +3041,9 @@
       ],
       "id": 37,
       "gridPos": {
-        "x": 8,
-        "y": 58,
-        "w": 8,
-        "h": 10
-      }
-    },
-    {
-      "type": "table",
-      "title": "Slow hub spans (over 5 s)",
-      "description": "Hub spans slower than 5 s for the selected stores (SoftTouch polls and writes). Repeated slow polls mean the POS database is struggling.",
-      "datasource": {
-        "type": "tempo",
-        "uid": "tempo"
-      },
-      "targets": [
-        {
-          "refId": "A",
-          "datasource": {
-            "type": "tempo",
-            "uid": "tempo"
-          },
-          "queryType": "traceql",
-          "query": "{ resource.service.name = \"quicc-hub\" && resource.tenant =~ \"${store:regex}\" && (resource.deployment.environment = \"$env\" || resource.deployment.environment.name = \"$env\") && duration > 5s }",
-          "limit": 30,
-          "tableType": "traces"
-        }
-      ],
-      "fieldConfig": {
-        "defaults": {},
-        "overrides": []
-      },
-      "options": {
-        "showHeader": true,
-        "cellHeight": "sm",
-        "sortBy": [
-          {
-            "displayName": "Duration",
-            "desc": true
-          }
-        ]
-      },
-      "links": [
-        {
-          "title": "Open in Explore",
-          "url": "/explore?schemaVersion=1&orgId=1&panes={%22a%22:{%22datasource%22:%22tempo%22,%22queries%22:%5B{%22refId%22:%22A%22,%22queryType%22:%22traceql%22,%22query%22:%22{%20resource.service.name%20%3D%20%5C%22quicc-hub%5C%22%20%26%26%20resource.tenant%20%3D~%20%5C%22${store:regex}%5C%22%20%26%26%20%28resource.deployment.environment%20%3D%20%5C%22$env%5C%22%20%7C%7C%20resource.deployment.environment.name%20%3D%20%5C%22$env%5C%22%29%20%26%26%20duration%20%3E%205s%20}%22,%22limit%22:50,%22tableType%22:%22traces%22,%22datasource%22:{%22type%22:%22tempo%22,%22uid%22:%22tempo%22}}%5D,%22range%22:{%22from%22:%22${__from}%22,%22to%22:%22${__to}%22}}}"
-        }
-      ],
-      "id": 38,
-      "gridPos": {
-        "x": 16,
-        "y": 58,
-        "w": 8,
+        "x": 12,
+        "y": 51,
+        "w": 12,
         "h": 10
       }
     }

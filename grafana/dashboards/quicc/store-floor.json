@@ -1,7 +1,7 @@
 {
   "uid": "store-floor",
   "title": "Store floor & devices",
-  "description": "One store's in-store pieces together: the SoftTouch hub, the Pi, the tablets and floor, and printing.",
+  "description": "One store's in-store pieces together: the store hub (callout box), the Pi, the tablets and floor, and printing.",
   "tags": [
     "quicc",
     "quicc-core",
@@ -170,7 +170,7 @@
   "panels": [
     {
       "type": "row",
-      "title": "POS hub (SoftTouch bridge)",
+      "title": "Store hub (callout box)",
       "collapsed": false,
       "id": 1,
       "gridPos": {
@@ -183,102 +183,8 @@
     },
     {
       "type": "stat",
-      "title": "SoftTouch",
-      "description": "Whether the hub can reach the SoftTouch database (Firebird on the POS server). DOWN: no POS checks reach the tablet and driver write-backs stop; check the POS server.",
-      "datasource": {
-        "type": "prometheus",
-        "uid": "prometheus"
-      },
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "prometheus"
-          },
-          "expr": "(min by (tenant) (hub_softtouch_up{deployment_environment=\"$env\", tenant=~\"${store:regex}|\"})) or (max by (tenant) (max_over_time(hub_softtouch_up{deployment_environment=\"$env\", tenant=~\"${store:regex}|\"}[1d])) * 0)",
-          "legendFormat": "{{tenant}}",
-          "range": false,
-          "instant": true,
-          "refId": "A"
-        }
-      ],
-      "fieldConfig": {
-        "defaults": {
-          "unit": "short",
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "red",
-                "value": null
-              },
-              {
-                "color": "green",
-                "value": 1
-              }
-            ]
-          },
-          "color": {
-            "mode": "thresholds"
-          },
-          "noValue": "no data",
-          "mappings": [
-            {
-              "type": "value",
-              "options": {
-                "1": {
-                  "text": "UP",
-                  "color": "green"
-                }
-              }
-            },
-            {
-              "type": "value",
-              "options": {
-                "0": {
-                  "text": "DOWN",
-                  "color": "red"
-                }
-              }
-            }
-          ]
-        },
-        "overrides": []
-      },
-      "options": {
-        "colorMode": "background",
-        "graphMode": "none",
-        "justifyMode": "center",
-        "textMode": "auto",
-        "wideLayout": true,
-        "showPercentChange": false,
-        "orientation": "auto",
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
-          "fields": "",
-          "values": false
-        }
-      },
-      "id": 2,
-      "gridPos": {
-        "x": 0,
-        "y": 1,
-        "w": 3,
-        "h": 4
-      },
-      "links": [
-        {
-          "title": "Uptime & incidents",
-          "url": "/d/reliability?${env:queryparam}&${store:queryparam}&${__url_time_range}"
-        }
-      ]
-    },
-    {
-      "type": "stat",
       "title": "Hub → Pi",
-      "description": "Whether the hub can reach the Pi's integration API. DOWN: POS checks stop landing on the tablet.",
+      "description": "Whether the hub can reach the Pi's integration API. DOWN: order callouts stop.",
       "datasource": {
         "type": "prometheus",
         "uid": "prometheus"
@@ -357,9 +263,9 @@
       },
       "id": 3,
       "gridPos": {
-        "x": 3,
+        "x": 0,
         "y": 1,
-        "w": 3,
+        "w": 6,
         "h": 4
       }
     },
@@ -447,7 +353,7 @@
       "gridPos": {
         "x": 6,
         "y": 1,
-        "w": 3,
+        "w": 6,
         "h": 4
       }
     },
@@ -509,9 +415,9 @@
       },
       "id": 5,
       "gridPos": {
-        "x": 9,
+        "x": 12,
         "y": 1,
-        "w": 3,
+        "w": 6,
         "h": 4
       },
       "links": [
@@ -524,7 +430,7 @@
     {
       "type": "stat",
       "title": "Feed lag",
-      "description": "How far behind the hub is on the Pi's change feed. Red over 60 s: driver write-backs reach SoftTouch late.",
+      "description": "How far behind the hub is on the Pi's change feed. Red over 60 s: order callouts are late.",
       "datasource": {
         "type": "prometheus",
         "uid": "prometheus"
@@ -588,420 +494,10 @@
       },
       "id": 6,
       "gridPos": {
-        "x": 12,
-        "y": 1,
-        "w": 3,
-        "h": 4
-      }
-    },
-    {
-      "type": "stat",
-      "title": "Mapping misses",
-      "description": "POS items the hub could not map to the menu in the selected range. Fix them on the hub page.",
-      "datasource": {
-        "type": "prometheus",
-        "uid": "prometheus"
-      },
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "prometheus"
-          },
-          "expr": "(sum (increase(hub_mapping_misses_total{deployment_environment=\"$env\", tenant=~\"${store:regex}|\"}[$__range]))) or vector(0)",
-          "legendFormat": "misses",
-          "range": false,
-          "instant": true,
-          "refId": "A"
-        }
-      ],
-      "fieldConfig": {
-        "defaults": {
-          "unit": "short",
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              },
-              {
-                "color": "yellow",
-                "value": 1
-              }
-            ]
-          },
-          "color": {
-            "mode": "thresholds"
-          },
-          "noValue": "no data"
-        },
-        "overrides": []
-      },
-      "options": {
-        "colorMode": "background",
-        "graphMode": "none",
-        "justifyMode": "center",
-        "textMode": "auto",
-        "wideLayout": true,
-        "showPercentChange": false,
-        "orientation": "auto",
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
-          "fields": "",
-          "values": false
-        }
-      },
-      "id": 7,
-      "gridPos": {
-        "x": 15,
-        "y": 1,
-        "w": 3,
-        "h": 4
-      }
-    },
-    {
-      "type": "stat",
-      "title": "Poll errors",
-      "description": "Failed SoftTouch polls in the selected range.",
-      "datasource": {
-        "type": "prometheus",
-        "uid": "prometheus"
-      },
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "prometheus"
-          },
-          "expr": "(sum (increase(hub_poll_errors_total{deployment_environment=\"$env\", tenant=~\"${store:regex}|\"}[$__range]))) or vector(0)",
-          "legendFormat": "errors",
-          "range": false,
-          "instant": true,
-          "refId": "A"
-        }
-      ],
-      "fieldConfig": {
-        "defaults": {
-          "unit": "short",
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              },
-              {
-                "color": "yellow",
-                "value": 1
-              },
-              {
-                "color": "red",
-                "value": 10
-              }
-            ]
-          },
-          "color": {
-            "mode": "thresholds"
-          },
-          "noValue": "no data"
-        },
-        "overrides": []
-      },
-      "options": {
-        "colorMode": "background",
-        "graphMode": "none",
-        "justifyMode": "center",
-        "textMode": "auto",
-        "wideLayout": true,
-        "showPercentChange": false,
-        "orientation": "auto",
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
-          "fields": "",
-          "values": false
-        }
-      },
-      "id": 8,
-      "gridPos": {
         "x": 18,
         "y": 1,
-        "w": 3,
+        "w": 6,
         "h": 4
-      }
-    },
-    {
-      "type": "stat",
-      "title": "Poll p95",
-      "description": "How long one SoftTouch poll takes (p95, selected range).",
-      "datasource": {
-        "type": "prometheus",
-        "uid": "prometheus"
-      },
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "prometheus"
-          },
-          "expr": "histogram_quantile(0.95, sum by (le) (increase({__name__=~\"hub_poll_seconds_bucket\", deployment_environment=\"$env\", tenant=~\"${store:regex}|\"}[$__range])))",
-          "legendFormat": "p95",
-          "range": false,
-          "instant": true,
-          "refId": "A"
-        }
-      ],
-      "fieldConfig": {
-        "defaults": {
-          "unit": "s",
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              },
-              {
-                "color": "yellow",
-                "value": 2
-              },
-              {
-                "color": "red",
-                "value": 5
-              }
-            ]
-          },
-          "color": {
-            "mode": "thresholds"
-          },
-          "noValue": "no data",
-          "decimals": 2
-        },
-        "overrides": []
-      },
-      "options": {
-        "colorMode": "background",
-        "graphMode": "none",
-        "justifyMode": "center",
-        "textMode": "auto",
-        "wideLayout": true,
-        "showPercentChange": false,
-        "orientation": "auto",
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
-          "fields": "",
-          "values": false
-        }
-      },
-      "id": 9,
-      "gridPos": {
-        "x": 21,
-        "y": 1,
-        "w": 3,
-        "h": 4
-      },
-      "links": [
-        {
-          "title": "Latency & bottlenecks",
-          "url": "/d/latency?${env:queryparam}&${store:queryparam}&${__url_time_range}"
-        }
-      ]
-    },
-    {
-      "type": "timeseries",
-      "title": "POS checks by result",
-      "description": "Terminal checks the hub pulled onto the Pi, and what happened to them later (updated, paid, voided, hand-keyed and skipped).",
-      "datasource": {
-        "type": "prometheus",
-        "uid": "prometheus"
-      },
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "prometheus"
-          },
-          "expr": "sum by (result) (increase(hub_checks_pulled_total{deployment_environment=\"$env\", tenant=~\"${store:regex}|\"}[$__interval]))",
-          "legendFormat": "{{result}}",
-          "range": true,
-          "instant": false,
-          "refId": "A"
-        }
-      ],
-      "fieldConfig": {
-        "defaults": {
-          "unit": "short",
-          "custom": {
-            "drawStyle": "bars",
-            "lineWidth": 2,
-            "fillOpacity": 60,
-            "showPoints": "never",
-            "spanNulls": true,
-            "stacking": {
-              "mode": "normal",
-              "group": "A"
-            }
-          },
-          "color": {
-            "mode": "palette-classic"
-          }
-        },
-        "overrides": []
-      },
-      "options": {
-        "legend": {
-          "displayMode": "list",
-          "placement": "bottom",
-          "showLegend": true
-        },
-        "tooltip": {
-          "mode": "multi",
-          "sort": "desc"
-        }
-      },
-      "id": 10,
-      "gridPos": {
-        "x": 0,
-        "y": 5,
-        "w": 8,
-        "h": 8
-      }
-    },
-    {
-      "type": "timeseries",
-      "title": "Driver write-backs",
-      "description": "Driver assignments written to SoftTouch (DRIVERNUMBER). same_driver / no_driver_batch are skips, not failures.",
-      "datasource": {
-        "type": "prometheus",
-        "uid": "prometheus"
-      },
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "prometheus"
-          },
-          "expr": "sum by (result) (increase(hub_writes_total{deployment_environment=\"$env\", tenant=~\"${store:regex}|\", kind=\"assign\"}[$__interval]))",
-          "legendFormat": "{{result}}",
-          "range": true,
-          "instant": false,
-          "refId": "A"
-        }
-      ],
-      "fieldConfig": {
-        "defaults": {
-          "unit": "short",
-          "custom": {
-            "drawStyle": "bars",
-            "lineWidth": 2,
-            "fillOpacity": 60,
-            "showPoints": "never",
-            "spanNulls": true,
-            "stacking": {
-              "mode": "normal",
-              "group": "A"
-            }
-          },
-          "color": {
-            "mode": "palette-classic"
-          }
-        },
-        "overrides": []
-      },
-      "options": {
-        "legend": {
-          "displayMode": "list",
-          "placement": "bottom",
-          "showLegend": true
-        },
-        "tooltip": {
-          "mode": "multi",
-          "sort": "desc"
-        }
-      },
-      "id": 11,
-      "gridPos": {
-        "x": 8,
-        "y": 5,
-        "w": 8,
-        "h": 8
-      }
-    },
-    {
-      "type": "timeseries",
-      "title": "Poll & write time p95",
-      "description": "SoftTouch poll and write durations.",
-      "datasource": {
-        "type": "prometheus",
-        "uid": "prometheus"
-      },
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "prometheus"
-          },
-          "expr": "histogram_quantile(0.95, sum by (le) (rate({__name__=~\"hub_poll_seconds_bucket\", deployment_environment=\"$env\", tenant=~\"${store:regex}|\"}[$__rate_interval])))",
-          "legendFormat": "poll",
-          "range": true,
-          "instant": false,
-          "refId": "A"
-        },
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "prometheus"
-          },
-          "expr": "histogram_quantile(0.95, sum by (le, kind) (rate({__name__=~\"hub_write_seconds_bucket\", deployment_environment=\"$env\", tenant=~\"${store:regex}|\"}[$__rate_interval])))",
-          "legendFormat": "write {{kind}}",
-          "range": true,
-          "instant": false,
-          "refId": "B"
-        }
-      ],
-      "fieldConfig": {
-        "defaults": {
-          "unit": "s",
-          "custom": {
-            "drawStyle": "line",
-            "lineWidth": 2,
-            "fillOpacity": 10,
-            "showPoints": "never",
-            "spanNulls": true,
-            "stacking": {
-              "mode": "none",
-              "group": "A"
-            }
-          },
-          "color": {
-            "mode": "palette-classic"
-          }
-        },
-        "overrides": []
-      },
-      "options": {
-        "legend": {
-          "displayMode": "list",
-          "placement": "bottom",
-          "showLegend": true
-        },
-        "tooltip": {
-          "mode": "multi",
-          "sort": "desc"
-        }
-      },
-      "id": 12,
-      "gridPos": {
-        "x": 16,
-        "y": 5,
-        "w": 8,
-        "h": 8
       }
     },
     {
@@ -1011,7 +507,7 @@
       "id": 13,
       "gridPos": {
         "x": 0,
-        "y": 13,
+        "y": 5,
         "w": 24,
         "h": 1
       },
@@ -1076,7 +572,7 @@
       "id": 14,
       "gridPos": {
         "x": 0,
-        "y": 14,
+        "y": 6,
         "w": 4,
         "h": 4
       },
@@ -1151,7 +647,7 @@
       "id": 15,
       "gridPos": {
         "x": 4,
-        "y": 14,
+        "y": 6,
         "w": 4,
         "h": 4
       }
@@ -1224,7 +720,7 @@
       "id": 16,
       "gridPos": {
         "x": 8,
-        "y": 14,
+        "y": 6,
         "w": 4,
         "h": 4
       }
@@ -1297,7 +793,7 @@
       "id": 17,
       "gridPos": {
         "x": 12,
-        "y": 14,
+        "y": 6,
         "w": 4,
         "h": 4
       }
@@ -1365,7 +861,7 @@
       "id": 18,
       "gridPos": {
         "x": 16,
-        "y": 14,
+        "y": 6,
         "w": 4,
         "h": 4
       }
@@ -1429,7 +925,7 @@
       "id": 19,
       "gridPos": {
         "x": 20,
-        "y": 14,
+        "y": 6,
         "w": 4,
         "h": 4
       }
@@ -1505,7 +1001,7 @@
       "id": 20,
       "gridPos": {
         "x": 0,
-        "y": 18,
+        "y": 10,
         "w": 8,
         "h": 8
       }
@@ -1565,7 +1061,7 @@
       "id": 21,
       "gridPos": {
         "x": 8,
-        "y": 18,
+        "y": 10,
         "w": 8,
         "h": 8
       }
@@ -1625,7 +1121,7 @@
       "id": 22,
       "gridPos": {
         "x": 16,
-        "y": 18,
+        "y": 10,
         "w": 8,
         "h": 8
       }
@@ -1637,7 +1133,7 @@
       "id": 23,
       "gridPos": {
         "x": 0,
-        "y": 26,
+        "y": 18,
         "w": 24,
         "h": 1
       },
@@ -1706,7 +1202,7 @@
       "id": 24,
       "gridPos": {
         "x": 0,
-        "y": 27,
+        "y": 19,
         "w": 3,
         "h": 4
       }
@@ -1770,7 +1266,7 @@
       "id": 25,
       "gridPos": {
         "x": 3,
-        "y": 27,
+        "y": 19,
         "w": 9,
         "h": 4
       }
@@ -1843,7 +1339,7 @@
       "id": 26,
       "gridPos": {
         "x": 12,
-        "y": 27,
+        "y": 19,
         "w": 3,
         "h": 4
       },
@@ -1921,7 +1417,7 @@
       "id": 27,
       "gridPos": {
         "x": 15,
-        "y": 27,
+        "y": 19,
         "w": 3,
         "h": 4
       }
@@ -1985,7 +1481,7 @@
       "id": 28,
       "gridPos": {
         "x": 18,
-        "y": 27,
+        "y": 19,
         "w": 6,
         "h": 4
       }
@@ -2045,7 +1541,7 @@
       "id": 29,
       "gridPos": {
         "x": 0,
-        "y": 31,
+        "y": 23,
         "w": 8,
         "h": 8
       }
@@ -2105,7 +1601,7 @@
       "id": 30,
       "gridPos": {
         "x": 8,
-        "y": 31,
+        "y": 23,
         "w": 8,
         "h": 8
       }
@@ -2165,7 +1661,7 @@
       "id": 31,
       "gridPos": {
         "x": 16,
-        "y": 31,
+        "y": 23,
         "w": 8,
         "h": 8
       }
@@ -2177,7 +1673,7 @@
       "id": 32,
       "gridPos": {
         "x": 0,
-        "y": 39,
+        "y": 31,
         "w": 24,
         "h": 1
       },
@@ -2266,7 +1762,7 @@
       "id": 33,
       "gridPos": {
         "x": 0,
-        "y": 40,
+        "y": 32,
         "w": 12,
         "h": 4
       }
@@ -2334,7 +1830,7 @@
       "id": 34,
       "gridPos": {
         "x": 12,
-        "y": 40,
+        "y": 32,
         "w": 3,
         "h": 4
       }
@@ -2407,7 +1903,7 @@
       "id": 35,
       "gridPos": {
         "x": 15,
-        "y": 40,
+        "y": 32,
         "w": 3,
         "h": 4
       }
@@ -2471,7 +1967,7 @@
       "id": 36,
       "gridPos": {
         "x": 18,
-        "y": 40,
+        "y": 32,
         "w": 6,
         "h": 4
       }
@@ -2535,7 +2031,7 @@
       "id": 37,
       "gridPos": {
         "x": 0,
-        "y": 44,
+        "y": 36,
         "w": 12,
         "h": 4
       }
@@ -2599,7 +2095,7 @@
       "id": 38,
       "gridPos": {
         "x": 12,
-        "y": 44,
+        "y": 36,
         "w": 12,
         "h": 4
       }
@@ -2659,7 +2155,7 @@
       "id": 39,
       "gridPos": {
         "x": 0,
-        "y": 48,
+        "y": 40,
         "w": 8,
         "h": 8
       }
@@ -2719,7 +2215,7 @@
       "id": 40,
       "gridPos": {
         "x": 8,
-        "y": 48,
+        "y": 40,
         "w": 8,
         "h": 8
       }
@@ -2779,7 +2275,7 @@
       "id": 41,
       "gridPos": {
         "x": 16,
-        "y": 48,
+        "y": 40,
         "w": 8,
         "h": 8
       }
