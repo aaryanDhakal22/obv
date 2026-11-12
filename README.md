@@ -197,7 +197,7 @@ move through any module, your phone buzzes.**
   |---|---|---|
   | call center can't reach the store | relayed calls that found no Pi stream or got no answer: more than `CC_RELAY_FAILS_MAX` in every 2-minute window for `CC_RELAY_FAILS_FOR` (one burst from a main deploy or a Pi reconnect never pages); store hours only (`hours=opening`) | main `rpc_timeouts_total` + `rpc_offline_total` `{type="terminal.relay"}` |
   | call center relay is slow | p95 round trip main → Pi → main over `CC_RELAY_P95_MS` for 5 min (warn; a typed card's charge is in the same series); store hours only | main `rpc_roundtrip_duration_milliseconds` |
-  | PIN guessing in the call-center app | main's log lines `callcenter: PIN lockout` / `callcenter: device revoked (PIN guessing)` in 15 min > `CC_PIN_LOCKOUTS_MAX`; prod only. *Waits* for main to log those lines (no line = OK) | Loki (main) |
+  | PIN guessing in the call-center app | main's log lines `callcenter: PIN lockout` / `callcenter: device revoked (PIN guessing)` in 15 min > `CC_PIN_LOCKOUTS_MAX`; prod only. main logs them from the 5th wrong PIN on a computer and at the 20th (it revokes the computer); renaming either message silently disables the rule | Loki (main) |
 
   | Name | Default | Meaning |
   |---|---|---|

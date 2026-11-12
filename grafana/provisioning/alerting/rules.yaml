@@ -646,8 +646,8 @@ groups:
 
       # Someone is guessing PINs in the call-center app (a 4-digit PIN: 10,000
       # tries). main locks the computer after 5 wrong PINs and revokes it after 20
-      # in a row. Waits for main's log lines `callcenter: PIN lockout` /
-      # `callcenter: device revoked (PIN guessing)`: no such line = no data = OK.
+      # in a row, and logs `callcenter: PIN lockout` (each time the lock is set) /
+      # `callcenter: device revoked (PIN guessing)`: the rule matches those words.
       - uid: quicc-cc-pin-guessing
         title: PIN guessing in the call-center app
         condition: C
