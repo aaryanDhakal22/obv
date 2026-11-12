@@ -70,6 +70,18 @@
       "tooltip": ""
     },
     {
+      "type": "link",
+      "title": "Counter",
+      "url": "/d/counter",
+      "icon": "dashboard",
+      "includeVars": true,
+      "keepTime": false,
+      "asDropdown": false,
+      "targetBlank": false,
+      "tags": [],
+      "tooltip": ""
+    },
+    {
       "type": "dashboards",
       "title": "Debug",
       "tags": [
@@ -2532,7 +2544,7 @@
             "uid": "loki"
           },
           "queryType": "range",
-          "expr": "{deployment_environment=\"$env\", service_name=~\"quicc-(online|main|agent|hub)\"} | detected_level=~\"error|fatal|panic\" | tenant=~\"${store:regex}|\""
+          "expr": "{deployment_environment=\"$env\", service_name=~\"quicc-(online|main|agent|hub)\"} | detected_level=~\"error|fatal|panic\" | tenant=\"\" or tenant=~\"${store:regex}\""
         }
       ],
       "options": {

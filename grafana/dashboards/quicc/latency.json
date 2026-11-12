@@ -70,6 +70,18 @@
       "tooltip": ""
     },
     {
+      "type": "link",
+      "title": "Counter",
+      "url": "/d/counter",
+      "icon": "dashboard",
+      "includeVars": true,
+      "keepTime": false,
+      "asDropdown": false,
+      "targetBlank": false,
+      "tags": [],
+      "tooltip": ""
+    },
+    {
       "type": "dashboards",
       "title": "Debug",
       "tags": [

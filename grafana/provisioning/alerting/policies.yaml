@@ -9,6 +9,19 @@ policies:
     receiver: default-noop
     group_by: ["grafana_folder", "alertname"]
     routes:
+      # Rules labelled hours=opening (the counter terminal's "disconnected"
+      # rule) page only while the store is open: store-closed lives in
+      # store-hours.yaml. Must stay above the plain prod route (first match wins).
+      - receiver: pushover-orders
+        object_matchers:
+          - ["team", "=", "orders"]
+          - ["deployment_environment", "=", "prod"]
+          - ["hours", "=", "opening"]
+        mute_time_intervals: ["store-closed"]
+        group_by: ["deployment_environment", "tenant", "module", "alertname"]
+        group_wait: 30s
+        group_interval: 2m
+        repeat_interval: 1h
       - receiver: pushover-orders
         object_matchers:
           - ["team", "=", "orders"]

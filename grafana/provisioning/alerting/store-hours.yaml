@@ -1,0 +1,23 @@
+apiVersion: 1
+
+# When the store is closed: alerts labelled hours=opening (the counter
+# terminal's "disconnected" rule) don't page then (policies.yaml). Grafana
+# still evaluates them; one still firing when the store opens pages then
+# (a terminal that didn't come back on for the day).
+#
+# STORE_OPENS / STORE_CLOSES (README.md "Counter alert thresholds"): one
+# store (Lombardi's, Towson MD) so one timing, in the store's time zone. A
+# second store with other hours gets its own timing plus a route on
+# tenant=<slug>. Change the times here and restart Grafana (no app release).
+muteTimes:
+  - orgId: 1
+    name: store-closed
+    time_intervals:
+      - times:
+          # STORE_OPENS = 10:30 (closed from midnight until it opens)
+          - start_time: "00:00"
+            end_time: "10:30"
+          # STORE_CLOSES = 23:00
+          - start_time: "23:00"
+            end_time: "24:00"
+        location: America/New_York

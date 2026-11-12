@@ -398,6 +398,172 @@ groups:
             datasourceUid: __expr__
             model: { refId: C, type: threshold, expression: A, conditions: [ { evaluator: { type: gt, params: [120] } } ] }
 
+  # The counter terminal (TERMINAL-PLAN.md): problems at the counter page the
+  # owner. PROD ONLY: every query pins deployment_environment="prod", so a
+  # staging run never fires one (policies.yaml would only send staging a
+  # quiet Pushover anyway). Thresholds are the named values in README.md
+  # "Counter alert thresholds": the name sits in a comment next to the number.
+  # Rules marked "waits for CM-n" read a metric the Pi doesn't send yet
+  # (HARDENING-PLAN.md R-1a): no data = OK, so they stay quiet until it ships.
+  # Loki rules match the Pi's stable log messages (the text is the contract:
+  # a renamed message silently disables the rule).
+  - orgId: 1
+    name: counter
+    folder: Order pipeline
+    interval: 1m
+    rules:
+      # Kitchen never saw a counter order or change: printed nowhere, even after
+      # failover (the generic "agent failed to print" also fires for it).
+      - uid: quicc-counter-no-kitchen-ticket
+        title: counter order with no kitchen ticket
+        condition: C
+        for: 0m
+        labels: { team: orders, module: counter, severity: page }
+        annotations:
+          summary: "Store {{ $labels.tenant }}: {{ printf \"%.0f\" $values.A.Value }} counter order(s) or change(s) in 10m printed on no kitchen printer, even after failover. Tell the kitchen; Resend to kitchen from the terminal once a printer is back."
+        noDataState: OK
+        execErrState: Error
+        data:
+          - refId: A
+            relativeTimeRange: { from: 600, to: 0 }
+            datasourceUid: loki
+            model: { refId: A, queryType: instant, expr: "sum by (deployment_environment, tenant) (count_over_time({deployment_environment=\"prod\", service_name=\"quicc-agent\"} |~ `Counter order: no kitchen ticket printed|Counter change ticket not printed` [10m]))" }
+          - refId: C
+            datasourceUid: __expr__
+            # COUNTER_TICKET_MISSES_MAX = 0
+            model: { refId: C, type: threshold, expression: A, conditions: [ { evaluator: { type: gt, params: [0] } } ] }
+
+      # A money event main refused (invalid / not_found) or the Pi parked: a
+      # payment, void, change, drawer or Z that may be missing in main. main
+      # never refuses what it can store, so one is already a bug (M-2).
+      - uid: quicc-counter-money-refused
+        title: counter money event refused by main
+        condition: C
+        for: 0m
+        labels: { team: orders, module: counter, severity: page }
+        annotations:
+          summary: "Store {{ $labels.tenant }}: main refused or the Pi parked {{ printf \"%.0f\" $values.A.Value }} counter money event(s) in 10m (payment / void / change / drawer / Z). The money is on the Pi but may be missing in main. Counter dashboard → Sync refusals; the Pi page → Overview → parked events."
+        noDataState: OK
+        execErrState: Error
+        data:
+          - refId: A
+            relativeTimeRange: { from: 600, to: 0 }
+            datasourceUid: prometheus
+            model: { refId: A, instant: true, expr: "sum by (deployment_environment, tenant) (increase(floor_events_received_total{deployment_environment=\"prod\", type=~\"order.placed|order.payment|order.void|order.changed|drawer.opened|drawer.movement|drawer.closed|z.report\", result=~\"invalid|not_found\"}[10m]) or increase(floor_events_sent_total{deployment_environment=\"prod\", service_name=\"quicc-agent\", result=\"parked\"}[10m]))" }
+          - refId: C
+            datasourceUid: __expr__
+            # COUNTER_MONEY_REFUSALS_MAX = 0
+            model: { refId: C, type: threshold, expression: A, conditions: [ { evaluator: { type: gt, params: [0] } } ] }
+
+      # Waits for CM-9. Money stuck on the Pi while it can still report (an
+      # internet drop stops the telemetry too, so it can't fire for that).
+      # Until CM-9 ships, quicc-floor-sync-stalled (backlog > 0 for 15 min)
+      # covers it for every event type.
+      - uid: quicc-counter-sync-age
+        title: counter money waiting on the Pi too long
+        condition: C
+        for: 2m
+        labels: { team: orders, module: counter, severity: page }
+        annotations:
+          summary: "Store {{ $labels.tenant }}: the oldest counter money event on the Pi is {{ printf \"%.0f\" $values.A.Value }}s old and still not in main. Check the Pi ↔ main link and the sync refusals."
+        noDataState: OK
+        execErrState: Error
+        data:
+          - refId: A
+            relativeTimeRange: { from: 300, to: 0 }
+            datasourceUid: prometheus
+            model: { refId: A, instant: true, expr: "max by (deployment_environment, tenant) (floor_sync_oldest_age_seconds{deployment_environment=\"prod\", class=\"money\"})" }
+          - refId: C
+            datasourceUid: __expr__
+            # COUNTER_SYNC_AGE_SECONDS = 600
+            model: { refId: C, type: threshold, expression: A, conditions: [ { evaluator: { type: gt, params: [600] } } ] }
+
+      # Waits for CM-2. hours=opening routes it through the store-closed mute
+      # timing (store-hours.yaml): a terminal switched off at night is fine.
+      - uid: quicc-counter-terminal-gone
+        title: counter terminal disconnected from the Pi
+        condition: C
+        # COUNTER_TERMINAL_GONE_FOR = 5m
+        for: 5m
+        labels: { team: orders, module: counter, severity: page, hours: opening }
+        annotations:
+          summary: "Store {{ $labels.tenant }}: terminal {{ $labels.device }} has had no link to the Pi for 5 minutes during opening hours. Check its power and Wi-Fi / cable; it can't take orders or payments."
+        noDataState: OK
+        execErrState: Error
+        data:
+          - refId: A
+            relativeTimeRange: { from: 300, to: 0 }
+            datasourceUid: prometheus
+            model: { refId: A, instant: true, expr: "min by (deployment_environment, tenant, device) (terminal_connected{deployment_environment=\"prod\"})" }
+          - refId: C
+            datasourceUid: __expr__
+            model: { refId: C, type: threshold, expression: A, conditions: [ { evaluator: { type: lt, params: [1] } } ] }
+
+      # Waits for CM-4. Payments the Pi refused or failed (not ok / duplicate /
+      # manager_required), several in a short time.
+      - uid: quicc-counter-payment-errors
+        title: counter payments failing
+        condition: C
+        for: 0m
+        labels: { team: orders, module: counter, severity: page }
+        annotations:
+          summary: "Store {{ $labels.tenant }}: {{ printf \"%.0f\" $values.A.Value }} counter payments failed in 10m (Counter dashboard → Payment errors). Cashiers may be retrying or taking money that isn't recorded."
+        noDataState: OK
+        execErrState: Error
+        data:
+          - refId: A
+            relativeTimeRange: { from: 600, to: 0 }
+            datasourceUid: prometheus
+            model: { refId: A, instant: true, expr: "sum by (deployment_environment, tenant) (increase(terminal_payments_total{deployment_environment=\"prod\", result!~\"ok|duplicate|manager_required\"}[10m]))" }
+          - refId: C
+            datasourceUid: __expr__
+            # COUNTER_PAYMENT_ERRORS_MAX = 2 (pages on the 3rd in 10 min)
+            model: { refId: C, type: threshold, expression: A, conditions: [ { evaluator: { type: gt, params: [2] } } ] }
+
+      # The day's close went wrong on the Pi: a Z report that didn't build or
+      # doesn't balance, or the batch auto-close failed. (A Z main refused is
+      # quicc-counter-money-refused.) CM-10 replaces the log match later.
+      - uid: quicc-counter-close-failed
+        title: counter Z report or close batch failed
+        condition: C
+        for: 0m
+        labels: { team: orders, module: counter, severity: page }
+        annotations:
+          summary: "Store {{ $labels.tenant }}: the day's close went wrong on the Pi in the last 30 min ({{ printf \"%.0f\" $values.A.Value }} error line(s): Z report build failed / doesn't balance / batch auto-close failed). Counter dashboard → Day-close log lines."
+        noDataState: OK
+        execErrState: Error
+        data:
+          - refId: A
+            relativeTimeRange: { from: 1800, to: 0 }
+            datasourceUid: loki
+            model: { refId: A, queryType: instant, expr: "sum by (deployment_environment, tenant) (count_over_time({deployment_environment=\"prod\", service_name=\"quicc-agent\"} |~ `z report: build failed|z report doesn't balance|z report: list pending failed|Batch auto-close failed` [30m]))" }
+          - refId: C
+            datasourceUid: __expr__
+            # COUNTER_CLOSE_ERRORS_MAX = 0
+            model: { refId: C, type: threshold, expression: A, conditions: [ { evaluator: { type: gt, params: [0] } } ] }
+
+      # Someone keeps hitting a locked terminal (or a locked web / link
+      # password): every request during a lockout answers 429. Stopgap until
+      # CM-8 (wrong PINs + lockouts per terminal) ships.
+      - uid: quicc-counter-pin-lockouts
+        title: PIN lockouts at the counter
+        condition: C
+        for: 0m
+        labels: { team: orders, module: counter, severity: page }
+        annotations:
+          summary: "Store {{ $labels.tenant }}: {{ printf \"%.0f\" $values.A.Value }} locked-out PIN / password attempts on the Pi in 15m. Someone is guessing PINs at a terminal (or the Pi page's password)."
+        noDataState: OK
+        execErrState: Error
+        data:
+          - refId: A
+            relativeTimeRange: { from: 900, to: 0 }
+            datasourceUid: prometheus
+            model: { refId: A, instant: true, expr: "sum by (deployment_environment, tenant) (increase(http_server_request_duration_seconds_count{deployment_environment=\"prod\", service_name=\"quicc-agent\", http_response_status_code=\"429\"}[15m]))" }
+          - refId: C
+            datasourceUid: __expr__
+            # COUNTER_LOCKOUT_HITS_MAX = 2 (pages on the 3rd in 15 min)
+            model: { refId: C, type: threshold, expression: A, conditions: [ { evaluator: { type: gt, params: [2] } } ] }
+
   # Dead-man rules: an outage that stops telemetry must page, not look green.
   # Each watches a heartbeat series that is always present while the piece is
   # up (gauges are re-exported every interval even with no traffic).

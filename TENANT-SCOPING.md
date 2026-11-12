@@ -74,4 +74,5 @@ Existing instruments are listed in `contract/main.md` §7.2 and `contract/agent.
 4. **Fleet & upgrades** (`fleet`):
    - A per-store table: main / agent / Quibase / hub versions, Pi uptime, disk, temp, SD errors, last update result.
    - **"Safe to upgrade now?"** checks per store: no open orders, all printers up, disk and temp OK, no firing alerts, Pi connected, tablets connected; with version drift vs the newest version seen.
-5. The **Quicc Debug** folder is unchanged: stack-health, logs-explorer, online-relay, duplex-rpc, admin-catalog.
+5. **Counter** (`counter`, 2026-11-12): the counter terminal: counter orders, money events reaching main, kitchen tickets, the Pi ↔ main sync, terminals and staff, the day's close. **The one exception to "no business stats":** money panels (payments, voids, drawers; sales $ and tenders once CM-11 lands) are there to spot money that didn't reach main. They come only from pushed metrics (main counts an event when it applies it, exactly once), never from the database. Metrics it still waits for: CM-0 … CM-14 in the quicc-ops `HARDENING-PLAN.md` R-1a.
+6. The **Quicc Debug** folder is unchanged: stack-health, logs-explorer, online-relay, duplex-rpc, admin-catalog.

@@ -70,6 +70,18 @@
       "tooltip": ""
     },
     {
+      "type": "link",
+      "title": "Counter",
+      "url": "/d/counter",
+      "icon": "dashboard",
+      "includeVars": true,
+      "keepTime": false,
+      "asDropdown": false,
+      "targetBlank": false,
+      "tags": [],
+      "tooltip": ""
+    },
+    {
       "type": "dashboards",
       "title": "Debug",
       "tags": [
@@ -1567,7 +1579,7 @@
           "refId": "A",
           "queryType": "range",
           "legendFormat": "{{service_name}}",
-          "expr": "sum by (service_name) (count_over_time({deployment_environment=\"$env\", service_name=~\"quicc-(online|main|agent|hub)\"} | detected_level=~\"error|fatal|panic\" | tenant=~\"${store:regex}|\" [$__auto]))"
+          "expr": "sum by (service_name) (count_over_time({deployment_environment=\"$env\", service_name=~\"quicc-(online|main|agent|hub)\"} | detected_level=~\"error|fatal|panic\" | tenant=\"\" or tenant=~\"${store:regex}\" [$__auto]))"
         }
       ],
       "fieldConfig": {
