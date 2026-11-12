@@ -111,24 +111,37 @@ groups:
             datasourceUid: __expr__
             model: { refId: C, type: threshold, expression: A, conditions: [ { evaluator: { type: gt, params: [0] } } ] }
 
-      # 6 — agent received an order but the print failed.
+      # 6 — agent received an order but a ticket printed nowhere, even after
+      #     failover (orders.print.failed never counts a rerouted ticket).
+      #     Not on a short blip (owner 2026-11-12: no spam while printing
+      #     works): pages on 2+ such orders in 10 min, or on one while a
+      #     printer has been down for 2 min straight (no "up" sample in 2m),
+      #     and only if still true a minute later.
       - uid: quicc-ord-agent-print
         title: agent failed to print an order
         condition: C
-        for: 0m
+        for: 1m
         labels: { team: orders, module: agent, severity: page }
         annotations:
-          summary: "agent/ print-failed {{ printf \"%.0f\" $values.A.Value }} order(s) in 10m (reason={{ $labels.reason }}) — ticket did not reach the printer."
+          summary: "agent/ printed {{ printf \"%.0f\" $values.A.Value }} order(s) nowhere in 10m (even after failover){{ if gt $values.B.Value 0.0 }}, {{ printf \"%.0f\" $values.B.Value }} printer(s) down 2+ min{{ end }} — the kitchen may be missing a ticket: Resend from Quibase / the terminal."
         noDataState: OK
         execErrState: Error
         data:
           - refId: A
             relativeTimeRange: { from: 600, to: 0 }
             datasourceUid: prometheus
-            model: { refId: A, instant: true, expr: "sum by (deployment_environment, tenant, reason) (increase(orders_print_failed_total[10m]))" }
+            model: { refId: A, instant: true, expr: "sum by (deployment_environment, tenant) (increase(orders_print_failed_total[10m]))" }
+          - refId: B
+            relativeTimeRange: { from: 600, to: 0 }
+            datasourceUid: prometheus
+            model: { refId: B, instant: true, expr: "(count by (deployment_environment, tenant) (max_over_time(printer_status[2m]) == 0)) or (count by (deployment_environment, tenant) (printer_status) * 0)" }
+          - refId: D
+            datasourceUid: __expr__
+            # PRINT_MISSES_PAGE = 2 (misses alone), or 1 with a printer down PRINTER_DOWN_FOR = 2m
+            model: { refId: D, type: math, expression: "($A >= 2) || ($A > 0 && $B > 0)" }
           - refId: C
             datasourceUid: __expr__
-            model: { refId: C, type: threshold, expression: A, conditions: [ { evaluator: { type: gt, params: [0] } } ] }
+            model: { refId: C, type: threshold, expression: D, conditions: [ { evaluator: { type: gt, params: [0] } } ] }
 
       # 8 — main→agent command timed out (roster stale / duplex leg degraded). Warning.
       - uid: quicc-ord-rpc-timeout
@@ -417,7 +430,9 @@ groups:
       - uid: quicc-counter-no-kitchen-ticket
         title: counter order with no kitchen ticket
         condition: C
-        for: 0m
+        # Not on a blip (owner 2026-11-12): 2+ misses in 10 min, or one while a
+        # printer has been down 2 min straight; still true a minute later.
+        for: 1m
         labels: { team: orders, module: counter, severity: page }
         annotations:
           summary: "Store {{ $labels.tenant }}: {{ printf \"%.0f\" $values.A.Value }} counter order(s) or change(s) in 10m printed on no kitchen printer, even after failover. Tell the kitchen; Resend to kitchen from the terminal once a printer is back."
@@ -428,10 +443,17 @@ groups:
             relativeTimeRange: { from: 600, to: 0 }
             datasourceUid: loki
             model: { refId: A, queryType: instant, expr: "sum by (deployment_environment, tenant) (count_over_time({deployment_environment=\"prod\", service_name=\"quicc-agent\"} |~ `Counter order: no kitchen ticket printed|Counter change ticket not printed` [10m]))" }
+          - refId: B
+            relativeTimeRange: { from: 600, to: 0 }
+            datasourceUid: prometheus
+            model: { refId: B, instant: true, expr: "(count by (deployment_environment, tenant) (max_over_time(printer_status{deployment_environment=\"prod\"}[2m]) == 0)) or (count by (deployment_environment, tenant) (printer_status{deployment_environment=\"prod\"}) * 0)" }
+          - refId: D
+            datasourceUid: __expr__
+            # COUNTER_TICKET_MISSES_PAGE = 2, or 1 with a printer down PRINTER_DOWN_FOR = 2m
+            model: { refId: D, type: math, expression: "($A >= 2) || ($A > 0 && $B > 0)" }
           - refId: C
             datasourceUid: __expr__
-            # COUNTER_TICKET_MISSES_MAX = 0
-            model: { refId: C, type: threshold, expression: A, conditions: [ { evaluator: { type: gt, params: [0] } } ] }
+            model: { refId: C, type: threshold, expression: D, conditions: [ { evaluator: { type: gt, params: [0] } } ] }
 
       # A money event main refused (invalid / not_found) or the Pi parked: a
       # payment, void, change, drawer or Z that may be missing in main. main
@@ -626,6 +648,189 @@ groups:
               instant: true
               # Every Pi seen in the last day, minus the ones heard from in the last 15 min.
               expr: "(max by (deployment_environment, tenant) (max_over_time({__name__=~\"agent_disk_free(_bytes)?\", deployment_environment=\"prod\"}[1d])) * 0 + 1) unless (max by (deployment_environment, tenant) (max_over_time({__name__=~\"agent_disk_free(_bytes)?\", deployment_environment=\"prod\"}[15m])))"
+          - refId: C
+            datasourceUid: __expr__
+            model: { refId: C, type: threshold, expression: A, conditions: [ { evaluator: { type: gt, params: [0] } } ] }
+
+  # Backups of main's Postgres (quicc-ops deploy/backup, HARDENING-PLAN F-8) and
+  # runtime failures that need a person: crash loops, panics, money that main
+  # stored but flagged (L-3). The backup gauges come from the backup scripts
+  # (service_name=quicc-backup): role=source = the nightly job on the database
+  # box (04:30 store time), role=offsite = the receiver's check (06:00, grace →
+  # the NAS later). Install the backup BEFORE these rules reach Grafana, or
+  # "backup missing" pages until the first run (deploy/backup/README.md).
+  - orgId: 1
+    name: backups-and-runtime
+    folder: Order pipeline
+    interval: 1m
+    rules:
+      - uid: quicc-backup-failed
+        title: main's backup failed
+        condition: C
+        for: 0m
+        labels: { team: orders, module: backup, severity: page }
+        annotations:
+          summary: "The last {{ $labels.role }} backup run reported a failure: role=source = the dump or the copy off the box failed (journalctl -u quicc-backup on the database box); role=offsite = the receiver's check found a problem (journalctl --user -u quicc-backup-check on grace). deploy/backup/README.md."
+        noDataState: OK
+        execErrState: Error
+        data:
+          - refId: A
+            relativeTimeRange: { from: 172800, to: 0 }
+            datasourceUid: prometheus
+            model: { refId: A, instant: true, expr: "min by (deployment_environment, role) (last_over_time({__name__=~\"quicc_backup_ok(_ratio)?\", service_name=\"quicc-backup\"}[2d]))" }
+          - refId: C
+            datasourceUid: __expr__
+            model: { refId: C, type: threshold, expression: A, conditions: [ { evaluator: { type: lt, params: [1] } } ] }
+
+      # BACKUP_MISSING_AFTER = 26 h (93600 s): one missed night pages the morning after.
+      - uid: quicc-backup-missing
+        title: main's nightly backup is missing
+        condition: C
+        for: 0m
+        labels: { team: orders, module: backup, severity: page, deployment_environment: prod }
+        annotations:
+          summary: "No successful backup of prod main's Postgres for over 26 h (or never reported): the timer didn't run, the box was off, or OTLP is broken. systemctl list-timers quicc-backup.timer on the database box; deploy/backup/README.md."
+        noDataState: Alerting
+        execErrState: Error
+        data:
+          - refId: A
+            relativeTimeRange: { from: 259200, to: 0 }
+            datasourceUid: prometheus
+            model: { refId: A, instant: true, expr: "((time() - max(max_over_time({__name__=~\"quicc_backup_last_success_timestamp(_seconds)?\", role=\"source\", deployment_environment=\"prod\"}[3d]))) > bool 93600) or on() absent_over_time({__name__=~\"quicc_backup_last_success_timestamp(_seconds)?\", role=\"source\", deployment_environment=\"prod\"}[3d])" }
+          - refId: C
+            datasourceUid: __expr__
+            model: { refId: C, type: threshold, expression: A, conditions: [ { evaluator: { type: gt, params: [0] } } ] }
+
+      - uid: quicc-backup-offsite-stale
+        title: off-box backup copies not checked
+        condition: C
+        for: 0m
+        labels: { team: orders, module: backup, severity: page, deployment_environment: prod }
+        annotations:
+          summary: "The receiver (grace) hasn't checked the off-box copies of prod's backup for over 26 h, or its newest copy is over 26 h old: the copy isn't arriving, grace is down, or its timer stopped. deploy/backup/README.md."
+        noDataState: Alerting
+        execErrState: Error
+        data:
+          - refId: A
+            relativeTimeRange: { from: 259200, to: 0 }
+            datasourceUid: prometheus
+            model: { refId: A, instant: true, expr: "((time() - max(max_over_time({__name__=~\"quicc_backup_check_timestamp(_seconds)?\", role=\"offsite\", deployment_environment=\"prod\"}[3d]))) > bool 93600) or on() ((max(last_over_time({__name__=~\"quicc_backup_newest_age_seconds\", role=\"offsite\", deployment_environment=\"prod\"}[3d])) > bool 93600)) or on() absent_over_time({__name__=~\"quicc_backup_check_timestamp(_seconds)?\", role=\"offsite\", deployment_environment=\"prod\"}[3d])" }
+          - refId: C
+            datasourceUid: __expr__
+            model: { refId: C, type: threshold, expression: A, conditions: [ { evaluator: { type: gt, params: [0] } } ] }
+
+      # RESTORE_DRILL_MAX_AGE = 8 days: the Sunday drill (restore into a throwaway Postgres) didn't pass.
+      - uid: quicc-backup-restore-drill
+        title: backup restore drill overdue
+        condition: C
+        for: 0m
+        labels: { team: orders, module: backup, severity: warn, deployment_environment: prod }
+        annotations:
+          summary: "No passing restore drill of prod's backup in 8 days: the copies may not restore. Run ~/quicc-backup/backup-check.sh --restore on grace and read its output."
+        noDataState: OK
+        execErrState: Error
+        data:
+          - refId: A
+            relativeTimeRange: { from: 1209600, to: 0 }
+            datasourceUid: prometheus
+            model: { refId: A, instant: true, expr: "(time() - max(max_over_time({__name__=~\"quicc_backup_last_restore_test_timestamp(_seconds)?\", role=\"offsite\", deployment_environment=\"prod\"}[14d]))) > bool 691200" }
+          - refId: C
+            datasourceUid: __expr__
+            model: { refId: C, type: threshold, expression: A, conditions: [ { evaluator: { type: gt, params: [0] } } ] }
+
+      # PI_RESTARTS_PAGE = 3 in 15 min. agent.uptime.seconds drops at every
+      # start (resets); an update is 1, a rollback 2. A crash every few
+      # seconds never exports at all: "a prod Pi stopped reporting" covers it.
+      - uid: quicc-pi-crash-loop
+        title: the Pi's agent keeps restarting
+        condition: C
+        for: 0m
+        labels: { team: orders, module: agent, severity: page }
+        annotations:
+          summary: "Store {{ $labels.tenant }}: the Pi's agent restarted {{ printf \"%.0f\" $values.A.Value }} times in 15 min (crash loop, watchdog kills or out of memory). journalctl -u quicc-agent -n 200 on the Pi; /var/lib/quicc-agent/crash-*.txt; deploy/pi/RECOVERY.md \"Crash loop\"."
+        noDataState: OK
+        execErrState: Error
+        data:
+          - refId: A
+            relativeTimeRange: { from: 900, to: 0 }
+            datasourceUid: prometheus
+            model: { refId: A, instant: true, expr: "sum by (deployment_environment, tenant) (resets(agent_uptime_seconds{deployment_environment=~\"prod|staging\"}[15m]))" }
+          - refId: C
+            datasourceUid: __expr__
+            model: { refId: C, type: threshold, expression: A, conditions: [ { evaluator: { type: gt, params: [2] } } ] }
+
+      # F-1 / F-2: a recovered panic is a bug that would have taken the service down.
+      - uid: quicc-runtime-panics
+        title: panic recovered (agent or main)
+        condition: C
+        for: 0m
+        labels: { team: orders, module: runtime, severity: page }
+        annotations:
+          summary: "{{ $labels.service_name }} recovered {{ printf \"%.0f\" $values.A.Value }} panic(s) in 10 min (where={{ $labels.where }}): the work in that goroutine / handler / SQS message was dropped or left for redrive. The stack is in the logs (Loki, level=error)."
+        noDataState: OK
+        execErrState: Error
+        data:
+          - refId: A
+            relativeTimeRange: { from: 600, to: 0 }
+            datasourceUid: prometheus
+            model: { refId: A, instant: true, expr: "sum by (deployment_environment, tenant, service_name, where) (increase({__name__=~\"agent_panics_total|main_panics_total|sqs_messages_panicked_total\", deployment_environment=~\"prod|staging\"}[10m]))" }
+          - refId: C
+            datasourceUid: __expr__
+            model: { refId: C, type: threshold, expression: A, conditions: [ { evaluator: { type: gt, params: [0] } } ] }
+
+      # L-3: a capture / void / refund of an online card hold failed.
+      - uid: quicc-money-card-hold-failed
+        title: card hold capture / void / refund failed
+        condition: C
+        for: 0m
+        labels: { team: orders, module: main, severity: page }
+        annotations:
+          summary: "Store {{ $labels.tenant }}: {{ printf \"%.0f\" $values.A.Value }} card hold {{ $labels.op }}(s) failed in 30 min: a customer may be charged for a cancelled order, or not charged for a delivered one. Check Store › Payments and Square's dashboard."
+        noDataState: OK
+        execErrState: Error
+        data:
+          - refId: A
+            relativeTimeRange: { from: 1800, to: 0 }
+            datasourceUid: prometheus
+            model: { refId: A, instant: true, expr: "sum by (deployment_environment, tenant, op) (increase(card_holds_failed_total{deployment_environment=~\"prod|staging\"}[30m]))" }
+          - refId: C
+            datasourceUid: __expr__
+            model: { refId: C, type: threshold, expression: A, conditions: [ { evaluator: { type: gt, params: [0] } } ] }
+
+      # L-3 / M-12: the day's Z doesn't balance (on the Pi, or against main's own payments).
+      - uid: quicc-money-z-unbalanced
+        title: Z report doesn't balance
+        condition: C
+        for: 0m
+        labels: { team: orders, module: counter, severity: page }
+        annotations:
+          summary: "Store {{ $labels.tenant }}: a Z report main stored doesn't balance (source={{ $labels.source }}, difference {{ printf \"%.0f\" $values.A.Value }}¢ on the last one): money is missing or counted twice. Compare Store › Reports › Z with the Pi's."
+        noDataState: OK
+        execErrState: Error
+        data:
+          - refId: A
+            relativeTimeRange: { from: 86400, to: 0 }
+            datasourceUid: prometheus
+            model: { refId: A, instant: true, expr: "max by (deployment_environment, tenant, source) (abs(last_over_time(dayclose_z_difference_cents{deployment_environment=~\"prod|staging\"}[1d]))) or on (deployment_environment, tenant) (sum by (deployment_environment, tenant) (increase(dayclose_z_stored_total{balanced=\"false\", deployment_environment=~\"prod|staging\"}[1d])) > 0)" }
+          - refId: C
+            datasourceUid: __expr__
+            model: { refId: C, type: threshold, expression: A, conditions: [ { evaluator: { type: gt, params: [0] } } ] }
+
+      # L-3 / M-2: money main stored but flagged (it never refuses what it can store).
+      - uid: quicc-money-flagged
+        title: money stored but flagged by main
+        condition: C
+        for: 0m
+        labels: { team: orders, module: main, severity: warn }
+        annotations:
+          summary: "Store {{ $labels.tenant }}: main stored {{ printf \"%.0f\" $values.A.Value }} money event(s) in 1 h with a flag ({{ $labels.type }} / {{ $labels.code }}): stored, but something didn't add up. Look them up in main's logs."
+        noDataState: OK
+        execErrState: Error
+        data:
+          - refId: A
+            relativeTimeRange: { from: 3600, to: 0 }
+            datasourceUid: prometheus
+            model: { refId: A, instant: true, expr: "sum by (deployment_environment, tenant, type, code) (increase(money_flags_total{deployment_environment=~\"prod|staging\"}[1h]))" }
           - refId: C
             datasourceUid: __expr__
             model: { refId: C, type: threshold, expression: A, conditions: [ { evaluator: { type: gt, params: [0] } } ] }

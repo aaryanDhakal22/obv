@@ -130,7 +130,7 @@ move through any module, your phone buzzes.**
   | main failed to persist | `increase(orders_persist_failed_total[10m]) > 0` | main |
   | main outbox dispatch failing | `increase(outbox_events_failed_total[10m]) > 0` | main |
   | main outbox backlog not draining | `outbox_events_pending > 0` for 15m | main |
-  | agent failed to print | `increase(orders_print_failed_total[10m]) > 0` | agent |
+  | agent failed to print | orders printed nowhere even after failover (`orders_print_failed_total`, never a rerouted ticket): ≥ `PRINT_MISSES_PAGE` (2) in 10 min, or 1 while a printer has been down `PRINTER_DOWN_FOR` (2 min, no up sample); `for: 1m` — a short blip never pages | agent |
   | agent received > printed (funnel gap) | agent `orders_received` − `orders_printed` > 0 for 30m | agent |
   | agent command channel timing out | `increase(rpc_timeouts_total[10m]) > 0` | main |
   | **order could not reach the agent (SSE down)** | `increase(sse_events_broadcast_total{event_type="order",result="no_subscribers"}[10m]) > 0` | main |
@@ -151,7 +151,7 @@ move through any module, your phone buzzes.**
 
   | Rule | Fires on | Source |
   |---|---|---|
-  | counter order with no kitchen ticket | Pi logs `Counter order: no kitchen ticket printed` / `Counter change ticket not printed` in 10 min > `COUNTER_TICKET_MISSES_MAX` | Loki (agent) |
+  | counter order with no kitchen ticket | Pi logs `Counter order: no kitchen ticket printed` / `Counter change ticket not printed` in 10 min ≥ `COUNTER_TICKET_MISSES_PAGE` (2), or 1 while a printer has been down `PRINTER_DOWN_FOR`; `for: 1m` | Loki (agent) + Prometheus |
   | counter money event refused by main | main answered `invalid`/`not_found` to a money event (order.placed / payment / void / changed, drawer.*, z.report), or the Pi parked one, in 10 min > `COUNTER_MONEY_REFUSALS_MAX` | main `floor_events_received_total` + agent `floor_events_sent_total{result="parked"}` |
   | counter money waiting on the Pi too long | *waits CM-9*: `floor_sync_oldest_age_seconds{class="money"}` > `COUNTER_SYNC_AGE_SECONDS` for 2 min. Today `agent floor changes not reaching main` (backlog > 0 for 15 min) covers it for every event | agent |
   | counter terminal disconnected from the Pi | *waits CM-2*: `terminal_connected{device}` < 1 for `COUNTER_TERMINAL_GONE_FOR`, only while the store is open (`hours=opening` → `store-closed` mute timing) | agent |
@@ -172,14 +172,16 @@ move through any module, your phone buzzes.**
 
   | Name | Default | Meaning |
   |---|---|---|
-  | `COUNTER_TICKET_MISSES_MAX` | 0 | counter orders / changes with no kitchen ticket allowed in 10 min |
+  | `COUNTER_TICKET_MISSES_PAGE` | 2 | counter orders / changes with no kitchen ticket in 10 min that page on their own (one pages only with a printer down `PRINTER_DOWN_FOR`) |
+  | `PRINT_MISSES_PAGE` | 2 | orders printed nowhere in 10 min that page on their own (rule *agent failed to print*) |
+  | `PRINTER_DOWN_FOR` | 2m | a printer counts as down (rules, Counter *Printers down*, Reliability's alert timeline) only with no reachable check for this long: short blips never page (owner 2026-11-12) |
   | `COUNTER_MONEY_REFUSALS_MAX` | 0 | money events main may refuse (or the Pi park) in 10 min |
   | `COUNTER_SYNC_AGE_SECONDS` | 600 | oldest money event still on the Pi before it pages |
   | `COUNTER_TERMINAL_GONE_FOR` | 5m | how long a terminal may be off the Pi while the store is open (the rule's `for`) |
   | `COUNTER_PAYMENT_ERRORS_MAX` | 2 | failed payments allowed in 10 min (pages on the 3rd) |
   | `COUNTER_CLOSE_ERRORS_MAX` | 0 | Z / close error lines allowed in 30 min |
   | `COUNTER_LOCKOUT_HITS_MAX` | 2 | locked-out attempts (429) allowed in 15 min (pages on the 3rd) |
-  | `STORE_OPENS` / `STORE_CLOSES` | 10:30 / 23:00 America/New_York | the `store-closed` mute timing (`store-hours.yaml`); **guessed, confirm Lombardi's hours** |
+  | `STORE_HOURS_MON_THU` / `_FRI_SAT` / `_SUN` | 10:00–01:00 / 10:00–02:00 / 10:30–24:00 America/New_York (owner, 2026-11-12) | the `store-closed` mute timing (`store-hours.yaml`): quiet Mon 00–10, Tue–Fri 01–10, Sat 02–10, Sun 02–10:30 |
 
   **Staging is muted for the counter rules** by their prod-only queries. To mute
   every staging page as well (all groups), delete the `pushover-staging` route

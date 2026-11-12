@@ -5,19 +5,42 @@ apiVersion: 1
 # still evaluates them; one still firing when the store opens pages then
 # (a terminal that didn't come back on for the day).
 #
-# STORE_OPENS / STORE_CLOSES (README.md "Counter alert thresholds"): one
-# store (Lombardi's, Towson MD) so one timing, in the store's time zone. A
-# second store with other hours gets its own timing plus a route on
-# tenant=<slug>. Change the times here and restart Grafana (no app release).
+# Lombardi's (Towson MD) opening hours, confirmed by the owner 2026-11-12,
+# in the store's time zone (America/New_York):
+#   STORE_HOURS_MON_THU = 10:00 – 01:00 (the next day)
+#   STORE_HOURS_FRI_SAT = 10:00 – 02:00 (the next day)
+#   STORE_HOURS_SUN     = 10:30 – 24:00 (midnight)
+# The store closes after midnight, so each day's closed window starts when
+# the night before ends. The quiet windows below follow from these:
+#   Mon        00:00 – 10:00   (Sunday closes at midnight)
+#   Tue – Fri  01:00 – 10:00   (Mon – Thu close at 01:00)
+#   Sat        02:00 – 10:00   (Friday closes at 02:00)
+#   Sun        02:00 – 10:30   (Saturday closes at 02:00)
+# main's Postgres backup runs at 04:30 (deploy/backup/quicc-backup.timer):
+# inside every closed window. One store, so one timing; a second store with
+# other hours gets its own timing plus a route on tenant=<slug>. Change the
+# times here and restart Grafana (no app release).
 muteTimes:
   - orgId: 1
     name: store-closed
     time_intervals:
-      - times:
-          # STORE_OPENS = 10:30 (closed from midnight until it opens)
+      - weekdays: ["monday"]
+        times:
           - start_time: "00:00"
+            end_time: "10:00"
+        location: America/New_York
+      - weekdays: ["tuesday:friday"]
+        times:
+          - start_time: "01:00"
+            end_time: "10:00"
+        location: America/New_York
+      - weekdays: ["saturday"]
+        times:
+          - start_time: "02:00"
+            end_time: "10:00"
+        location: America/New_York
+      - weekdays: ["sunday"]
+        times:
+          - start_time: "02:00"
             end_time: "10:30"
-          # STORE_CLOSES = 23:00
-          - start_time: "23:00"
-            end_time: "24:00"
         location: America/New_York

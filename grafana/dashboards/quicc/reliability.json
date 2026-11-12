@@ -1153,7 +1153,7 @@
             "type": "prometheus",
             "uid": "prometheus"
           },
-          "expr": "((sum by (tenant) (increase(orders_print_failed_total{deployment_environment=\"$env\", tenant=~\"${store:regex}|\"}[10m]))) > 0) * 0 + 1",
+          "expr": "(((sum by (tenant) (increase(orders_print_failed_total{deployment_environment=\"$env\", tenant=~\"${store:regex}|\"}[10m]))) >= 2) or (((sum by (tenant) (increase(orders_print_failed_total{deployment_environment=\"$env\", tenant=~\"${store:regex}|\"}[10m]))) > 0) and on (tenant) ((count by (tenant) (max_over_time(printer_status{deployment_environment=\"$env\", tenant=~\"${store:regex}|\"}[2m]) == 0)) > 0))) * 0 + 1",
           "legendFormat": "{{tenant}} print failed",
           "range": true,
           "instant": false,

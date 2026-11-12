@@ -477,7 +477,7 @@
     {
       "type": "stat",
       "title": "Printers down",
-      "description": "Printers the Pi can't reach right now (printer.status = 0). A station down: its tickets reroute to another printer with a REROUTED banner.",
+      "description": "Printers the Pi can't reach right now (printer.status = 0). A station down: its tickets reroute to another printer with a REROUTED banner. Down = no reachable check for 2 min straight (a short blip doesn't count, like the alert rules).",
       "datasource": {
         "type": "prometheus",
         "uid": "prometheus"
@@ -488,7 +488,7 @@
             "type": "prometheus",
             "uid": "prometheus"
           },
-          "expr": "(count by (tenant) (printer_status{service_name=\"quicc-agent\", deployment_environment=\"$env\", tenant=~\"${store:regex}|\"} == 0)) or (count by (tenant) (printer_status{service_name=\"quicc-agent\", deployment_environment=\"$env\", tenant=~\"${store:regex}|\"}) * 0)",
+          "expr": "(count by (tenant) (max_over_time(printer_status{service_name=\"quicc-agent\", deployment_environment=\"$env\", tenant=~\"${store:regex}|\"}[2m]) == 0)) or (count by (tenant) (printer_status{service_name=\"quicc-agent\", deployment_environment=\"$env\", tenant=~\"${store:regex}|\"}) * 0)",
           "legendFormat": "{{tenant}}",
           "refId": "A",
           "range": false,
