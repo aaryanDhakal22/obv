@@ -7,7 +7,7 @@ apiVersion: 1
 # on *failures/backlog*, not on absence of traffic. Silence is caught by the
 # `telemetry-silence` group at the bottom (absent_over_time on heartbeats).
 # Every rule keeps `deployment_environment` + `tenant`, so policies.yaml routes
-# prod to a loud page, staging to a quiet one and dev nowhere.
+# prod to a loud page; staging and dev nowhere (owner 2026-11-13).
 #
 # Prometheus names follow the OTEL→PRW convention (dots→_, counters +_total).
 #

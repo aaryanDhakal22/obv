@@ -3,6 +3,11 @@ apiVersion: 1
 # Contact points for order-pipeline alerts. Reuses the same Pushover app the
 # agent already sends printer notifications to — set PUSHOVER_APP_TOKEN and
 # PUSHOVER_USER_KEY in observability/.env (Grafana expands ${VAR} in provisioning).
+# Staging / dev never notify anyone (owner 2026-11-13): the staging contact point is deleted.
+deleteContactPoints:
+  - orgId: 1
+    uid: pushover-staging
+
 contactPoints:
   - orgId: 1
     name: pushover-orders
@@ -20,35 +25,14 @@ contactPoints:
           # 1 = high priority (bypasses quiet hours) while firing, 0 on resolve.
           priority: "1"
           okPriority: "0"
-          title: '[{{ .Status }}] Quicc order pipeline: {{ len .Alerts.Firing }} firing'
+          # Plain words, no emoji (owner 2026-11-13: "✅ resolved: <problem name>" read like a problem).
+          # A problem: "PROBLEM · <what> (<store> · <module>)" + its summary; fixed: "FIXED · back to
+          # normal (was: <what>)".
+          title: '{{ if gt (len .Alerts.Firing) 0 }}Quicc · {{ len .Alerts.Firing }} problem{{ if gt (len .Alerts.Firing) 1 }}s{{ end }}{{ else }}Quicc · back to normal{{ end }}'
           message: |-
-            {{ range .Alerts.Firing }}⚠️ {{ index .Labels "alertname" }} ({{ with index .Labels "tenant" }}{{ . }} · {{ end }}{{ index .Labels "module" }}/{{ index .Labels "deployment_environment" }})
+            {{ range .Alerts.Firing }}PROBLEM · {{ index .Labels "alertname" }} ({{ with index .Labels "tenant" }}{{ . }} · {{ end }}{{ index .Labels "module" }})
             {{ index .Annotations "summary" }}
-            {{ end }}{{ range .Alerts.Resolved }}✅ resolved: {{ index .Labels "alertname" }}
-            {{ end }}
-        disableResolveMessage: false
-
-  - orgId: 1
-    name: pushover-staging
-    receivers:
-      - uid: pushover-staging
-        type: pushover
-        settings:
-          apiToken: ${PUSHOVER_APP_TOKEN}
-          userKey: ${PUSHOVER_USER_KEY}
-          # Deliver to this specific device (leave blank to hit all devices).
-          device: AaryanPhone
-          # Custom Pushover sound for firing order-drop alerts. Resolved
-          # notifications use the default sound (okSound unset).
-          sound: none
-          # Staging: quiet (priority 0, no sound).
-          priority: "0"
-          okPriority: "0"
-          title: '[{{ .Status }}] Quicc STAGING: {{ len .Alerts.Firing }} firing'
-          message: |-
-            {{ range .Alerts.Firing }}⚠️ {{ index .Labels "alertname" }} ({{ with index .Labels "tenant" }}{{ . }} · {{ end }}{{ index .Labels "module" }}/{{ index .Labels "deployment_environment" }})
-            {{ index .Annotations "summary" }}
-            {{ end }}{{ range .Alerts.Resolved }}✅ resolved: {{ index .Labels "alertname" }}
+            {{ end }}{{ range .Alerts.Resolved }}FIXED · back to normal (was: {{ index .Labels "alertname" }}{{ with index .Labels "tenant" }}, {{ . }}{{ end }})
             {{ end }}
         disableResolveMessage: false
 
