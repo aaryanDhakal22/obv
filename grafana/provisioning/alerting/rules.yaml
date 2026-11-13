@@ -10,6 +10,19 @@ apiVersion: 1
 # prod to a loud page, staging to a quiet one and dev nowhere.
 #
 # Prometheus names follow the OTEL→PRW convention (dots→_, counters +_total).
+#
+# Grafana keeps a provisioned rule after its block leaves this file, so a
+# removed rule's uid goes in deleteRules (else it lingers and keeps paging).
+deleteRules:
+  # v1's funnel gap (received − printed > 0): dropped from this file long ago
+  # but still live in Grafana; it flapped on prod's future orders (received
+  # now, printed at their time). "agent failed to print" covers real misses.
+  - orgId: 1
+    uid: quicc-ord-agent-funnel-gap
+  # SoftTouch is gone (2026-11-11): the hub is only the callout box.
+  - orgId: 1
+    uid: quicc-hub-softtouch-down
+
 groups:
   - orgId: 1
     name: order-pipeline

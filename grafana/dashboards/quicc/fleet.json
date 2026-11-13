@@ -1613,7 +1613,7 @@
           {
             "matcher": {
               "id": "byName",
-              "options": "POS link"
+              "options": "Hub link"
             },
             "properties": [
               {
@@ -1721,7 +1721,7 @@
               "tenant": "store",
               "version": "hub version",
               "Value #B": "hub behind",
-              "Value #C": "POS link",
+              "Value #C": "Hub link",
               "Value #E": "hub sees Pi"
             }
           }

@@ -560,7 +560,7 @@
     },
     {
       "type": "stat",
-      "title": "POS link",
+      "title": "Hub link",
       "description": "Worst store's share of reported time the hub's status reached the Pi. Low: the hub box or its network is unstable.",
       "datasource": {
         "type": "prometheus",
@@ -573,7 +573,7 @@
             "uid": "prometheus"
           },
           "expr": "min(avg_over_time((min by (tenant) ({__name__=~\"hub_link_up(_ratio)?\", deployment_environment=\"$env\", tenant=~\"${store:regex}|\"}))[$__range:1m]))",
-          "legendFormat": "POS link",
+          "legendFormat": "Hub link",
           "range": false,
           "instant": true,
           "refId": "A"
@@ -1052,7 +1052,7 @@
             "uid": "prometheus"
           },
           "expr": "min by (tenant) ({__name__=~\"hub_link_up(_ratio)?\", deployment_environment=\"$env\", tenant=~\"${store:regex}|\"})",
-          "legendFormat": "{{tenant}} POS link",
+          "legendFormat": "{{tenant}} Hub link",
           "range": true,
           "instant": false,
           "refId": "F"

@@ -1,7 +1,7 @@
 {
   "uid": "store-health",
   "title": "Store health",
-  "description": "Is this store working right now: up/down of main, Pi, link, printers, tablets and POS link (the Pi sees the hub); live bottlenecks; today's order flow and p95 per hop; recent errors.",
+  "description": "Is this store working right now: up/down of main, Pi, link, printers, tablets and hub link (the Pi sees the hub); Pi memory; live bottlenecks; today's order flow and p95 per hop; recent errors (main, Pi, hub, online).",
   "tags": [
     "quicc",
     "quicc-core",
@@ -10,7 +10,7 @@
   ],
   "timezone": "browser",
   "schemaVersion": 39,
-  "version": 1,
+  "version": 2,
   "editable": true,
   "graphTooltip": 1,
   "refresh": "30s",
@@ -641,8 +641,8 @@
     },
     {
       "type": "stat",
-      "title": "POS link",
-      "description": "Whether the store hub's status reaches the Pi (hub.link.up). DOWN: order callouts stop; check the hub box.",
+      "title": "Hub link",
+      "description": "Whether the store hub (the callout box on iris) reaches the Pi with its status (hub.link.up, as the Pi sees it). DOWN: order callouts and the store TVs stop; check the hub (tmux session hub on iris).",
       "datasource": {
         "type": "prometheus",
         "uid": "prometheus"
@@ -2516,9 +2516,9 @@
       }
     },
     {
-      "id": 36,
+      "id": 38,
       "type": "row",
-      "title": "Recent errors",
+      "title": "Pi resources",
       "collapsed": false,
       "gridPos": {
         "x": 0,
@@ -2527,6 +2527,336 @@
         "h": 1
       },
       "panels": []
+    },
+    {
+      "type": "stat",
+      "title": "Pi memory %",
+      "description": "Memory of the store Pi, in %. 'agent': the agent's Go memory in use (go.memory.used, all kinds) as a share of its own cap GOMEMLIMIT = 280 MiB (go.memory.limit; the systemd unit's MemoryHigh is 300M, MemoryMax 400M, deploy/pi/agent-install.sh). Over 90 % for long: the Go GC works hard and the unit nears MemoryHigh (slow) then MemoryMax (OOM kill, restart: rule 'the Pi's agent keeps restarting'). 'Pi RAM used': the whole Pi's RAM (1 - MemAvailable / MemTotal). The agent reads MemAvailable for its heartbeat to main but does not export it yet: this line stays empty until the agent sends the gauges agent.mem.available and agent.mem.total (bytes, from /proc/meminfo).",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "100 * sum by (tenant) (go_memory_used_bytes{deployment_environment=\"$env\", service_name=\"quicc-agent\", tenant=~\"${store:regex}|\"}) / max by (tenant) (go_memory_limit_bytes{deployment_environment=\"$env\", service_name=\"quicc-agent\", tenant=~\"${store:regex}|\"} < 1e12)",
+          "legendFormat": "{{tenant}} agent",
+          "range": false,
+          "instant": true,
+          "refId": "A"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "100 * (1 - max by (tenant) ({__name__=~\"agent_mem_available(_bytes)?\", deployment_environment=\"$env\", service_name=\"quicc-agent\", tenant=~\"${store:regex}|\"}) / max by (tenant) ({__name__=~\"agent_mem_total(_bytes)?\", deployment_environment=\"$env\", service_name=\"quicc-agent\", tenant=~\"${store:regex}|\"}))",
+          "legendFormat": "{{tenant}} Pi RAM used",
+          "range": false,
+          "instant": true,
+          "refId": "B"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "min": 0,
+          "max": 100,
+          "decimals": 0,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 80
+              },
+              {
+                "color": "red",
+                "value": 90
+              }
+            ]
+          },
+          "color": {
+            "mode": "thresholds"
+          },
+          "noValue": "no data"
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "background",
+        "graphMode": "area",
+        "justifyMode": "center",
+        "textMode": "value_and_name",
+        "wideLayout": true,
+        "showPercentChange": false,
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        }
+      },
+      "links": [
+        {
+          "title": "Fleet & upgrades",
+          "url": "/d/fleet?${env:queryparam}&${store:queryparam}&${__url_time_range}"
+        }
+      ],
+      "id": 39,
+      "gridPos": {
+        "x": 0,
+        "y": 30,
+        "w": 6,
+        "h": 8
+      }
+    },
+    {
+      "type": "timeseries",
+      "title": "Pi memory % over time",
+      "description": "Memory of the store Pi, in %. 'agent': the agent's Go memory in use (go.memory.used, all kinds) as a share of its own cap GOMEMLIMIT = 280 MiB (go.memory.limit; the systemd unit's MemoryHigh is 300M, MemoryMax 400M, deploy/pi/agent-install.sh). Over 90 % for long: the Go GC works hard and the unit nears MemoryHigh (slow) then MemoryMax (OOM kill, restart: rule 'the Pi's agent keeps restarting'). 'Pi RAM used': the whole Pi's RAM (1 - MemAvailable / MemTotal). The agent reads MemAvailable for its heartbeat to main but does not export it yet: this line stays empty until the agent sends the gauges agent.mem.available and agent.mem.total (bytes, from /proc/meminfo).",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "100 * sum by (tenant) (go_memory_used_bytes{deployment_environment=\"$env\", service_name=\"quicc-agent\", tenant=~\"${store:regex}|\"}) / max by (tenant) (go_memory_limit_bytes{deployment_environment=\"$env\", service_name=\"quicc-agent\", tenant=~\"${store:regex}|\"} < 1e12)",
+          "legendFormat": "{{tenant}} agent (% of GOMEMLIMIT)",
+          "range": true,
+          "instant": false,
+          "refId": "A"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "100 * (1 - max by (tenant) ({__name__=~\"agent_mem_available(_bytes)?\", deployment_environment=\"$env\", service_name=\"quicc-agent\", tenant=~\"${store:regex}|\"}) / max by (tenant) ({__name__=~\"agent_mem_total(_bytes)?\", deployment_environment=\"$env\", service_name=\"quicc-agent\", tenant=~\"${store:regex}|\"}))",
+          "legendFormat": "{{tenant}} Pi RAM used",
+          "range": true,
+          "instant": false,
+          "refId": "B"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "min": 0,
+          "max": 100,
+          "decimals": 0,
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 2,
+            "fillOpacity": 10,
+            "showPoints": "never",
+            "spanNulls": false,
+            "barAlignment": 0,
+            "gradientMode": "none",
+            "stacking": {
+              "mode": "none",
+              "group": "A"
+            },
+            "axisSoftMin": 0,
+            "thresholdsStyle": {
+              "mode": "dashed"
+            }
+          },
+          "color": {
+            "mode": "palette-classic"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 80
+              },
+              {
+                "color": "red",
+                "value": 90
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true,
+          "calcs": [
+            "max",
+            "lastNotNull"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "id": 40,
+      "gridPos": {
+        "x": 6,
+        "y": 30,
+        "w": 18,
+        "h": 8
+      }
+    },
+    {
+      "id": 36,
+      "type": "row",
+      "title": "Recent errors",
+      "collapsed": false,
+      "gridPos": {
+        "x": 0,
+        "y": 38,
+        "w": 24,
+        "h": 1
+      },
+      "panels": []
+    },
+    {
+      "type": "timeseries",
+      "title": "Error lines by service",
+      "description": "Error / fatal / panic log lines per interval, per service (quicc-main = prod main, quicc-agent = the store Pi, quicc-hub = the callout box, quicc-online = the vendor relay); Pi and hub lines filtered to the selected stores. A step up tells you when; the log panel beside it tells you what.",
+      "datasource": {
+        "type": "loki",
+        "uid": "loki"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "loki",
+            "uid": "loki"
+          },
+          "queryType": "range",
+          "expr": "sum by (service_name) (count_over_time({deployment_environment=\"$env\", service_name=~\"quicc-(online|main|agent|hub)\"} | detected_level=~\"error|fatal|panic\" | tenant=\"\" or tenant=~\"${store:regex}\" [$__auto]))",
+          "legendFormat": "{{service_name}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "decimals": 0,
+          "custom": {
+            "drawStyle": "bars",
+            "lineWidth": 1,
+            "fillOpacity": 80,
+            "showPoints": "never",
+            "spanNulls": false,
+            "barAlignment": 0,
+            "gradientMode": "none",
+            "stacking": {
+              "mode": "normal",
+              "group": "A"
+            },
+            "axisSoftMin": 0
+          },
+          "color": {
+            "mode": "palette-classic"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "quicc-main"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "main"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "quicc-agent"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Pi"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "quicc-hub"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "hub"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "quicc-online"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "online"
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true,
+          "calcs": [
+            "sum"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "id": 41,
+      "gridPos": {
+        "x": 0,
+        "y": 39,
+        "w": 8,
+        "h": 10
+      }
     },
     {
       "type": "logs",
@@ -2564,9 +2894,9 @@
       ],
       "id": 37,
       "gridPos": {
-        "x": 0,
-        "y": 30,
-        "w": 24,
+        "x": 8,
+        "y": 39,
+        "w": 16,
         "h": 10
       }
     }

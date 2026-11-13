@@ -84,7 +84,7 @@ match), so Loki panels filter with `| tenant="" or tenant=~"${store:regex}"`
 (fixed 2026-11-12 on Store health, Uptime & incidents and Fleet: main's error
 lines were silently dropped before).
 
-- **Store health** (`store-health`, today): up/down tiles for main, Pi, Pi to main link, printers, tablets and POS link (the Pi sees the hub); live bottlenecks (waiting to accept, unacked by the Pi, outbox pending, floor-sync backlog, hub status age, hub feed lag); order flow (received → saved → reached the Pi → accepted → printed, print failures); p95 per hop (vendor → saved is mostly the vendor's own 1–4 min hand-over, red only over 10 min); open orders by state, orders per hop, machine-hop p95 (our hops only: SQS wait, not vendor → saved); recent errors from Loki.
+- **Store health** (`store-health`, today): up/down tiles for main, Pi, Pi to main link, printers, tablets and hub link (the Pi sees the hub; "POS link" before 2026-11-12, here and on Uptime and Fleet); live bottlenecks (waiting to accept, unacked by the Pi, outbox pending, floor-sync backlog, hub status age, hub feed lag); order flow (received → saved → reached the Pi → accepted → printed, print failures); p95 per hop (vendor → saved is mostly the vendor's own 1–4 min hand-over, red only over 10 min); open orders by state, orders per hop, machine-hop p95 (our hops only: SQS wait, not vendor → saved); **Pi resources**: Pi memory % (now and over time: the agent's Go memory as a share of its GOMEMLIMIT 280 MiB, and the whole Pi's RAM used, which stays empty until the agent exports `agent.mem.available` / `agent.mem.total`); recent errors: error lines per service (main, Pi, hub, online) next to the error log lines from Loki.
 - **Latency & bottlenecks** (`latency`): p95 tiles per hop (SQS wait, vendor → saved, dispatch, Pi ack, accept, print, floor sync, RPC round trip, printer write) and current queues; average seconds per order by hop; p95 per store and hop; p50/p95/p99 time series per hop; main, Pi and hub queue depths; the slowest main and Pi traces from Tempo.
 - **Uptime & incidents** (`reliability`): uptime over the range (worst store) and per store × component for 24 h / 7 d / 30 d; an up/down state timeline; alert conditions over time (recomputed from the rule queries) plus rules firing now; failures by kind across modules, error log lines by service, SSE reconnects, print failures, unaccepted-order pages. main and Pi uptime is presence-based (no telemetry = down, counted from the first time each was seen in the window). Link, printers, tablets and POS link uptime is the average of their 0/1 gauges while the Pi reports.
 - **Fleet & upgrades** (`fleet`): stores safe / not safe to upgrade, Pis gone quiet, agent and Quibase versions running and the newest seen, main version. **Upgrade checks per store** gives SAFE / WAIT plus each check's value: no open orders, printers up, disk ≥ 500 MB, temp < 80 °C, no alert conditions, Pi linked, a tablet connected, and whether the agent is behind the newest version. "Newest" is the version first seen most recently in prod or staging over 30 days. The dashboard also has Quibase tablets per version, the hub per store, a per-Pi table (version, last seen, agent and Pi uptime, disk, temp, SD errors, last good update, update results, reconnects), rollouts over time, Pi hardware and Pi/hub logs.
@@ -131,7 +131,6 @@ move through any module, your phone buzzes.**
   | main outbox dispatch failing | `increase(outbox_events_failed_total[10m]) > 0` | main |
   | main outbox backlog not draining | `outbox_events_pending > 0` for 15m | main |
   | agent failed to print | orders printed nowhere even after failover (`orders_print_failed_total`, never a rerouted ticket): ≥ `PRINT_MISSES_PAGE` (2) in 10 min, or 1 while a printer has been down `PRINTER_DOWN_FOR` (2 min, no up sample); `for: 1m` — a short blip never pages | agent |
-  | agent received > printed (funnel gap) | agent `orders_received` − `orders_printed` > 0 for 30m | agent |
   | agent command channel timing out | `increase(rpc_timeouts_total{type!="terminal.relay"}[10m]) > 0` (the call center's relay has its own rule, below) | main |
   | **order could not reach the agent (SSE down)** | `increase(sse_events_broadcast_total{event_type="order",result="no_subscribers"}[10m]) > 0` | main |
   | online orders refused, store's Pi offline | `increase(orders_refusals_total{reason="kitchen_offline"}[10m]) > 0` | main |
@@ -205,6 +204,11 @@ move through any module, your phone buzzes.**
   | `CC_RELAY_FAILS_FOR` | 2m | ... kept up this long |
   | `CC_RELAY_P95_MS` | 2500 | the relay's p95 round trip that warns after 5 min |
   | `CC_PIN_LOCKOUTS_MAX` | 1 | PIN lockouts / revoked computers allowed in 15 min (pages on the 2nd) |
+
+  **Removed rules**: Grafana keeps a file-provisioned rule after its block is
+  deleted, so `rules.yaml` lists removed uids under `deleteRules` (the v1
+  funnel-gap rule `quicc-ord-agent-funnel-gap` and the SoftTouch rule
+  `quicc-hub-softtouch-down`, 2026-11-12). Add a uid there whenever a rule goes.
 
   The **store-hub** group covers the hub, now only the store's callout box
   (spoken callouts + the store TVs). Its SoftTouch rule and the hub's own
