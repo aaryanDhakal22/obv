@@ -376,7 +376,7 @@ groups:
         for: 5m
         labels: { team: orders, module: hub, severity: critical }
         annotations:
-          summary: "Store {{ $labels.tenant }}: the store hub sent nothing for 10 minutes (stopped, iris off, or OTLP broken). Order callouts are silent — restart it on iris (tmux session hub)."
+          summary: "Store {{ $labels.tenant }}: the store hub sent nothing for 10 minutes (stopped, iris off, or OTLP broken). Order callouts are silent — restart it on iris (systemctl --user restart quicc-hub; before hub 0.4.2 the tmux session hub)."
         noDataState: OK
         execErrState: Error
         data:
@@ -427,6 +427,28 @@ groups:
           - refId: C
             datasourceUid: __expr__
             model: { refId: C, type: threshold, expression: A, conditions: [ { evaluator: { type: gt, params: [120] } } ] }
+
+      # The hub polls the Pi's feed but hands nothing on (prod 2026-11-13: a
+      # cursor kept across a re-pair to a reset Pi, 19 h without callouts while
+      # every other hub signal read fine). hub_feed_stalled (hub >= 0.4.2) is 1
+      # after HUB_FEED_STALL_POLLS (3) such polls in a row. PROD ONLY.
+      - uid: quicc-hub-feed-stalled
+        title: hub feed stalled
+        condition: C
+        for: 2m
+        labels: { team: orders, module: hub, severity: page }
+        annotations:
+          summary: "Store {{ $labels.tenant }}: the hub keeps reading the Pi's order feed but hands nothing on, so no order is called out. Restart it on iris (systemctl --user restart quicc-hub); if it stays, stop it, delete feed_cursor in ~/quicc-hub/data/hub.db and start it (quicc-ops deploy/hub/README.md)."
+        noDataState: OK
+        execErrState: Error
+        data:
+          - refId: A
+            relativeTimeRange: { from: 300, to: 0 }
+            datasourceUid: prometheus
+            model: { refId: A, instant: true, expr: "max by (deployment_environment, tenant) (hub_feed_stalled{deployment_environment=\"prod\"})" }
+          - refId: C
+            datasourceUid: __expr__
+            model: { refId: C, type: threshold, expression: A, conditions: [ { evaluator: { type: gt, params: [0] } } ] }
 
   # The counter terminal (TERMINAL-PLAN.md): problems at the counter page the
   # owner. PROD ONLY: every query pins deployment_environment="prod", so a

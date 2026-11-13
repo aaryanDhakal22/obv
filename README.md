@@ -138,7 +138,8 @@ move through any module, your phone buzzes.**
   | online order voided by the placement sweeper | `increase(orders_placements_sweeps_total{action="voided"}[10m]) > 0` | main |
   | store hub stopped reporting | no `hub_info` from a prod hub seen in the last day for 10m | hub |
   | store hub can't reach the Pi | `hub_agent_up < 1` for 5m | hub |
-  | store hub falling behind the Pi's orders | `hub_feed_lag_seconds > 120` for 3m | hub |
+  | store hub falling behind the Pi's orders | `hub_feed_lag_seconds > 120` for 3m (hub ≥ 0.4.2: the lag also grows while polls bring events the hub can't hand on) | hub |
+  | hub feed stalled | `hub_feed_stalled > 0` for 2m, **prod only** (hub ≥ 0.4.2: `HUB_FEED_STALL_POLLS`, 3, polls in a row that brought events and handed none on; prod 2026-11-13 went 19 h without callouts this way) | hub |
 
   **Counter** group (`counter`, 2026-11-12): problems at the counter terminal.
   **Prod only**: every query pins `deployment_environment="prod"`, so a staging

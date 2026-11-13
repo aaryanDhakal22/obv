@@ -49,7 +49,10 @@ Existing instruments are listed in `contract/main.md` §7.2 and `contract/agent.
 ### hub (new OTEL setup like the agent's; the resource carries `tenant`/`location`)
 - `hub.info` (gauge = 1, `version`)
 - `hub.agent.up` (0/1)
-- `hub.feed.lag.seconds` (gauge: how far behind the Pi's cursor feed the hub is)
+- `hub.feed.lag.seconds` (gauge: how far behind the Pi's cursor feed the hub is; hub 0.4.2: also grows
+  while polls bring events the hub can't hand on, where it used to read 0)
+- `hub.feed.stalled` (0/1, hub 0.4.2: the Pi's feed has events the hub keeps not handing on; absent while
+  unpaired; alert "hub feed stalled", prod only)
 - Logs over OTLP, like the agent.
 - Gone with SoftTouch (2026-11-11, the hub is now only the callout box): `hub.softtouch.up`,
   `hub.poll.seconds`, `hub.poll.errors`, `hub.checks.pulled`, `hub.checks.keyed_twice`, `hub.writes`,
