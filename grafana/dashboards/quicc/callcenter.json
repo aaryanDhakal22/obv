@@ -1,0 +1,1462 @@
+{
+  "timezone": "browser",
+  "schemaVersion": 39,
+  "editable": true,
+  "graphTooltip": 1,
+  "liveNow": false,
+  "timepicker": {},
+  "annotations": {
+    "list": [
+      {
+        "builtIn": 1,
+        "datasource": {
+          "type": "grafana",
+          "uid": "-- Grafana --"
+        },
+        "enable": true,
+        "hide": true,
+        "iconColor": "rgba(0, 211, 255, 1)",
+        "name": "Annotations & Alerts",
+        "type": "dashboard"
+      }
+    ]
+  },
+  "uid": "callcenter",
+  "title": "Call center",
+  "version": 1,
+  "description": "The call center's web app: how long its calls take and where the time goes (their internet vs main + the store), card steps and failures before the store, the live stream, and which versions the browsers run.",
+  "tags": [
+    "quicc",
+    "quicc-core",
+    "callcenter",
+    "latency"
+  ],
+  "refresh": "1m",
+  "time": {
+    "from": "now-6h",
+    "to": "now"
+  },
+  "links": [
+    {
+      "type": "link",
+      "title": "Store health",
+      "url": "/d/store-health",
+      "icon": "dashboard",
+      "includeVars": true,
+      "keepTime": false,
+      "asDropdown": false,
+      "targetBlank": false,
+      "tags": [],
+      "tooltip": ""
+    },
+    {
+      "type": "link",
+      "title": "Uptime & incidents",
+      "url": "/d/reliability",
+      "icon": "dashboard",
+      "includeVars": true,
+      "keepTime": false,
+      "asDropdown": false,
+      "targetBlank": false,
+      "tags": [],
+      "tooltip": ""
+    },
+    {
+      "type": "link",
+      "title": "Fleet & upgrades",
+      "url": "/d/fleet",
+      "icon": "dashboard",
+      "includeVars": true,
+      "keepTime": false,
+      "asDropdown": false,
+      "targetBlank": false,
+      "tags": [],
+      "tooltip": ""
+    },
+    {
+      "type": "link",
+      "title": "Store floor & devices",
+      "url": "/d/store-floor",
+      "icon": "dashboard",
+      "includeVars": true,
+      "keepTime": false,
+      "asDropdown": false,
+      "targetBlank": false,
+      "tags": [],
+      "tooltip": ""
+    },
+    {
+      "type": "link",
+      "title": "Counter",
+      "url": "/d/counter",
+      "icon": "dashboard",
+      "includeVars": true,
+      "keepTime": false,
+      "asDropdown": false,
+      "targetBlank": false,
+      "tags": [],
+      "tooltip": ""
+    },
+    {
+      "type": "dashboards",
+      "title": "Debug",
+      "tags": [
+        "quicc-debug"
+      ],
+      "asDropdown": true,
+      "includeVars": false,
+      "keepTime": true,
+      "icon": "external link",
+      "targetBlank": false,
+      "tooltip": ""
+    }
+  ],
+  "templating": {
+    "list": [
+      {
+        "name": "env",
+        "label": "Environment",
+        "type": "custom",
+        "query": "prod,staging,dev",
+        "current": {
+          "selected": true,
+          "text": "prod",
+          "value": "prod"
+        },
+        "options": [
+          {
+            "selected": true,
+            "text": "prod",
+            "value": "prod"
+          },
+          {
+            "selected": false,
+            "text": "staging",
+            "value": "staging"
+          },
+          {
+            "selected": false,
+            "text": "dev",
+            "value": "dev"
+          }
+        ],
+        "hide": 0,
+        "multi": false,
+        "includeAll": false,
+        "skipUrlSync": false
+      }
+    ]
+  },
+  "panels": [
+    {
+      "id": 1,
+      "type": "row",
+      "title": "Right now",
+      "collapsed": false,
+      "gridPos": {
+        "x": 0,
+        "y": 0,
+        "w": 24,
+        "h": 1
+      },
+      "panels": []
+    },
+    {
+      "type": "stat",
+      "title": "Browsers open",
+      "description": "Call-center browsers that sent their numbers in the last 5 minutes (a browser reports once a minute while open).",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "sum(callcenter_browsers{deployment_environment=\"$env\"})",
+          "legendFormat": "",
+          "range": false,
+          "instant": true,
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "blue",
+                "value": null
+              }
+            ]
+          },
+          "color": {
+            "mode": "thresholds"
+          },
+          "decimals": 0,
+          "noValue": "no data"
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "background",
+        "graphMode": "none",
+        "justifyMode": "center",
+        "textMode": "auto",
+        "wideLayout": true,
+        "showPercentChange": false,
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        }
+      },
+      "id": 2,
+      "gridPos": {
+        "x": 0,
+        "y": 1,
+        "w": 3,
+        "h": 4
+      }
+    },
+    {
+      "type": "stat",
+      "title": "On an old version",
+      "description": "Browsers still running a build older than the server (opened before the last deploy). They reload by themselves at the first quiet moment; the top bar shows New version · Reload until then.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "sum(callcenter_browsers{deployment_environment=\"$env\", stale=\"yes\"}) or vector(0)",
+          "legendFormat": "",
+          "range": false,
+          "instant": true,
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 1
+              }
+            ]
+          },
+          "color": {
+            "mode": "thresholds"
+          },
+          "decimals": 0,
+          "noValue": "no data"
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "background",
+        "graphMode": "none",
+        "justifyMode": "center",
+        "textMode": "auto",
+        "wideLayout": true,
+        "showPercentChange": false,
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        }
+      },
+      "id": 3,
+      "gridPos": {
+        "x": 3,
+        "y": 1,
+        "w": 3,
+        "h": 4
+      }
+    },
+    {
+      "type": "stat",
+      "title": "Round trip p95",
+      "description": "A browser's whole wait for an answer (click to answer), every call but the live stream, over the selected range.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "histogram_quantile(0.95, sum by (le) (increase(callcenter_client_request_duration_milliseconds_bucket{deployment_environment=\"$env\", route!~\".* events\"}[$__range])))",
+          "legendFormat": "",
+          "range": false,
+          "instant": true,
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ms",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 1500
+              },
+              {
+                "color": "red",
+                "value": 4000
+              }
+            ]
+          },
+          "color": {
+            "mode": "thresholds"
+          },
+          "decimals": 0,
+          "noValue": "no data"
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "background",
+        "graphMode": "none",
+        "justifyMode": "center",
+        "textMode": "auto",
+        "wideLayout": true,
+        "showPercentChange": false,
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        }
+      },
+      "id": 4,
+      "gridPos": {
+        "x": 6,
+        "y": 1,
+        "w": 3,
+        "h": 4
+      }
+    },
+    {
+      "type": "stat",
+      "title": "Their internet p95",
+      "description": "The part of the round trip that is the call center's own internet (round trip minus main + the store). High here and low on the next tile = the problem is on their side.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "histogram_quantile(0.95, sum by (le) (increase(callcenter_client_network_duration_milliseconds_bucket{deployment_environment=\"$env\"}[$__range])))",
+          "legendFormat": "",
+          "range": false,
+          "instant": true,
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ms",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 800
+              },
+              {
+                "color": "red",
+                "value": 2000
+              }
+            ]
+          },
+          "color": {
+            "mode": "thresholds"
+          },
+          "decimals": 0,
+          "noValue": "no data"
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "background",
+        "graphMode": "none",
+        "justifyMode": "center",
+        "textMode": "auto",
+        "wideLayout": true,
+        "showPercentChange": false,
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        }
+      },
+      "id": 5,
+      "gridPos": {
+        "x": 9,
+        "y": 1,
+        "w": 3,
+        "h": 4
+      }
+    },
+    {
+      "type": "stat",
+      "title": "main + store p95",
+      "description": "Our server's call to main and the store's Pi behind it.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "histogram_quantile(0.95, sum by (le) (increase(callcenter_upstream_duration_milliseconds_bucket{deployment_environment=\"$env\"}[$__range])))",
+          "legendFormat": "",
+          "range": false,
+          "instant": true,
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ms",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 1000
+              },
+              {
+                "color": "red",
+                "value": 3000
+              }
+            ]
+          },
+          "color": {
+            "mode": "thresholds"
+          },
+          "decimals": 0,
+          "noValue": "no data"
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "background",
+        "graphMode": "none",
+        "justifyMode": "center",
+        "textMode": "auto",
+        "wideLayout": true,
+        "showPercentChange": false,
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        }
+      },
+      "id": 6,
+      "gridPos": {
+        "x": 12,
+        "y": 1,
+        "w": 3,
+        "h": 4
+      }
+    },
+    {
+      "type": "stat",
+      "title": "Card fails before the store",
+      "description": "Card attempts that never reached the store's charge (the card field didn't load, details typed wrong, Square's field didn't answer), over the range. Each one is also in the store's journal (card.field_failed / card.tokenize_failed).",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "sum(increase(callcenter_card_attempts_total{deployment_environment=\"$env\", stage=~\"sdk_load|attach|tokenize\", outcome!=\"ok\"}[$__range])) or vector(0)",
+          "legendFormat": "",
+          "range": false,
+          "instant": true,
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 1
+              },
+              {
+                "color": "red",
+                "value": 5
+              }
+            ]
+          },
+          "color": {
+            "mode": "thresholds"
+          },
+          "decimals": 0,
+          "noValue": "no data"
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "background",
+        "graphMode": "none",
+        "justifyMode": "center",
+        "textMode": "auto",
+        "wideLayout": true,
+        "showPercentChange": false,
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        }
+      },
+      "id": 7,
+      "gridPos": {
+        "x": 15,
+        "y": 1,
+        "w": 3,
+        "h": 4
+      }
+    },
+    {
+      "type": "stat",
+      "title": "Cards charged",
+      "description": "Charges through the store that Square approved, over the range.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "sum(increase(callcenter_card_attempts_total{deployment_environment=\"$env\", stage=\"charge\", outcome=\"ok\"}[$__range])) or vector(0)",
+          "legendFormat": "",
+          "range": false,
+          "instant": true,
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "blue",
+                "value": null
+              }
+            ]
+          },
+          "color": {
+            "mode": "thresholds"
+          },
+          "decimals": 0,
+          "noValue": "no data"
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "background",
+        "graphMode": "none",
+        "justifyMode": "center",
+        "textMode": "auto",
+        "wideLayout": true,
+        "showPercentChange": false,
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        }
+      },
+      "id": 8,
+      "gridPos": {
+        "x": 18,
+        "y": 1,
+        "w": 3,
+        "h": 4
+      }
+    },
+    {
+      "type": "stat",
+      "title": "main",
+      "description": "1 = our server reached main's /api/v1/version on its last probe (every minute). The tile's name is main's version.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "max by (main_version) (callcenter_main_up{deployment_environment=\"$env\"})",
+          "legendFormat": "main {{main_version}}",
+          "range": false,
+          "instant": true,
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "red",
+                "value": null
+              },
+              {
+                "color": "green",
+                "value": 1
+              }
+            ]
+          },
+          "color": {
+            "mode": "thresholds"
+          },
+          "decimals": 0,
+          "noValue": "no data"
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "background",
+        "graphMode": "none",
+        "justifyMode": "center",
+        "textMode": "auto",
+        "wideLayout": true,
+        "showPercentChange": false,
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        }
+      },
+      "id": 9,
+      "gridPos": {
+        "x": 21,
+        "y": 1,
+        "w": 3,
+        "h": 4
+      }
+    },
+    {
+      "id": 10,
+      "type": "row",
+      "title": "Latency",
+      "collapsed": false,
+      "gridPos": {
+        "x": 0,
+        "y": 5,
+        "w": 24,
+        "h": 1
+      },
+      "panels": []
+    },
+    {
+      "type": "timeseries",
+      "title": "Where the time goes (p95)",
+      "description": "p95 per minute window: the browser's whole round trip, its internet's share, and main + the store. When the round trip climbs, the line that climbs with it is the culprit.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "histogram_quantile(0.95, sum by (le) (increase(callcenter_client_request_duration_milliseconds_bucket{deployment_environment=\"$env\", route!~\".* events\"}[5m])))",
+          "legendFormat": "round trip",
+          "range": true,
+          "refId": "A"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "histogram_quantile(0.95, sum by (le) (increase(callcenter_client_network_duration_milliseconds_bucket{deployment_environment=\"$env\"}[5m])))",
+          "legendFormat": "their internet",
+          "range": true,
+          "refId": "B"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "histogram_quantile(0.95, sum by (le) (increase(callcenter_upstream_duration_milliseconds_bucket{deployment_environment=\"$env\"}[5m])))",
+          "legendFormat": "main + store",
+          "range": true,
+          "refId": "C"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ms",
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 2,
+            "fillOpacity": 10,
+            "showPoints": "never",
+            "spanNulls": true,
+            "stacking": {
+              "mode": "none",
+              "group": "A"
+            }
+          },
+          "noValue": "no data"
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "right",
+          "calcs": [
+            "mean",
+            "max"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "id": 11,
+      "gridPos": {
+        "x": 0,
+        "y": 6,
+        "w": 12,
+        "h": 8
+      }
+    },
+    {
+      "type": "timeseries",
+      "title": "Their internet per browser (p95)",
+      "description": "The internet share per call-center computer (the name given at the store login). One computer high = that computer's connection.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "histogram_quantile(0.95, sum by (le, device) (increase(callcenter_client_network_duration_milliseconds_bucket{deployment_environment=\"$env\"}[5m])))",
+          "legendFormat": "{{device}}",
+          "range": true,
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ms",
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 2,
+            "fillOpacity": 10,
+            "showPoints": "never",
+            "spanNulls": true,
+            "stacking": {
+              "mode": "none",
+              "group": "A"
+            }
+          },
+          "noValue": "no data"
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "right",
+          "calcs": [
+            "mean",
+            "max"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "id": 12,
+      "gridPos": {
+        "x": 12,
+        "y": 6,
+        "w": 12,
+        "h": 8
+      }
+    },
+    {
+      "type": "timeseries",
+      "title": "Slowest calls (p95 per route, browser side)",
+      "description": "The browser's round trip per call. pi/... calls go through main to the store's Pi.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "topk(8, histogram_quantile(0.95, sum by (le, route) (increase(callcenter_client_request_duration_milliseconds_bucket{deployment_environment=\"$env\", route!~\".* events\"}[10m]))))",
+          "legendFormat": "{{route}}",
+          "range": true,
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ms",
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 2,
+            "fillOpacity": 10,
+            "showPoints": "never",
+            "spanNulls": true,
+            "stacking": {
+              "mode": "none",
+              "group": "A"
+            }
+          },
+          "noValue": "no data"
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "right",
+          "calcs": [
+            "mean",
+            "max"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "id": 13,
+      "gridPos": {
+        "x": 0,
+        "y": 14,
+        "w": 12,
+        "h": 8
+      }
+    },
+    {
+      "type": "timeseries",
+      "title": "main + store per route (p95, server side)",
+      "description": "Our server's wait for main per call; the store's Pi answers the pi/... ones.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "topk(8, histogram_quantile(0.95, sum by (le, route) (increase(callcenter_upstream_duration_milliseconds_bucket{deployment_environment=\"$env\"}[10m]))))",
+          "legendFormat": "{{route}}",
+          "range": true,
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ms",
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 2,
+            "fillOpacity": 10,
+            "showPoints": "never",
+            "spanNulls": true,
+            "stacking": {
+              "mode": "none",
+              "group": "A"
+            }
+          },
+          "noValue": "no data"
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "right",
+          "calcs": [
+            "mean",
+            "max"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "id": 14,
+      "gridPos": {
+        "x": 12,
+        "y": 14,
+        "w": 12,
+        "h": 8
+      }
+    },
+    {
+      "type": "timeseries",
+      "title": "Calls per minute by outcome",
+      "description": "Every browser call: ok, 4xx (refused: closed, declined, wrong PIN), 5xx (main or the store didn't answer), network (no answer at all: the computer's internet).",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "sum by (outcome) (rate(callcenter_client_request_duration_milliseconds_count{deployment_environment=\"$env\", route!~\".* events\"}[5m])) * 60",
+          "legendFormat": "{{outcome}}",
+          "range": true,
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "custom": {
+            "drawStyle": "bars",
+            "lineWidth": 2,
+            "fillOpacity": 60,
+            "showPoints": "never",
+            "spanNulls": true,
+            "stacking": {
+              "mode": "normal",
+              "group": "A"
+            }
+          },
+          "noValue": "no data"
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "right",
+          "calcs": [
+            "mean",
+            "max"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "id": 15,
+      "gridPos": {
+        "x": 0,
+        "y": 22,
+        "w": 12,
+        "h": 8
+      }
+    },
+    {
+      "type": "timeseries",
+      "title": "Live stream drops",
+      "description": "The browsers' live stream (new orders, the store's state): drops per browser, and minutes it was down. A drop reconnects by itself; many = an unsteady connection.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "sum by (device) (increase(callcenter_client_sse_events_total{deployment_environment=\"$env\", kind=\"error\"}[5m]))",
+          "legendFormat": "drops · {{device}}",
+          "range": true,
+          "refId": "A"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "sum by (device) (increase(callcenter_client_sse_downtime_milliseconds_total{deployment_environment=\"$env\"}[5m])) / 60000",
+          "legendFormat": "minutes down · {{device}}",
+          "range": true,
+          "refId": "B"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 2,
+            "fillOpacity": 10,
+            "showPoints": "never",
+            "spanNulls": true,
+            "stacking": {
+              "mode": "none",
+              "group": "A"
+            }
+          },
+          "noValue": "no data"
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "right",
+          "calcs": [
+            "mean",
+            "max"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "id": 16,
+      "gridPos": {
+        "x": 12,
+        "y": 22,
+        "w": 12,
+        "h": 8
+      }
+    },
+    {
+      "id": 17,
+      "type": "row",
+      "title": "Cards",
+      "collapsed": false,
+      "gridPos": {
+        "x": 0,
+        "y": 30,
+        "w": 24,
+        "h": 1
+      },
+      "panels": []
+    },
+    {
+      "type": "table",
+      "title": "Card attempts by stage and result",
+      "description": "Over the range. stage: sdk_load (Square's script), attach (the card field), tokenize (Square checks the typed card), charge (through the store). outcome: ok, invalid (typed wrong), error (Square's field / servers), declined (the bank), no_answer (the store didn't answer). code = Square's own (INVALID_CARD_NUMBER, CARD_DECLINED, TokenizationError, …).",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "sort_desc(sum by (stage, outcome, code, device) (increase(callcenter_card_attempts_total{deployment_environment=\"$env\"}[$__range])) > 0)",
+          "format": "table",
+          "range": false,
+          "instant": true,
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "noValue": "no data"
+        },
+        "overrides": []
+      },
+      "options": {
+        "showHeader": true,
+        "cellHeight": "sm",
+        "footer": {
+          "show": false,
+          "reducer": [
+            "sum"
+          ],
+          "fields": ""
+        }
+      },
+      "transformations": [
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {
+              "Time": true
+            },
+            "renameByName": {
+              "Value": "count"
+            }
+          }
+        }
+      ],
+      "id": 18,
+      "gridPos": {
+        "x": 0,
+        "y": 31,
+        "w": 12,
+        "h": 8
+      }
+    },
+    {
+      "type": "timeseries",
+      "title": "Card steps (p95)",
+      "description": "How long each card step takes: loading Square's field, attaching it, Square checking the card, the charge through the store.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "histogram_quantile(0.95, sum by (le, stage) (increase(callcenter_card_stage_duration_milliseconds_bucket{deployment_environment=\"$env\"}[15m])))",
+          "legendFormat": "{{stage}}",
+          "range": true,
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ms",
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 2,
+            "fillOpacity": 10,
+            "showPoints": "never",
+            "spanNulls": true,
+            "stacking": {
+              "mode": "none",
+              "group": "A"
+            }
+          },
+          "noValue": "no data"
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "right",
+          "calcs": [
+            "mean",
+            "max"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "id": 19,
+      "gridPos": {
+        "x": 12,
+        "y": 31,
+        "w": 12,
+        "h": 8
+      }
+    },
+    {
+      "id": 20,
+      "type": "row",
+      "title": "Versions and the page",
+      "collapsed": false,
+      "gridPos": {
+        "x": 0,
+        "y": 39,
+        "w": 24,
+        "h": 1
+      },
+      "panels": []
+    },
+    {
+      "type": "table",
+      "title": "Browsers by version",
+      "description": "What the open browsers run (last 5 minutes). stale = yes: opened before the last deploy.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "sum by (client_version, stale) (callcenter_browsers{deployment_environment=\"$env\"})",
+          "format": "table",
+          "range": false,
+          "instant": true,
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "noValue": "no data"
+        },
+        "overrides": []
+      },
+      "options": {
+        "showHeader": true,
+        "cellHeight": "sm",
+        "footer": {
+          "show": false,
+          "reducer": [
+            "sum"
+          ],
+          "fields": ""
+        }
+      },
+      "transformations": [
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {
+              "Time": true
+            },
+            "renameByName": {
+              "Value": "browsers"
+            }
+          }
+        }
+      ],
+      "id": 21,
+      "gridPos": {
+        "x": 0,
+        "y": 40,
+        "w": 8,
+        "h": 7
+      }
+    },
+    {
+      "type": "table",
+      "title": "Server and main",
+      "description": "The call-center server's version and build, and main's version from its probe.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "max by (version, build) (callcenter_build_info{deployment_environment=\"$env\"}) or max by (main_version) (callcenter_main_up{deployment_environment=\"$env\"})",
+          "format": "table",
+          "range": false,
+          "instant": true,
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "noValue": "no data"
+        },
+        "overrides": []
+      },
+      "options": {
+        "showHeader": true,
+        "cellHeight": "sm",
+        "footer": {
+          "show": false,
+          "reducer": [
+            "sum"
+          ],
+          "fields": ""
+        }
+      },
+      "transformations": [
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {
+              "Time": true
+            },
+            "renameByName": {}
+          }
+        }
+      ],
+      "id": 22,
+      "gridPos": {
+        "x": 8,
+        "y": 40,
+        "w": 8,
+        "h": 7
+      }
+    },
+    {
+      "type": "timeseries",
+      "title": "Page load and errors",
+      "description": "Page load p95 (first byte and fully loaded) and page errors per hour in the browsers.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "histogram_quantile(0.95, sum by (le, phase) (increase(callcenter_client_page_load_duration_milliseconds_bucket{deployment_environment=\"$env\"}[1h])))",
+          "legendFormat": "load p95 · {{phase}}",
+          "range": true,
+          "refId": "A"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "sum by (kind) (increase(callcenter_client_errors_total{deployment_environment=\"$env\"}[1h]))",
+          "legendFormat": "errors/h · {{kind}}",
+          "range": true,
+          "refId": "B"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 2,
+            "fillOpacity": 10,
+            "showPoints": "never",
+            "spanNulls": true,
+            "stacking": {
+              "mode": "none",
+              "group": "A"
+            }
+          },
+          "noValue": "no data"
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "right",
+          "calcs": [
+            "mean",
+            "max"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "id": 23,
+      "gridPos": {
+        "x": 16,
+        "y": 40,
+        "w": 8,
+        "h": 7
+      }
+    }
+  ]
+}
