@@ -619,9 +619,11 @@ groups:
           - refId: A
             relativeTimeRange: { from: 900, to: 0 }
             datasourceUid: prometheus
-            model: { refId: A, instant: true, expr: "sum by (deployment_environment, tenant) (increase(http_server_request_duration_seconds_count{deployment_environment=\"prod\", service_name=\"quicc-agent\", http_response_status_code=\"429\"}[15m]))" }
+            model: { refId: A, instant: true, expr: "sum by (deployment_environment, tenant) (increase(http_server_request_duration_seconds_count{deployment_environment=\"prod\", service_name=\"quicc-agent\", http_response_status_code=\"429\", http_route!=\"/api/diag/report\"}[15m]))" }
           - refId: C
             datasourceUid: __expr__
+            # /api/diag/report is left out: its 429 is main's report rate limit, not a lockout
+            # (prod 2026-11-15: a terminal's report retried all night paged as "PIN lockouts").
             # COUNTER_LOCKOUT_HITS_MAX = 2 (pages on the 3rd in 15 min)
             model: { refId: C, type: threshold, expression: A, conditions: [ { evaluator: { type: gt, params: [2] } } ] }
 
