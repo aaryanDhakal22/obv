@@ -1,0 +1,6363 @@
+{
+ "uid": "callcenter-glance",
+ "title": "Call center at a glance",
+ "description": "Every call center number on one page, each with what is normal and what is not (the owner 2026-11-18).",
+ "tags": [
+  "quicc",
+  "callcenter"
+ ],
+ "timezone": "America/New_York",
+ "time": {
+  "from": "now/d",
+  "to": "now"
+ },
+ "refresh": "1m",
+ "schemaVersion": 39,
+ "version": 1,
+ "editable": true,
+ "graphTooltip": 1,
+ "fiscalYearStartMonth": 0,
+ "liveNow": false,
+ "weekStart": "",
+ "timepicker": {
+  "refresh_intervals": [
+   "30s",
+   "1m",
+   "5m",
+   "15m"
+  ]
+ },
+ "templating": {
+  "list": [
+   {
+    "name": "env",
+    "label": "Environment",
+    "type": "custom",
+    "query": "prod,staging,dev",
+    "current": {
+     "selected": true,
+     "text": "prod",
+     "value": "prod"
+    },
+    "options": [
+     {
+      "selected": true,
+      "text": "prod",
+      "value": "prod"
+     },
+     {
+      "selected": false,
+      "text": "staging",
+      "value": "staging"
+     },
+     {
+      "selected": false,
+      "text": "dev",
+      "value": "dev"
+     }
+    ],
+    "hide": 0,
+    "multi": false,
+    "includeAll": false,
+    "skipUrlSync": false
+   },
+   {
+    "name": "staff",
+    "label": "Agent",
+    "type": "query",
+    "datasource": {
+     "type": "prometheus",
+     "uid": "prometheus"
+    },
+    "definition": "label_values(callcenter_ui_events_total{deployment_environment=\"$env\"}, staff)",
+    "query": {
+     "query": "label_values(callcenter_ui_events_total{deployment_environment=\"$env\"}, staff)",
+     "refId": "staff"
+    },
+    "refresh": 2,
+    "includeAll": true,
+    "multi": true,
+    "allValue": ".*",
+    "current": {
+     "selected": true,
+     "text": [
+      "All"
+     ],
+     "value": [
+      "$__all"
+     ]
+    },
+    "options": [],
+    "hide": 0,
+    "sort": 1,
+    "skipUrlSync": false
+   },
+   {
+    "name": "isp",
+    "label": "Provider",
+    "type": "query",
+    "datasource": {
+     "type": "prometheus",
+     "uid": "prometheus"
+    },
+    "definition": "label_values(callcenter_net_rtt_milliseconds_count{deployment_environment=\"$env\"}, isp)",
+    "query": {
+     "query": "label_values(callcenter_net_rtt_milliseconds_count{deployment_environment=\"$env\"}, isp)",
+     "refId": "isp"
+    },
+    "refresh": 2,
+    "includeAll": true,
+    "multi": true,
+    "allValue": ".*",
+    "current": {
+     "selected": true,
+     "text": [
+      "All"
+     ],
+     "value": [
+      "$__all"
+     ]
+    },
+    "options": [],
+    "hide": 0,
+    "sort": 1,
+    "skipUrlSync": false
+   }
+  ]
+ },
+ "annotations": {
+  "list": [
+   {
+    "builtIn": 1,
+    "datasource": {
+     "type": "grafana",
+     "uid": "-- Grafana --"
+    },
+    "enable": true,
+    "hide": true,
+    "iconColor": "rgba(0, 211, 255, 1)",
+    "name": "Annotations & Alerts",
+    "type": "dashboard"
+   },
+   {
+    "name": "Call center release",
+    "datasource": {
+     "type": "prometheus",
+     "uid": "prometheus"
+    },
+    "enable": true,
+    "hide": false,
+    "iconColor": "purple",
+    "expr": "max by (version) (callcenter_build_info{deployment_environment=\"$env\"}) unless max by (version) (callcenter_build_info{deployment_environment=\"$env\"} offset 10m)",
+    "step": "1m",
+    "titleFormat": "Call center {{version}} live",
+    "textFormat": "A new call center server version started sending: pages on the old one reload at their next quiet moment.",
+    "tagKeys": "version",
+    "useValueForTime": false
+   },
+   {
+    "name": "Close batch",
+    "datasource": {
+     "type": "loki",
+     "uid": "loki"
+    },
+    "enable": true,
+    "hide": false,
+    "iconColor": "orange",
+    "expr": "{deployment_environment=\"$env\", service_name=\"quicc-agent\"} |~ `Batch closed|Batch auto-closed`",
+    "target": {
+     "expr": "{deployment_environment=\"$env\", service_name=\"quicc-agent\"} |~ `Batch closed|Batch auto-closed`",
+     "refId": "Anno"
+    },
+    "titleFormat": "Close batch",
+    "textFormat": "",
+    "tagKeys": ""
+   },
+   {
+    "name": "Incident: call center server quiet",
+    "datasource": {
+     "type": "prometheus",
+     "uid": "prometheus"
+    },
+    "enable": true,
+    "hide": false,
+    "iconColor": "red",
+    "expr": "max(max_over_time(callcenter_build_info{deployment_environment=\"$env\"}[1h])) unless max(callcenter_build_info{deployment_environment=\"$env\"})",
+    "step": "1m",
+    "titleFormat": "Call center server quiet",
+    "textFormat": "The call center server stopped sending its numbers (down, restarting, or cut off from monitoring).",
+    "tagKeys": ""
+   },
+   {
+    "name": "Incident: main unreachable",
+    "datasource": {
+     "type": "prometheus",
+     "uid": "prometheus"
+    },
+    "enable": true,
+    "hide": false,
+    "iconColor": "red",
+    "expr": "min(callcenter_main_up{deployment_environment=\"$env\"}) == 0",
+    "step": "1m",
+    "titleFormat": "main unreachable from the call center",
+    "textFormat": "The call center server's check of main failed: orders couldn't reach the store.",
+    "tagKeys": ""
+   }
+  ]
+ },
+ "links": [
+  {
+   "type": "link",
+   "title": "Call center (detail)",
+   "url": "/d/callcenter",
+   "icon": "dashboard",
+   "includeVars": false,
+   "keepTime": true,
+   "asDropdown": false,
+   "targetBlank": false,
+   "tags": [],
+   "tooltip": ""
+  },
+  {
+   "type": "link",
+   "title": "Efficiency over time",
+   "url": "/d/efficiency",
+   "icon": "dashboard",
+   "includeVars": false,
+   "keepTime": true,
+   "asDropdown": false,
+   "targetBlank": false,
+   "tags": [],
+   "tooltip": ""
+  },
+  {
+   "type": "link",
+   "title": "Store health",
+   "url": "/d/store-health",
+   "icon": "dashboard",
+   "includeVars": false,
+   "keepTime": true,
+   "asDropdown": false,
+   "targetBlank": false,
+   "tags": [],
+   "tooltip": ""
+  },
+  {
+   "type": "link",
+   "title": "Uptime & incidents",
+   "url": "/d/reliability",
+   "icon": "dashboard",
+   "includeVars": false,
+   "keepTime": true,
+   "asDropdown": false,
+   "targetBlank": false,
+   "tags": [],
+   "tooltip": ""
+  },
+  {
+   "type": "dashboards",
+   "title": "Debug",
+   "tags": [
+    "quicc-debug"
+   ],
+   "asDropdown": true,
+   "includeVars": false,
+   "keepTime": true,
+   "icon": "external link",
+   "targetBlank": false,
+   "tooltip": ""
+  }
+ ],
+ "panels": [
+  {
+   "type": "text",
+   "title": "How to read this page",
+   "description": "",
+   "id": 1,
+   "gridPos": {
+    "x": 0,
+    "y": 0,
+    "w": 24,
+    "h": 7
+   },
+   "options": {
+    "mode": "markdown",
+    "content": "**One page for the call center.** Each tile and graph has an **ⓘ** (hover the title): what it measures, what is normal, what is not, and what to do when it is red.\n\n**Colours:** <span style=\"color:#73BF69\">**green** = normal</span> · <span style=\"color:#FF9830\">**amber** = keep an eye on it</span> · <span style=\"color:#F2495C\">**red** = act now</span> · <span style=\"color:#5794F2\">**blue** = a count with no right or wrong number</span>. On graphs, the shaded bands and dashed lines are the same limits. Limits marked *a starting guess* in their ⓘ will be tuned after the first week of real data.\n\n**Markers on the graphs:** purple = a new call center release went live · orange = the store pressed Close batch · red = an incident (the call center server or main went quiet). **Times are Eastern** (the store's), even though the agents work in Manila. The page opens on **today so far**; pick **Agent** / **Provider** at the top to narrow it (Provider only narrows the network panels). Bars count per 5 or 15 minutes: the newest bar appears when its window closes. The detailed per-route view is the **Call center** dashboard, the year-long before / after a release view is **Efficiency over time** (links at the top)."
+   }
+  },
+  {
+   "type": "row",
+   "title": "Right now",
+   "collapsed": false,
+   "id": 2,
+   "gridPos": {
+    "x": 0,
+    "y": 7,
+    "w": 24,
+    "h": 1
+   },
+   "panels": []
+  },
+  {
+   "type": "stat",
+   "title": "Agents signed in",
+   "description": "Agents whose computer checked in during the last ~15 minutes (each signed-in computer sends a clock sample at sign-in and every 5 minutes; an agent who signs out drops off within 15–20 minutes). Normal: the number of agents on shift. 0 is normal while the call center is closed. Not normal: fewer than the rota says while open; ask who can't sign in. No colours: there is no right number. (Falls back to agents who did anything in the last 15 minutes on builds before the clock checks.)",
+   "datasource": {
+    "type": "prometheus",
+    "uid": "prometheus"
+   },
+   "id": 3,
+   "gridPos": {
+    "x": 0,
+    "y": 8,
+    "w": 4,
+    "h": 4
+   },
+   "targets": [
+    {
+     "datasource": {
+      "type": "prometheus",
+      "uid": "prometheus"
+     },
+     "expr": "count(count by (staff) (callcenter_clock_offset_milliseconds{deployment_environment=\"$env\", staff=~\"$staff\", isp=~\"$isp\"})) or count(count by (staff) (increase(callcenter_ui_events_total{deployment_environment=\"$env\", staff=~\"$staff\", staff!=\"nobody\"}[15m]) > 0)) or vector(0)",
+     "refId": "A",
+     "legendFormat": "__auto",
+     "range": false,
+     "instant": true
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "unit": "none",
+     "thresholds": {
+      "mode": "absolute",
+      "steps": [
+       {
+        "color": "blue",
+        "value": null
+       }
+      ]
+     },
+     "color": {
+      "mode": "thresholds"
+     },
+     "noValue": "no data",
+     "decimals": 0
+    },
+    "overrides": []
+   },
+   "options": {
+    "colorMode": "background",
+    "graphMode": "none",
+    "justifyMode": "center",
+    "textMode": "auto",
+    "wideLayout": true,
+    "showPercentChange": false,
+    "orientation": "auto",
+    "reduceOptions": {
+     "calcs": [
+      "lastNotNull"
+     ],
+     "fields": "",
+     "values": false
+    }
+   }
+  },
+  {
+   "type": "stat",
+   "title": "Orders, last hour",
+   "description": "Orders the agents finished in the last 60 minutes (sent to the store, cashed out, or changes sent on an existing order), whatever the time range above. No right number: it follows the phones. Not normal: 0 during a busy hour while agents are signed in (the call center may not reach the store: check the tiles beside it).",
+   "datasource": {
+    "type": "prometheus",
+    "uid": "prometheus"
+   },
+   "id": 4,
+   "gridPos": {
+    "x": 4,
+    "y": 8,
+    "w": 4,
+    "h": 4
+   },
+   "targets": [
+    {
+     "datasource": {
+      "type": "prometheus",
+      "uid": "prometheus"
+     },
+     "expr": "sum((max_over_time(callcenter_ui_order_duration_milliseconds_count{deployment_environment=\"$env\", staff=~\"$staff\", outcome=~\"sent|cash_out|changes_sent\"}[1h]) unless callcenter_ui_order_duration_milliseconds_count{deployment_environment=\"$env\", staff=~\"$staff\", outcome=~\"sent|cash_out|changes_sent\"} offset 1h or increase(callcenter_ui_order_duration_milliseconds_count{deployment_environment=\"$env\", staff=~\"$staff\", outcome=~\"sent|cash_out|changes_sent\"}[1h]))) or vector(0)",
+     "refId": "A",
+     "legendFormat": "__auto",
+     "range": false,
+     "instant": true
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "unit": "none",
+     "thresholds": {
+      "mode": "absolute",
+      "steps": [
+       {
+        "color": "blue",
+        "value": null
+       }
+      ]
+     },
+     "color": {
+      "mode": "thresholds"
+     },
+     "noValue": "no data",
+     "decimals": 0
+    },
+    "overrides": []
+   },
+   "options": {
+    "colorMode": "background",
+    "graphMode": "none",
+    "justifyMode": "center",
+    "textMode": "auto",
+    "wideLayout": true,
+    "showPercentChange": false,
+    "orientation": "auto",
+    "reduceOptions": {
+     "calcs": [
+      "lastNotNull"
+     ],
+     "fields": "",
+     "values": false
+    }
+   }
+  },
+  {
+   "type": "stat",
+   "title": "Median order time",
+   "description": "Over the time range (today by default): half of the orders took less than this, from the agent's first touch (the first digit of the phone number, a customer picked, a screen pop) to done. Idle time before the first touch is not counted. From the 7-day log digest (every finished order), so it is a true median. Normal: under 3 minutes. Amber: 3–5 minutes. Red: over 5 minutes: look at Speed & efficiency below for which step is slow (phone, account, menu, cash out) and which agent. (A starting guess: tune it after the first week of real data.)",
+   "datasource": {
+    "type": "loki",
+    "uid": "loki"
+   },
+   "id": 5,
+   "gridPos": {
+    "x": 8,
+    "y": 8,
+    "w": 4,
+    "h": 4
+   },
+   "targets": [
+    {
+     "datasource": {
+      "type": "loki",
+      "uid": "loki"
+     },
+     "expr": "quantile_over_time(0.5, {service_name=\"quicc-callcenter\", deployment_environment=\"$env\", detail=\"digest\"} | ui_kind=\"order\" | ui_name=~\"sent|cash_out|changes_sent\" | staff=~\"$staff\" | unwrap ui_ms | __error__=\"\" [$__range]) by ()",
+     "refId": "A",
+     "legendFormat": "",
+     "queryType": "instant"
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "unit": "ms",
+     "thresholds": {
+      "mode": "absolute",
+      "steps": [
+       {
+        "color": "green",
+        "value": null
+       },
+       {
+        "color": "orange",
+        "value": 180000
+       },
+       {
+        "color": "red",
+        "value": 300000
+       }
+      ]
+     },
+     "color": {
+      "mode": "thresholds"
+     },
+     "noValue": "no data"
+    },
+    "overrides": []
+   },
+   "options": {
+    "colorMode": "background",
+    "graphMode": "none",
+    "justifyMode": "center",
+    "textMode": "auto",
+    "wideLayout": true,
+    "showPercentChange": false,
+    "orientation": "auto",
+    "reduceOptions": {
+     "calcs": [
+      "lastNotNull"
+     ],
+     "fields": "",
+     "values": false
+    }
+   }
+  },
+  {
+   "type": "stat",
+   "title": "Card success",
+   "description": "Over the time range: of every time an agent pressed Pay on a card, the share that ended charged. A typo the agent fixes and re-tries counts as one failed try and one success. Normal: 85 % or more (green). Amber: 70–85 %. Red: under 70 %: look at Cards below for the reason (Square refusals, the bank, the network) and the computer; Network & clock tells a bad clock or a slow internet from Square.",
+   "datasource": {
+    "type": "prometheus",
+    "uid": "prometheus"
+   },
+   "id": 6,
+   "gridPos": {
+    "x": 12,
+    "y": 8,
+    "w": 4,
+    "h": 4
+   },
+   "targets": [
+    {
+     "datasource": {
+      "type": "prometheus",
+      "uid": "prometheus"
+     },
+     "expr": "sum((max_over_time(callcenter_card_attempts_total{deployment_environment=\"$env\", stage=\"charge\", outcome=\"ok\"}[$__range]) unless callcenter_card_attempts_total{deployment_environment=\"$env\", stage=\"charge\", outcome=\"ok\"} offset $__range or increase(callcenter_card_attempts_total{deployment_environment=\"$env\", stage=\"charge\", outcome=\"ok\"}[$__range]))) / sum((max_over_time(callcenter_card_attempts_total{deployment_environment=\"$env\", stage=\"tokenize\"}[$__range]) unless callcenter_card_attempts_total{deployment_environment=\"$env\", stage=\"tokenize\"} offset $__range or increase(callcenter_card_attempts_total{deployment_environment=\"$env\", stage=\"tokenize\"}[$__range])))",
+     "refId": "A",
+     "legendFormat": "__auto",
+     "range": false,
+     "instant": true
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "unit": "percentunit",
+     "thresholds": {
+      "mode": "absolute",
+      "steps": [
+       {
+        "color": "red",
+        "value": null
+       },
+       {
+        "color": "orange",
+        "value": 0.7
+       },
+       {
+        "color": "green",
+        "value": 0.85
+       }
+      ]
+     },
+     "color": {
+      "mode": "thresholds"
+     },
+     "noValue": "no data",
+     "decimals": 0
+    },
+    "overrides": []
+   },
+   "options": {
+    "colorMode": "background",
+    "graphMode": "none",
+    "justifyMode": "center",
+    "textMode": "auto",
+    "wideLayout": true,
+    "showPercentChange": false,
+    "orientation": "auto",
+    "reduceOptions": {
+     "calcs": [
+      "lastNotNull"
+     ],
+     "fields": "",
+     "values": false
+    }
+   }
+  },
+  {
+   "type": "stat",
+   "title": "Square refusals",
+   "description": "Over the time range: card entries Square's card box refused before the store saw them: \"refused, no reason given\" plus \"too many tries on this card\" (Square blocks a card for about 10 minutes after 2 refusals). The bank's declines are not in this number (they are under Cards). Normal: 0. Amber: 1–2. Red: 3 or more: check the agents' clocks (a clock over 2 minutes off makes Square refuse) and their connection to Square, below. (A starting guess: tune it after the first week of real data.)",
+   "datasource": {
+    "type": "prometheus",
+    "uid": "prometheus"
+   },
+   "id": 7,
+   "gridPos": {
+    "x": 16,
+    "y": 8,
+    "w": 4,
+    "h": 4
+   },
+   "targets": [
+    {
+     "datasource": {
+      "type": "prometheus",
+      "uid": "prometheus"
+     },
+     "expr": "sum((max_over_time(callcenter_card_attempts_total{deployment_environment=\"$env\", stage=\"tokenize\", outcome=~\"refused|rate_limited\"}[$__range]) unless callcenter_card_attempts_total{deployment_environment=\"$env\", stage=\"tokenize\", outcome=~\"refused|rate_limited\"} offset $__range or increase(callcenter_card_attempts_total{deployment_environment=\"$env\", stage=\"tokenize\", outcome=~\"refused|rate_limited\"}[$__range]))) or vector(0)",
+     "refId": "A",
+     "legendFormat": "__auto",
+     "range": false,
+     "instant": true
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "unit": "none",
+     "thresholds": {
+      "mode": "absolute",
+      "steps": [
+       {
+        "color": "green",
+        "value": null
+       },
+       {
+        "color": "orange",
+        "value": 1
+       },
+       {
+        "color": "red",
+        "value": 3
+       }
+      ]
+     },
+     "color": {
+      "mode": "thresholds"
+     },
+     "noValue": "no data",
+     "decimals": 0
+    },
+    "overrides": []
+   },
+   "options": {
+    "colorMode": "background",
+    "graphMode": "none",
+    "justifyMode": "center",
+    "textMode": "auto",
+    "wideLayout": true,
+    "showPercentChange": false,
+    "orientation": "auto",
+    "reduceOptions": {
+     "calcs": [
+      "lastNotNull"
+     ],
+     "fields": "",
+     "values": false
+    }
+   }
+  },
+  {
+   "type": "stat",
+   "title": "Wrong clocks now",
+   "description": "Agents whose computer clock is over 2 minutes off ours right now, or set to a time zone that isn't Manila (last 15 minutes). The agent sees a red banner with the fix. Normal: 0. Red: 1 or more: Square's card box can refuse every card from that computer. Fix: Windows Settings › Time & language › Date & time: turn on \"Set time automatically\" and \"Set time zone automatically\" (or pick Manila), then press Check again on the banner.",
+   "datasource": {
+    "type": "prometheus",
+    "uid": "prometheus"
+   },
+   "id": 8,
+   "gridPos": {
+    "x": 20,
+    "y": 8,
+    "w": 4,
+    "h": 4
+   },
+   "targets": [
+    {
+     "datasource": {
+      "type": "prometheus",
+      "uid": "prometheus"
+     },
+     "expr": "count(count by (staff) (abs(callcenter_clock_offset_milliseconds{deployment_environment=\"$env\", staff=~\"$staff\", isp=~\"$isp\"}) > 120000) or count by (staff) ((max_over_time(callcenter_clock_bad_total{deployment_environment=\"$env\", staff=~\"$staff\", reason=\"tz\"}[15m]) unless callcenter_clock_bad_total{deployment_environment=\"$env\", staff=~\"$staff\", reason=\"tz\"} offset 15m or increase(callcenter_clock_bad_total{deployment_environment=\"$env\", staff=~\"$staff\", reason=\"tz\"}[15m])) > 0)) or vector(0)",
+     "refId": "A",
+     "legendFormat": "__auto",
+     "range": false,
+     "instant": true
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "unit": "none",
+     "thresholds": {
+      "mode": "absolute",
+      "steps": [
+       {
+        "color": "green",
+        "value": null
+       },
+       {
+        "color": "red",
+        "value": 1
+       }
+      ]
+     },
+     "color": {
+      "mode": "thresholds"
+     },
+     "noValue": "no data",
+     "decimals": 0
+    },
+    "overrides": []
+   },
+   "options": {
+    "colorMode": "background",
+    "graphMode": "none",
+    "justifyMode": "center",
+    "textMode": "auto",
+    "wideLayout": true,
+    "showPercentChange": false,
+    "orientation": "auto",
+    "reduceOptions": {
+     "calcs": [
+      "lastNotNull"
+     ],
+     "fields": "",
+     "values": false
+    }
+   }
+  },
+  {
+   "type": "stat",
+   "title": "Slowest to us",
+   "description": "The worst agent's round trip from their computer to the call center server in the last 15 minutes (p95: 1 in 20 tries was slower). Normal: under 750 ms. Amber: 750 ms – 1.5 s. Red: over 1.5 s: that agent's screens lag and cards may time out; see the round trips per agent and provider below (one agent = their PC or Wi-Fi; everyone on one provider = that provider).",
+   "datasource": {
+    "type": "prometheus",
+    "uid": "prometheus"
+   },
+   "id": 9,
+   "gridPos": {
+    "x": 0,
+    "y": 12,
+    "w": 4,
+    "h": 4
+   },
+   "targets": [
+    {
+     "datasource": {
+      "type": "prometheus",
+      "uid": "prometheus"
+     },
+     "expr": "max(histogram_quantile(0.95, sum by (le, staff) ((max_over_time(callcenter_net_rtt_milliseconds_bucket{deployment_environment=\"$env\", staff=~\"$staff\", isp=~\"$isp\", target=~\"us\"}[15m]) unless callcenter_net_rtt_milliseconds_bucket{deployment_environment=\"$env\", staff=~\"$staff\", isp=~\"$isp\", target=~\"us\"} offset 15m or increase(callcenter_net_rtt_milliseconds_bucket{deployment_environment=\"$env\", staff=~\"$staff\", isp=~\"$isp\", target=~\"us\"}[15m])))))",
+     "refId": "A",
+     "legendFormat": "__auto",
+     "range": false,
+     "instant": true
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "unit": "ms",
+     "thresholds": {
+      "mode": "absolute",
+      "steps": [
+       {
+        "color": "green",
+        "value": null
+       },
+       {
+        "color": "orange",
+        "value": 750
+       },
+       {
+        "color": "red",
+        "value": 1500
+       }
+      ]
+     },
+     "color": {
+      "mode": "thresholds"
+     },
+     "noValue": "no data"
+    },
+    "overrides": []
+   },
+   "options": {
+    "colorMode": "background",
+    "graphMode": "none",
+    "justifyMode": "center",
+    "textMode": "auto",
+    "wideLayout": true,
+    "showPercentChange": false,
+    "orientation": "auto",
+    "reduceOptions": {
+     "calcs": [
+      "lastNotNull"
+     ],
+     "fields": "",
+     "values": false
+    }
+   }
+  },
+  {
+   "type": "stat",
+   "title": "Slowest to Square",
+   "description": "The worst agent's time to reach Square's card script and card server in the last 15 minutes (p95). Normal: under 1.5 s. Amber: 1.5–3 s. Red: over 3 s: Square's card box may load slowly or refuse; ask that agent to press Check my connection (the ? sheet).",
+   "datasource": {
+    "type": "prometheus",
+    "uid": "prometheus"
+   },
+   "id": 10,
+   "gridPos": {
+    "x": 4,
+    "y": 12,
+    "w": 4,
+    "h": 4
+   },
+   "targets": [
+    {
+     "datasource": {
+      "type": "prometheus",
+      "uid": "prometheus"
+     },
+     "expr": "max(histogram_quantile(0.95, sum by (le, staff) ((max_over_time(callcenter_net_rtt_milliseconds_bucket{deployment_environment=\"$env\", staff=~\"$staff\", isp=~\"$isp\", target=~\"square_js|pci\"}[15m]) unless callcenter_net_rtt_milliseconds_bucket{deployment_environment=\"$env\", staff=~\"$staff\", isp=~\"$isp\", target=~\"square_js|pci\"} offset 15m or increase(callcenter_net_rtt_milliseconds_bucket{deployment_environment=\"$env\", staff=~\"$staff\", isp=~\"$isp\", target=~\"square_js|pci\"}[15m])))))",
+     "refId": "A",
+     "legendFormat": "__auto",
+     "range": false,
+     "instant": true
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "unit": "ms",
+     "thresholds": {
+      "mode": "absolute",
+      "steps": [
+       {
+        "color": "green",
+        "value": null
+       },
+       {
+        "color": "orange",
+        "value": 1500
+       },
+       {
+        "color": "red",
+        "value": 3000
+       }
+      ]
+     },
+     "color": {
+      "mode": "thresholds"
+     },
+     "noValue": "no data"
+    },
+    "overrides": []
+   },
+   "options": {
+    "colorMode": "background",
+    "graphMode": "none",
+    "justifyMode": "center",
+    "textMode": "auto",
+    "wideLayout": true,
+    "showPercentChange": false,
+    "orientation": "auto",
+    "reduceOptions": {
+     "calcs": [
+      "lastNotNull"
+     ],
+     "fields": "",
+     "values": false
+    }
+   }
+  },
+  {
+   "type": "stat",
+   "title": "Call center server",
+   "description": "UP when the call center's server sent its numbers in the last 3 minutes (it sends every 30 seconds). DOWN: the server is stopped, crashed or can't reach this monitoring; the agents can't take orders if it's really down. Check the Lightsail box and its container.",
+   "datasource": {
+    "type": "prometheus",
+    "uid": "prometheus"
+   },
+   "id": 11,
+   "gridPos": {
+    "x": 8,
+    "y": 12,
+    "w": 4,
+    "h": 4
+   },
+   "targets": [
+    {
+     "datasource": {
+      "type": "prometheus",
+      "uid": "prometheus"
+     },
+     "expr": "max(max_over_time(callcenter_build_info{deployment_environment=\"$env\"}[3m])) or vector(0)",
+     "refId": "A",
+     "legendFormat": "__auto",
+     "range": false,
+     "instant": true
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "unit": "none",
+     "thresholds": {
+      "mode": "absolute",
+      "steps": [
+       {
+        "color": "red",
+        "value": null
+       },
+       {
+        "color": "green",
+        "value": 1
+       }
+      ]
+     },
+     "color": {
+      "mode": "thresholds"
+     },
+     "noValue": "no data",
+     "decimals": 0,
+     "mappings": [
+      {
+       "type": "value",
+       "options": {
+        "0": {
+         "text": "DOWN",
+         "color": "red",
+         "index": 0
+        },
+        "1": {
+         "text": "UP",
+         "color": "green",
+         "index": 1
+        }
+       }
+      }
+     ]
+    },
+    "overrides": []
+   },
+   "options": {
+    "colorMode": "background",
+    "graphMode": "none",
+    "justifyMode": "center",
+    "textMode": "auto",
+    "wideLayout": true,
+    "showPercentChange": false,
+    "orientation": "auto",
+    "reduceOptions": {
+     "calcs": [
+      "lastNotNull"
+     ],
+     "fields": "",
+     "values": false
+    }
+   }
+  },
+  {
+   "type": "stat",
+   "title": "main reachable",
+   "description": "UP when the call center's server reached main (the store's system) on its last check (every minute). DOWN: orders can't reach the store: check main (Store health dashboard) and the home internet.",
+   "datasource": {
+    "type": "prometheus",
+    "uid": "prometheus"
+   },
+   "id": 12,
+   "gridPos": {
+    "x": 12,
+    "y": 12,
+    "w": 4,
+    "h": 4
+   },
+   "targets": [
+    {
+     "datasource": {
+      "type": "prometheus",
+      "uid": "prometheus"
+     },
+     "expr": "min(callcenter_main_up{deployment_environment=\"$env\"})",
+     "refId": "A",
+     "legendFormat": "__auto",
+     "range": false,
+     "instant": true
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "unit": "none",
+     "thresholds": {
+      "mode": "absolute",
+      "steps": [
+       {
+        "color": "red",
+        "value": null
+       },
+       {
+        "color": "green",
+        "value": 1
+       }
+      ]
+     },
+     "color": {
+      "mode": "thresholds"
+     },
+     "noValue": "no data",
+     "decimals": 0,
+     "mappings": [
+      {
+       "type": "value",
+       "options": {
+        "0": {
+         "text": "DOWN",
+         "color": "red",
+         "index": 0
+        },
+        "1": {
+         "text": "UP",
+         "color": "green",
+         "index": 1
+        }
+       }
+      }
+     ]
+    },
+    "overrides": []
+   },
+   "options": {
+    "colorMode": "background",
+    "graphMode": "none",
+    "justifyMode": "center",
+    "textMode": "auto",
+    "wideLayout": true,
+    "showPercentChange": false,
+    "orientation": "auto",
+    "reduceOptions": {
+     "calcs": [
+      "lastNotNull"
+     ],
+     "fields": "",
+     "values": false
+    }
+   }
+  },
+  {
+   "type": "stat",
+   "title": "Time to main",
+   "description": "How long main took to answer the call center server's check, averaged over the last 10 minutes (one check a minute). Normal: under 500 ms. Amber: 500 ms – 1.5 s. Red: over 1.5 s: every screen that loads from the store is slow; check main and the store's internet. (A starting guess: tune it after the first week of real data.)",
+   "datasource": {
+    "type": "prometheus",
+    "uid": "prometheus"
+   },
+   "id": 13,
+   "gridPos": {
+    "x": 16,
+    "y": 12,
+    "w": 4,
+    "h": 4
+   },
+   "targets": [
+    {
+     "datasource": {
+      "type": "prometheus",
+      "uid": "prometheus"
+     },
+     "expr": "sum(increase(callcenter_main_probe_duration_milliseconds_sum{deployment_environment=\"$env\"}[10m])) / sum(increase(callcenter_main_probe_duration_milliseconds_count{deployment_environment=\"$env\"}[10m]))",
+     "refId": "A",
+     "legendFormat": "__auto",
+     "range": false,
+     "instant": true
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "unit": "ms",
+     "thresholds": {
+      "mode": "absolute",
+      "steps": [
+       {
+        "color": "green",
+        "value": null
+       },
+       {
+        "color": "orange",
+        "value": 500
+       },
+       {
+        "color": "red",
+        "value": 1500
+       }
+      ]
+     },
+     "color": {
+      "mode": "thresholds"
+     },
+     "noValue": "no data"
+    },
+    "overrides": []
+   },
+   "options": {
+    "colorMode": "background",
+    "graphMode": "none",
+    "justifyMode": "center",
+    "textMode": "auto",
+    "wideLayout": true,
+    "showPercentChange": false,
+    "orientation": "auto",
+    "reduceOptions": {
+     "calcs": [
+      "lastNotNull"
+     ],
+     "fields": "",
+     "values": false
+    }
+   }
+  },
+  {
+   "type": "stat",
+   "title": "Old-version pages",
+   "description": "Open call center pages loaded before the last release (last 5 minutes). They reload by themselves at the first quiet moment, so a few minutes after a release this is normal. Normal: 0. Amber: 1 or more for over 15 minutes: ask that agent to reload the page (F5) when no order is open.",
+   "datasource": {
+    "type": "prometheus",
+    "uid": "prometheus"
+   },
+   "id": 14,
+   "gridPos": {
+    "x": 20,
+    "y": 12,
+    "w": 4,
+    "h": 4
+   },
+   "targets": [
+    {
+     "datasource": {
+      "type": "prometheus",
+      "uid": "prometheus"
+     },
+     "expr": "sum(callcenter_browsers{deployment_environment=\"$env\", stale=\"yes\"}) or vector(0)",
+     "refId": "A",
+     "legendFormat": "__auto",
+     "range": false,
+     "instant": true
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "unit": "none",
+     "thresholds": {
+      "mode": "absolute",
+      "steps": [
+       {
+        "color": "green",
+        "value": null
+       },
+       {
+        "color": "orange",
+        "value": 1
+       }
+      ]
+     },
+     "color": {
+      "mode": "thresholds"
+     },
+     "noValue": "no data",
+     "decimals": 0
+    },
+    "overrides": []
+   },
+   "options": {
+    "colorMode": "background",
+    "graphMode": "none",
+    "justifyMode": "center",
+    "textMode": "auto",
+    "wideLayout": true,
+    "showPercentChange": false,
+    "orientation": "auto",
+    "reduceOptions": {
+     "calcs": [
+      "lastNotNull"
+     ],
+     "fields": "",
+     "values": false
+    }
+   }
+  },
+  {
+   "type": "row",
+   "title": "Cards",
+   "collapsed": false,
+   "id": 15,
+   "gridPos": {
+    "x": 0,
+    "y": 16,
+    "w": 24,
+    "h": 1
+   },
+   "panels": []
+  },
+  {
+   "type": "timeseries",
+   "title": "Card tries, charges and failures (per 5 min)",
+   "description": "Each bar is 5 minutes. Tries = an agent pressed Pay; charged = the store took the money; failed = it didn't go through (any reason). Normal: failed is a thin sliver of tries. Not normal: failed bars as tall as charged ones, or a run of failures with no charges: see the reasons beside it.",
+   "datasource": {
+    "type": "prometheus",
+    "uid": "prometheus"
+   },
+   "id": 16,
+   "gridPos": {
+    "x": 0,
+    "y": 17,
+    "w": 12,
+    "h": 8
+   },
+   "targets": [
+    {
+     "datasource": {
+      "type": "prometheus",
+      "uid": "prometheus"
+     },
+     "expr": "sum((max_over_time(callcenter_card_attempts_total{deployment_environment=\"$env\", stage=\"tokenize\"}[$__interval]) unless callcenter_card_attempts_total{deployment_environment=\"$env\", stage=\"tokenize\"} offset $__interval or increase(callcenter_card_attempts_total{deployment_environment=\"$env\", stage=\"tokenize\"}[$__interval])))",
+     "refId": "A",
+     "legendFormat": "tries",
+     "range": true,
+     "instant": false
+    },
+    {
+     "datasource": {
+      "type": "prometheus",
+      "uid": "prometheus"
+     },
+     "expr": "sum((max_over_time(callcenter_card_attempts_total{deployment_environment=\"$env\", stage=\"charge\", outcome=\"ok\"}[$__interval]) unless callcenter_card_attempts_total{deployment_environment=\"$env\", stage=\"charge\", outcome=\"ok\"} offset $__interval or increase(callcenter_card_attempts_total{deployment_environment=\"$env\", stage=\"charge\", outcome=\"ok\"}[$__interval])))",
+     "refId": "B",
+     "legendFormat": "charged",
+     "range": true,
+     "instant": false
+    },
+    {
+     "datasource": {
+      "type": "prometheus",
+      "uid": "prometheus"
+     },
+     "expr": "sum((max_over_time(callcenter_card_attempts_total{deployment_environment=\"$env\", stage=~\"tokenize|charge\", outcome!=\"ok\"}[$__interval]) unless callcenter_card_attempts_total{deployment_environment=\"$env\", stage=~\"tokenize|charge\", outcome!=\"ok\"} offset $__interval or increase(callcenter_card_attempts_total{deployment_environment=\"$env\", stage=~\"tokenize|charge\", outcome!=\"ok\"}[$__interval])))",
+     "refId": "C",
+     "legendFormat": "failed",
+     "range": true,
+     "instant": false
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "unit": "none",
+     "custom": {
+      "drawStyle": "bars",
+      "lineWidth": 1,
+      "fillOpacity": 80,
+      "showPoints": "never",
+      "spanNulls": false,
+      "stacking": {
+       "mode": "none",
+       "group": "A"
+      },
+      "thresholdsStyle": {
+       "mode": "off"
+      }
+     },
+     "noValue": "no data",
+     "color": {
+      "mode": "palette-classic"
+     },
+     "decimals": 0
+    },
+    "overrides": [
+     {
+      "matcher": {
+       "id": "byName",
+       "options": "tries"
+      },
+      "properties": [
+       {
+        "id": "color",
+        "value": {
+         "mode": "fixed",
+         "fixedColor": "blue"
+        }
+       }
+      ]
+     },
+     {
+      "matcher": {
+       "id": "byName",
+       "options": "charged"
+      },
+      "properties": [
+       {
+        "id": "color",
+        "value": {
+         "mode": "fixed",
+         "fixedColor": "green"
+        }
+       }
+      ]
+     },
+     {
+      "matcher": {
+       "id": "byName",
+       "options": "failed"
+      },
+      "properties": [
+       {
+        "id": "color",
+        "value": {
+         "mode": "fixed",
+         "fixedColor": "red"
+        }
+       }
+      ]
+     }
+    ]
+   },
+   "options": {
+    "legend": {
+     "displayMode": "table",
+     "placement": "right",
+     "calcs": [
+      "sum"
+     ]
+    },
+    "tooltip": {
+     "mode": "multi",
+     "sort": "desc"
+    }
+   },
+   "interval": "5m"
+  },
+  {
+   "type": "timeseries",
+   "title": "Card failures by reason (per 5 min)",
+   "description": "Why cards failed, from Square's code, per 5 minutes. Bank declined = the card's bank said no (normal now and then: ask for another card). Over limit / no funds = the card has no room. Wrong card details = number, expiry, CVV or ZIP typed or read wrong (read it back with the caller). Refused, no reason = Square's card box said no without a code: usually a computer clock that is off or a bad connection to Square (see Network & clock). Too many tries = Square blocks that card for ~10 minutes. No answer / network = Square or the internet didn't answer. Normal: a few bank declines and typos a day. Not normal: any run of \"refused, no reason\" or \"no answer\": it's the computer or the network, not the card.",
+   "datasource": {
+    "type": "prometheus",
+    "uid": "prometheus"
+   },
+   "id": 17,
+   "gridPos": {
+    "x": 12,
+    "y": 17,
+    "w": 12,
+    "h": 8
+   },
+   "targets": [
+    {
+     "datasource": {
+      "type": "prometheus",
+      "uid": "prometheus"
+     },
+     "expr": "sum((max_over_time(callcenter_card_attempts_total{deployment_environment=\"$env\", stage=\"charge\", outcome=\"declined\", code!~\"TRANSACTION_LIMIT|INSUFFICIENT_FUNDS|INVALID_.*|PAN_FAILURE|.*EXPIR.*|.*CVV.*|.*AVS.*|ADDRESS_VERIFICATION_FAILURE|RATE_LIMIT.*|TOO_MANY_REQUESTS\"}[$__interval]) unless callcenter_card_attempts_total{deployment_environment=\"$env\", stage=\"charge\", outcome=\"declined\", code!~\"TRANSACTION_LIMIT|INSUFFICIENT_FUNDS|INVALID_.*|PAN_FAILURE|.*EXPIR.*|.*CVV.*|.*AVS.*|ADDRESS_VERIFICATION_FAILURE|RATE_LIMIT.*|TOO_MANY_REQUESTS\"} offset $__interval or increase(callcenter_card_attempts_total{deployment_environment=\"$env\", stage=\"charge\", outcome=\"declined\", code!~\"TRANSACTION_LIMIT|INSUFFICIENT_FUNDS|INVALID_.*|PAN_FAILURE|.*EXPIR.*|.*CVV.*|.*AVS.*|ADDRESS_VERIFICATION_FAILURE|RATE_LIMIT.*|TOO_MANY_REQUESTS\"}[$__interval])))",
+     "refId": "A",
+     "legendFormat": "bank declined",
+     "range": true,
+     "instant": false
+    },
+    {
+     "datasource": {
+      "type": "prometheus",
+      "uid": "prometheus"
+     },
+     "expr": "sum((max_over_time(callcenter_card_attempts_total{deployment_environment=\"$env\", stage=\"charge\", code=~\"TRANSACTION_LIMIT|INSUFFICIENT_FUNDS\"}[$__interval]) unless callcenter_card_attempts_total{deployment_environment=\"$env\", stage=\"charge\", code=~\"TRANSACTION_LIMIT|INSUFFICIENT_FUNDS\"} offset $__interval or increase(callcenter_card_attempts_total{deployment_environment=\"$env\", stage=\"charge\", code=~\"TRANSACTION_LIMIT|INSUFFICIENT_FUNDS\"}[$__interval])))",
+     "refId": "B",
+     "legendFormat": "over limit / no funds",
+     "range": true,
+     "instant": false
+    },
+    {
+     "datasource": {
+      "type": "prometheus",
+      "uid": "prometheus"
+     },
+     "expr": "sum((max_over_time(callcenter_card_attempts_total{deployment_environment=\"$env\", stage=~\"tokenize|charge\", outcome=\"invalid\"}[$__interval]) unless callcenter_card_attempts_total{deployment_environment=\"$env\", stage=~\"tokenize|charge\", outcome=\"invalid\"} offset $__interval or increase(callcenter_card_attempts_total{deployment_environment=\"$env\", stage=~\"tokenize|charge\", outcome=\"invalid\"}[$__interval])) or (max_over_time(callcenter_card_attempts_total{deployment_environment=\"$env\", stage=\"charge\", outcome=\"declined\", code=~\"INVALID_.*|PAN_FAILURE|.*EXPIR.*|.*CVV.*|.*AVS.*|ADDRESS_VERIFICATION_FAILURE\"}[$__interval]) unless callcenter_card_attempts_total{deployment_environment=\"$env\", stage=\"charge\", outcome=\"declined\", code=~\"INVALID_.*|PAN_FAILURE|.*EXPIR.*|.*CVV.*|.*AVS.*|ADDRESS_VERIFICATION_FAILURE\"} offset $__interval or increase(callcenter_card_attempts_total{deployment_environment=\"$env\", stage=\"charge\", outcome=\"declined\", code=~\"INVALID_.*|PAN_FAILURE|.*EXPIR.*|.*CVV.*|.*AVS.*|ADDRESS_VERIFICATION_FAILURE\"}[$__interval])))",
+     "refId": "C",
+     "legendFormat": "wrong card details",
+     "range": true,
+     "instant": false
+    },
+    {
+     "datasource": {
+      "type": "prometheus",
+      "uid": "prometheus"
+     },
+     "expr": "sum((max_over_time(callcenter_card_attempts_total{deployment_environment=\"$env\", stage=\"tokenize\", outcome=\"refused\"}[$__interval]) unless callcenter_card_attempts_total{deployment_environment=\"$env\", stage=\"tokenize\", outcome=\"refused\"} offset $__interval or increase(callcenter_card_attempts_total{deployment_environment=\"$env\", stage=\"tokenize\", outcome=\"refused\"}[$__interval])))",
+     "refId": "D",
+     "legendFormat": "refused, no reason (Square)",
+     "range": true,
+     "instant": false
+    },
+    {
+     "datasource": {
+      "type": "prometheus",
+      "uid": "prometheus"
+     },
+     "expr": "sum((max_over_time(callcenter_card_attempts_total{deployment_environment=\"$env\", stage=~\"tokenize|charge\", outcome=\"rate_limited\"}[$__interval]) unless callcenter_card_attempts_total{deployment_environment=\"$env\", stage=~\"tokenize|charge\", outcome=\"rate_limited\"} offset $__interval or increase(callcenter_card_attempts_total{deployment_environment=\"$env\", stage=~\"tokenize|charge\", outcome=\"rate_limited\"}[$__interval])) or (max_over_time(callcenter_card_attempts_total{deployment_environment=\"$env\", stage=\"charge\", outcome=\"declined\", code=~\"RATE_LIMIT.*|TOO_MANY_REQUESTS\"}[$__interval]) unless callcenter_card_attempts_total{deployment_environment=\"$env\", stage=\"charge\", outcome=\"declined\", code=~\"RATE_LIMIT.*|TOO_MANY_REQUESTS\"} offset $__interval or increase(callcenter_card_attempts_total{deployment_environment=\"$env\", stage=\"charge\", outcome=\"declined\", code=~\"RATE_LIMIT.*|TOO_MANY_REQUESTS\"}[$__interval])))",
+     "refId": "E",
+     "legendFormat": "too many tries",
+     "range": true,
+     "instant": false
+    },
+    {
+     "datasource": {
+      "type": "prometheus",
+      "uid": "prometheus"
+     },
+     "expr": "sum((max_over_time(callcenter_card_attempts_total{deployment_environment=\"$env\", stage=~\"sdk_load|attach|tokenize|charge\", outcome=~\"error|unreachable|no_answer\"}[$__interval]) unless callcenter_card_attempts_total{deployment_environment=\"$env\", stage=~\"sdk_load|attach|tokenize|charge\", outcome=~\"error|unreachable|no_answer\"} offset $__interval or increase(callcenter_card_attempts_total{deployment_environment=\"$env\", stage=~\"sdk_load|attach|tokenize|charge\", outcome=~\"error|unreachable|no_answer\"}[$__interval])))",
+     "refId": "F",
+     "legendFormat": "no answer / network",
+     "range": true,
+     "instant": false
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "unit": "none",
+     "custom": {
+      "drawStyle": "bars",
+      "lineWidth": 1,
+      "fillOpacity": 80,
+      "showPoints": "never",
+      "spanNulls": false,
+      "stacking": {
+       "mode": "normal",
+       "group": "A"
+      },
+      "thresholdsStyle": {
+       "mode": "off"
+      }
+     },
+     "noValue": "no data",
+     "color": {
+      "mode": "palette-classic"
+     },
+     "decimals": 0
+    },
+    "overrides": [
+     {
+      "matcher": {
+       "id": "byName",
+       "options": "bank declined"
+      },
+      "properties": [
+       {
+        "id": "color",
+        "value": {
+         "mode": "fixed",
+         "fixedColor": "red"
+        }
+       }
+      ]
+     },
+     {
+      "matcher": {
+       "id": "byName",
+       "options": "over limit / no funds"
+      },
+      "properties": [
+       {
+        "id": "color",
+        "value": {
+         "mode": "fixed",
+         "fixedColor": "dark-orange"
+        }
+       }
+      ]
+     },
+     {
+      "matcher": {
+       "id": "byName",
+       "options": "wrong card details"
+      },
+      "properties": [
+       {
+        "id": "color",
+        "value": {
+         "mode": "fixed",
+         "fixedColor": "yellow"
+        }
+       }
+      ]
+     },
+     {
+      "matcher": {
+       "id": "byName",
+       "options": "refused, no reason (Square)"
+      },
+      "properties": [
+       {
+        "id": "color",
+        "value": {
+         "mode": "fixed",
+         "fixedColor": "purple"
+        }
+       }
+      ]
+     },
+     {
+      "matcher": {
+       "id": "byName",
+       "options": "too many tries"
+      },
+      "properties": [
+       {
+        "id": "color",
+        "value": {
+         "mode": "fixed",
+         "fixedColor": "dark-purple"
+        }
+       }
+      ]
+     },
+     {
+      "matcher": {
+       "id": "byName",
+       "options": "no answer / network"
+      },
+      "properties": [
+       {
+        "id": "color",
+        "value": {
+         "mode": "fixed",
+         "fixedColor": "blue"
+        }
+       }
+      ]
+     }
+    ]
+   },
+   "options": {
+    "legend": {
+     "displayMode": "table",
+     "placement": "right",
+     "calcs": [
+      "sum"
+     ]
+    },
+    "tooltip": {
+     "mode": "multi",
+     "sort": "desc"
+    }
+   },
+   "interval": "5m"
+  },
+  {
+   "type": "table",
+   "title": "Cards per computer",
+   "description": "Over the time range, per computer (the name its browser reports): tries, charged, the success rate and the failures by kind. Cards are counted per computer, not per agent (the agents' own numbers are in the Agents table, from the log digest). Normal: every computer 85 % or more. Not normal: one computer much worse than the others with the same callers: its clock, browser or internet (Network & clock).",
+   "datasource": {
+    "type": "prometheus",
+    "uid": "prometheus"
+   },
+   "id": 18,
+   "gridPos": {
+    "x": 0,
+    "y": 25,
+    "w": 24,
+    "h": 7
+   },
+   "targets": [
+    {
+     "datasource": {
+      "type": "prometheus",
+      "uid": "prometheus"
+     },
+     "expr": "sum by (device) ((max_over_time(callcenter_card_attempts_total{deployment_environment=\"$env\", stage=\"tokenize\"}[$__range]) unless callcenter_card_attempts_total{deployment_environment=\"$env\", stage=\"tokenize\"} offset $__range or increase(callcenter_card_attempts_total{deployment_environment=\"$env\", stage=\"tokenize\"}[$__range])))",
+     "refId": "A",
+     "legendFormat": "__auto",
+     "range": false,
+     "instant": true,
+     "format": "table"
+    },
+    {
+     "datasource": {
+      "type": "prometheus",
+      "uid": "prometheus"
+     },
+     "expr": "sum by (device) ((max_over_time(callcenter_card_attempts_total{deployment_environment=\"$env\", stage=\"charge\", outcome=\"ok\"}[$__range]) unless callcenter_card_attempts_total{deployment_environment=\"$env\", stage=\"charge\", outcome=\"ok\"} offset $__range or increase(callcenter_card_attempts_total{deployment_environment=\"$env\", stage=\"charge\", outcome=\"ok\"}[$__range])))",
+     "refId": "B",
+     "legendFormat": "__auto",
+     "range": false,
+     "instant": true,
+     "format": "table"
+    },
+    {
+     "datasource": {
+      "type": "prometheus",
+      "uid": "prometheus"
+     },
+     "expr": "sum by (device) ((max_over_time(callcenter_card_attempts_total{deployment_environment=\"$env\", stage=\"charge\", outcome=\"ok\"}[$__range]) unless callcenter_card_attempts_total{deployment_environment=\"$env\", stage=\"charge\", outcome=\"ok\"} offset $__range or increase(callcenter_card_attempts_total{deployment_environment=\"$env\", stage=\"charge\", outcome=\"ok\"}[$__range]))) / sum by (device) ((max_over_time(callcenter_card_attempts_total{deployment_environment=\"$env\", stage=\"tokenize\"}[$__range]) unless callcenter_card_attempts_total{deployment_environment=\"$env\", stage=\"tokenize\"} offset $__range or increase(callcenter_card_attempts_total{deployment_environment=\"$env\", stage=\"tokenize\"}[$__range])))",
+     "refId": "C",
+     "legendFormat": "__auto",
+     "range": false,
+     "instant": true,
+     "format": "table"
+    },
+    {
+     "datasource": {
+      "type": "prometheus",
+      "uid": "prometheus"
+     },
+     "expr": "sum by (device) ((max_over_time(callcenter_card_attempts_total{deployment_environment=\"$env\", stage=\"tokenize\", outcome=\"refused\"}[$__range]) unless callcenter_card_attempts_total{deployment_environment=\"$env\", stage=\"tokenize\", outcome=\"refused\"} offset $__range or increase(callcenter_card_attempts_total{deployment_environment=\"$env\", stage=\"tokenize\", outcome=\"refused\"}[$__range])))",
+     "refId": "D",
+     "legendFormat": "__auto",
+     "range": false,
+     "instant": true,
+     "format": "table"
+    },
+    {
+     "datasource": {
+      "type": "prometheus",
+      "uid": "prometheus"
+     },
+     "expr": "sum by (device) ((max_over_time(callcenter_card_attempts_total{deployment_environment=\"$env\", stage=\"charge\", outcome=\"declined\"}[$__range]) unless callcenter_card_attempts_total{deployment_environment=\"$env\", stage=\"charge\", outcome=\"declined\"} offset $__range or increase(callcenter_card_attempts_total{deployment_environment=\"$env\", stage=\"charge\", outcome=\"declined\"}[$__range])))",
+     "refId": "E",
+     "legendFormat": "__auto",
+     "range": false,
+     "instant": true,
+     "format": "table"
+    },
+    {
+     "datasource": {
+      "type": "prometheus",
+      "uid": "prometheus"
+     },
+     "expr": "sum by (device) ((max_over_time(callcenter_card_attempts_total{deployment_environment=\"$env\", stage=~\"tokenize|charge\", outcome=\"rate_limited\"}[$__range]) unless callcenter_card_attempts_total{deployment_environment=\"$env\", stage=~\"tokenize|charge\", outcome=\"rate_limited\"} offset $__range or increase(callcenter_card_attempts_total{deployment_environment=\"$env\", stage=~\"tokenize|charge\", outcome=\"rate_limited\"}[$__range])))",
+     "refId": "F",
+     "legendFormat": "__auto",
+     "range": false,
+     "instant": true,
+     "format": "table"
+    },
+    {
+     "datasource": {
+      "type": "prometheus",
+      "uid": "prometheus"
+     },
+     "expr": "sum by (device) ((max_over_time(callcenter_card_attempts_total{deployment_environment=\"$env\", stage=~\"sdk_load|attach|tokenize|charge\", outcome=~\"error|unreachable|no_answer\"}[$__range]) unless callcenter_card_attempts_total{deployment_environment=\"$env\", stage=~\"sdk_load|attach|tokenize|charge\", outcome=~\"error|unreachable|no_answer\"} offset $__range or increase(callcenter_card_attempts_total{deployment_environment=\"$env\", stage=~\"sdk_load|attach|tokenize|charge\", outcome=~\"error|unreachable|no_answer\"}[$__range])))",
+     "refId": "G",
+     "legendFormat": "__auto",
+     "range": false,
+     "instant": true,
+     "format": "table"
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "unit": "none",
+     "noValue": "–",
+     "custom": {
+      "align": "auto",
+      "minWidth": 70
+     }
+    },
+    "overrides": [
+     {
+      "matcher": {
+       "id": "byName",
+       "options": "success"
+      },
+      "properties": [
+       {
+        "id": "unit",
+        "value": "percentunit"
+       },
+       {
+        "id": "decimals",
+        "value": 0
+       },
+       {
+        "id": "thresholds",
+        "value": {
+         "mode": "absolute",
+         "steps": [
+          {
+           "color": "red",
+           "value": null
+          },
+          {
+           "color": "orange",
+           "value": 0.7
+          },
+          {
+           "color": "green",
+           "value": 0.85
+          }
+         ]
+        }
+       },
+       {
+        "id": "color",
+        "value": {
+         "mode": "thresholds"
+        }
+       },
+       {
+        "id": "custom.cellOptions",
+        "value": {
+         "type": "color-background",
+         "mode": "basic"
+        }
+       },
+       {
+        "id": "mappings",
+        "value": [
+         {
+          "type": "special",
+          "options": {
+           "match": "null",
+           "result": {
+            "text": "–",
+            "color": "transparent",
+            "index": 0
+           }
+          }
+         }
+        ]
+       }
+      ]
+     },
+     {
+      "matcher": {
+       "id": "byName",
+       "options": "refused (Square)"
+      },
+      "properties": [
+       {
+        "id": "decimals",
+        "value": 0
+       },
+       {
+        "id": "thresholds",
+        "value": {
+         "mode": "absolute",
+         "steps": [
+          {
+           "color": "green",
+           "value": null
+          },
+          {
+           "color": "orange",
+           "value": 1
+          },
+          {
+           "color": "red",
+           "value": 3
+          }
+         ]
+        }
+       },
+       {
+        "id": "color",
+        "value": {
+         "mode": "thresholds"
+        }
+       },
+       {
+        "id": "custom.cellOptions",
+        "value": {
+         "type": "color-background",
+         "mode": "basic"
+        }
+       },
+       {
+        "id": "mappings",
+        "value": [
+         {
+          "type": "special",
+          "options": {
+           "match": "null",
+           "result": {
+            "text": "–",
+            "color": "transparent",
+            "index": 0
+           }
+          }
+         }
+        ]
+       }
+      ]
+     },
+     {
+      "matcher": {
+       "id": "byName",
+       "options": "tries"
+      },
+      "properties": [
+       {
+        "id": "decimals",
+        "value": 0
+       }
+      ]
+     },
+     {
+      "matcher": {
+       "id": "byName",
+       "options": "charged"
+      },
+      "properties": [
+       {
+        "id": "decimals",
+        "value": 0
+       }
+      ]
+     },
+     {
+      "matcher": {
+       "id": "byName",
+       "options": "bank declined"
+      },
+      "properties": [
+       {
+        "id": "decimals",
+        "value": 0
+       }
+      ]
+     },
+     {
+      "matcher": {
+       "id": "byName",
+       "options": "too many tries"
+      },
+      "properties": [
+       {
+        "id": "decimals",
+        "value": 0
+       },
+       {
+        "id": "thresholds",
+        "value": {
+         "mode": "absolute",
+         "steps": [
+          {
+           "color": "green",
+           "value": null
+          },
+          {
+           "color": "red",
+           "value": 1
+          }
+         ]
+        }
+       },
+       {
+        "id": "color",
+        "value": {
+         "mode": "thresholds"
+        }
+       },
+       {
+        "id": "custom.cellOptions",
+        "value": {
+         "type": "color-background",
+         "mode": "basic"
+        }
+       },
+       {
+        "id": "mappings",
+        "value": [
+         {
+          "type": "special",
+          "options": {
+           "match": "null",
+           "result": {
+            "text": "–",
+            "color": "transparent",
+            "index": 0
+           }
+          }
+         }
+        ]
+       }
+      ]
+     },
+     {
+      "matcher": {
+       "id": "byName",
+       "options": "no answer"
+      },
+      "properties": [
+       {
+        "id": "decimals",
+        "value": 0
+       },
+       {
+        "id": "thresholds",
+        "value": {
+         "mode": "absolute",
+         "steps": [
+          {
+           "color": "green",
+           "value": null
+          },
+          {
+           "color": "orange",
+           "value": 1
+          },
+          {
+           "color": "red",
+           "value": 3
+          }
+         ]
+        }
+       },
+       {
+        "id": "color",
+        "value": {
+         "mode": "thresholds"
+        }
+       },
+       {
+        "id": "custom.cellOptions",
+        "value": {
+         "type": "color-background",
+         "mode": "basic"
+        }
+       },
+       {
+        "id": "mappings",
+        "value": [
+         {
+          "type": "special",
+          "options": {
+           "match": "null",
+           "result": {
+            "text": "–",
+            "color": "transparent",
+            "index": 0
+           }
+          }
+         }
+        ]
+       }
+      ]
+     }
+    ]
+   },
+   "options": {
+    "showHeader": true,
+    "cellHeight": "sm",
+    "footer": {
+     "show": false,
+     "reducer": [
+      "sum"
+     ],
+     "fields": ""
+    },
+    "sortBy": [
+     {
+      "displayName": "tries",
+      "desc": true
+     }
+    ]
+   },
+   "transformations": [
+    {
+     "id": "merge",
+     "options": {}
+    },
+    {
+     "id": "organize",
+     "options": {
+      "excludeByName": {
+       "Time": true
+      },
+      "renameByName": {
+       "device": "computer",
+       "Value #A": "tries",
+       "Value #B": "charged",
+       "Value #C": "success",
+       "Value #D": "refused (Square)",
+       "Value #E": "bank declined",
+       "Value #F": "too many tries",
+       "Value #G": "no answer"
+      }
+     }
+    }
+   ]
+  },
+  {
+   "type": "table",
+   "title": "Card outcome vs the network and clock at that moment",
+   "description": "Every card try with the agent's network and clock as last measured just before it: net good / bad (bad = a failed round trip, us over 1.5 s or Square over 3 s), clock ok / off (over 2 minutes), none = not measured. Normal: almost every row is net good + clock ok. Not normal: failures that cluster on net bad (the internet) or clock off (fix the clock); failures on good + ok point at the card or Square.",
+   "datasource": {
+    "type": "prometheus",
+    "uid": "prometheus"
+   },
+   "id": 19,
+   "gridPos": {
+    "x": 0,
+    "y": 32,
+    "w": 10,
+    "h": 8
+   },
+   "targets": [
+    {
+     "datasource": {
+      "type": "prometheus",
+      "uid": "prometheus"
+     },
+     "expr": "sort_desc(sum by (outcome, net, clock, isp) ((max_over_time(callcenter_card_net_total{deployment_environment=\"$env\", isp=~\"$isp\"}[$__range]) unless callcenter_card_net_total{deployment_environment=\"$env\", isp=~\"$isp\"} offset $__range or increase(callcenter_card_net_total{deployment_environment=\"$env\", isp=~\"$isp\"}[$__range]))) > 0)",
+     "refId": "A",
+     "legendFormat": "__auto",
+     "range": false,
+     "instant": true,
+     "format": "table"
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "unit": "none",
+     "noValue": "–",
+     "custom": {
+      "align": "auto",
+      "minWidth": 70
+     }
+    },
+    "overrides": [
+     {
+      "matcher": {
+       "id": "byName",
+       "options": "tries"
+      },
+      "properties": [
+       {
+        "id": "decimals",
+        "value": 0
+       }
+      ]
+     },
+     {
+      "matcher": {
+       "id": "byName",
+       "options": "network"
+      },
+      "properties": [
+       {
+        "id": "mappings",
+        "value": [
+         {
+          "type": "value",
+          "options": {
+           "good": {
+            "color": "green",
+            "index": 0
+           },
+           "bad": {
+            "color": "red",
+            "index": 1
+           },
+           "none": {
+            "color": "text",
+            "index": 2
+           }
+          }
+         }
+        ]
+       },
+       {
+        "id": "custom.cellOptions",
+        "value": {
+         "type": "color-text"
+        }
+       }
+      ]
+     },
+     {
+      "matcher": {
+       "id": "byName",
+       "options": "clock"
+      },
+      "properties": [
+       {
+        "id": "mappings",
+        "value": [
+         {
+          "type": "value",
+          "options": {
+           "ok": {
+            "color": "green",
+            "index": 0
+           },
+           "off": {
+            "color": "red",
+            "index": 1
+           },
+           "none": {
+            "color": "text",
+            "index": 2
+           }
+          }
+         }
+        ]
+       },
+       {
+        "id": "custom.cellOptions",
+        "value": {
+         "type": "color-text"
+        }
+       }
+      ]
+     },
+     {
+      "matcher": {
+       "id": "byName",
+       "options": "outcome"
+      },
+      "properties": [
+       {
+        "id": "mappings",
+        "value": [
+         {
+          "type": "value",
+          "options": {
+           "ok": {
+            "color": "green",
+            "index": 0
+           }
+          }
+         },
+         {
+          "type": "regex",
+          "options": {
+           "pattern": ".+",
+           "result": {
+            "color": "red",
+            "index": 1
+           }
+          }
+         }
+        ]
+       },
+       {
+        "id": "custom.cellOptions",
+        "value": {
+         "type": "color-text"
+        }
+       }
+      ]
+     }
+    ]
+   },
+   "options": {
+    "showHeader": true,
+    "cellHeight": "sm",
+    "footer": {
+     "show": false,
+     "reducer": [
+      "sum"
+     ],
+     "fields": ""
+    },
+    "sortBy": [
+     {
+      "displayName": "tries",
+      "desc": true
+     }
+    ]
+   },
+   "transformations": [
+    {
+     "id": "merge",
+     "options": {}
+    },
+    {
+     "id": "organize",
+     "options": {
+      "excludeByName": {
+       "Time": true
+      },
+      "renameByName": {
+       "Value": "tries",
+       "Value #A": "tries",
+       "net": "network",
+       "isp": "provider"
+      }
+     }
+    }
+   ]
+  },
+  {
+   "type": "bargauge",
+   "title": "Card success by network state",
+   "description": "The card success rate when the agent's network was good vs bad (and not measured) at that moment, over the time range. Normal: \"good\" at 85 % or more. If \"bad\" is much lower than \"good\", the agents' internet is costing cards: fix their connection or provider.",
+   "datasource": {
+    "type": "prometheus",
+    "uid": "prometheus"
+   },
+   "id": 20,
+   "gridPos": {
+    "x": 10,
+    "y": 32,
+    "w": 5,
+    "h": 8
+   },
+   "targets": [
+    {
+     "datasource": {
+      "type": "prometheus",
+      "uid": "prometheus"
+     },
+     "expr": "sum by (net) ((max_over_time(callcenter_card_net_total{deployment_environment=\"$env\", isp=~\"$isp\", outcome=\"ok\"}[$__range]) unless callcenter_card_net_total{deployment_environment=\"$env\", isp=~\"$isp\", outcome=\"ok\"} offset $__range or increase(callcenter_card_net_total{deployment_environment=\"$env\", isp=~\"$isp\", outcome=\"ok\"}[$__range]))) / sum by (net) ((max_over_time(callcenter_card_net_total{deployment_environment=\"$env\", isp=~\"$isp\"}[$__range]) unless callcenter_card_net_total{deployment_environment=\"$env\", isp=~\"$isp\"} offset $__range or increase(callcenter_card_net_total{deployment_environment=\"$env\", isp=~\"$isp\"}[$__range])))",
+     "refId": "A",
+     "legendFormat": "{{net}}",
+     "range": false,
+     "instant": true
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "unit": "percentunit",
+     "thresholds": {
+      "mode": "absolute",
+      "steps": [
+       {
+        "color": "red",
+        "value": null
+       },
+       {
+        "color": "orange",
+        "value": 0.7
+       },
+       {
+        "color": "green",
+        "value": 0.85
+       }
+      ]
+     },
+     "color": {
+      "mode": "thresholds"
+     },
+     "noValue": "no data",
+     "min": 0,
+     "decimals": 0
+    },
+    "overrides": []
+   },
+   "options": {
+    "orientation": "horizontal",
+    "displayMode": "basic",
+    "showUnfilled": true,
+    "valueMode": "color",
+    "namePlacement": "top",
+    "sizing": "auto",
+    "minVizHeight": 16,
+    "maxVizHeight": 24,
+    "reduceOptions": {
+     "calcs": [
+      "lastNotNull"
+     ],
+     "fields": "",
+     "values": false
+    }
+   }
+  },
+  {
+   "type": "timeseries",
+   "title": "Square's card box: time to check a card (tokenize)",
+   "description": "How long Square's card box took to check the card after Pay (median and p95, 15-minute windows). The agent waits this long before the store even sees the card. Normal: under 1.5 s. Amber band: 1.5–3 s. Red band: over 3 s: callers wait, and Square refuses more; look at Square's round trip per provider below. (A starting guess: tune it after the first week of real data.)",
+   "datasource": {
+    "type": "prometheus",
+    "uid": "prometheus"
+   },
+   "id": 21,
+   "gridPos": {
+    "x": 15,
+    "y": 32,
+    "w": 9,
+    "h": 8
+   },
+   "targets": [
+    {
+     "datasource": {
+      "type": "prometheus",
+      "uid": "prometheus"
+     },
+     "expr": "histogram_quantile(0.5, sum by (le) ((max_over_time(callcenter_card_stage_duration_milliseconds_bucket{deployment_environment=\"$env\", stage=\"tokenize\"}[15m]) unless callcenter_card_stage_duration_milliseconds_bucket{deployment_environment=\"$env\", stage=\"tokenize\"} offset 15m or increase(callcenter_card_stage_duration_milliseconds_bucket{deployment_environment=\"$env\", stage=\"tokenize\"}[15m]))))",
+     "refId": "A",
+     "legendFormat": "median",
+     "range": true,
+     "instant": false
+    },
+    {
+     "datasource": {
+      "type": "prometheus",
+      "uid": "prometheus"
+     },
+     "expr": "histogram_quantile(0.95, sum by (le) ((max_over_time(callcenter_card_stage_duration_milliseconds_bucket{deployment_environment=\"$env\", stage=\"tokenize\"}[15m]) unless callcenter_card_stage_duration_milliseconds_bucket{deployment_environment=\"$env\", stage=\"tokenize\"} offset 15m or increase(callcenter_card_stage_duration_milliseconds_bucket{deployment_environment=\"$env\", stage=\"tokenize\"}[15m]))))",
+     "refId": "B",
+     "legendFormat": "p95",
+     "range": true,
+     "instant": false
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "unit": "ms",
+     "custom": {
+      "drawStyle": "line",
+      "lineWidth": 2,
+      "fillOpacity": 0,
+      "showPoints": "never",
+      "spanNulls": true,
+      "stacking": {
+       "mode": "none",
+       "group": "A"
+      },
+      "thresholdsStyle": {
+       "mode": "line+area"
+      },
+      "axisSoftMin": 0,
+      "axisSoftMax": 3600
+     },
+     "noValue": "no data",
+     "color": {
+      "mode": "palette-classic"
+     },
+     "thresholds": {
+      "mode": "absolute",
+      "steps": [
+       {
+        "color": "green",
+        "value": null
+       },
+       {
+        "color": "orange",
+        "value": 1500
+       },
+       {
+        "color": "red",
+        "value": 3000
+       }
+      ]
+     }
+    },
+    "overrides": []
+   },
+   "options": {
+    "legend": {
+     "displayMode": "table",
+     "placement": "right",
+     "calcs": [
+      "mean",
+      "max"
+     ]
+    },
+    "tooltip": {
+     "mode": "multi",
+     "sort": "desc"
+    }
+   }
+  },
+  {
+   "type": "row",
+   "title": "Card failed at the call center, charged at the store",
+   "collapsed": false,
+   "id": 22,
+   "gridPos": {
+    "x": 0,
+    "y": 40,
+    "w": 24,
+    "h": 1
+   },
+   "panels": []
+  },
+  {
+   "type": "stat",
+   "title": "At the store instead",
+   "description": "Orders where an agent pressed Card and it didn't go through (refused, declined or no answer), and the card was later run on a store terminal instead: the store had to charge a card the call center couldn't. Each case costs the store time on the phone or at the door. Over the time range (today by default). Normal: 0–1 a day. Amber: 2–3. Red: more than 3: look at the reasons and agents beside it. (A starting guess: tune it after the first week of real data.)\n\n**Coming with the next release:** shows No data until the release that sends it is live. (the Pi's `callcenter_card_fallback_to_store_total` {reason, agent, store_tender} and its digest event `card.fallback_to_store`: the agent release after 2026-11-18.)",
+   "datasource": {
+    "type": "prometheus",
+    "uid": "prometheus"
+   },
+   "id": 23,
+   "gridPos": {
+    "x": 0,
+    "y": 41,
+    "w": 4,
+    "h": 4
+   },
+   "targets": [
+    {
+     "datasource": {
+      "type": "prometheus",
+      "uid": "prometheus"
+     },
+     "expr": "sum((max_over_time(callcenter_card_fallback_to_store_total{deployment_environment=\"$env\", agent=~\"$staff\"}[$__range]) unless callcenter_card_fallback_to_store_total{deployment_environment=\"$env\", agent=~\"$staff\"} offset $__range or increase(callcenter_card_fallback_to_store_total{deployment_environment=\"$env\", agent=~\"$staff\"}[$__range]))) or vector(0)",
+     "refId": "A",
+     "legendFormat": "__auto",
+     "range": false,
+     "instant": true
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "unit": "none",
+     "thresholds": {
+      "mode": "absolute",
+      "steps": [
+       {
+        "color": "green",
+        "value": null
+       },
+       {
+        "color": "orange",
+        "value": 2
+       },
+       {
+        "color": "red",
+        "value": 4
+       }
+      ]
+     },
+     "color": {
+      "mode": "thresholds"
+     },
+     "noValue": "no data",
+     "decimals": 0
+    },
+    "overrides": []
+   },
+   "options": {
+    "colorMode": "background",
+    "graphMode": "none",
+    "justifyMode": "center",
+    "textMode": "auto",
+    "wideLayout": true,
+    "showPercentChange": false,
+    "orientation": "auto",
+    "reduceOptions": {
+     "calcs": [
+      "lastNotNull"
+     ],
+     "fields": "",
+     "values": false
+    }
+   }
+  },
+  {
+   "type": "stat",
+   "title": "% of card orders",
+   "description": "Orders where an agent pressed Card and it didn't go through (refused, declined or no answer), and the card was later run on a store terminal instead: the store had to charge a card the call center couldn't. Each case costs the store time on the phone or at the door. The cases above as a share of the call center's card orders (charged at the call center + charged at the store instead). Normal: under 5 %. Amber: 5–10 %. Red: over 10 %. (A starting guess: tune it after the first week of real data.)\n\n**Coming with the next release:** shows No data until the release that sends it is live. (the Pi's `callcenter_card_fallback_to_store_total` {reason, agent, store_tender} and its digest event `card.fallback_to_store`: the agent release after 2026-11-18.)",
+   "datasource": {
+    "type": "prometheus",
+    "uid": "prometheus"
+   },
+   "id": 24,
+   "gridPos": {
+    "x": 0,
+    "y": 45,
+    "w": 4,
+    "h": 4
+   },
+   "targets": [
+    {
+     "datasource": {
+      "type": "prometheus",
+      "uid": "prometheus"
+     },
+     "expr": "sum((max_over_time(callcenter_card_fallback_to_store_total{deployment_environment=\"$env\", agent=~\"$staff\"}[$__range]) unless callcenter_card_fallback_to_store_total{deployment_environment=\"$env\", agent=~\"$staff\"} offset $__range or increase(callcenter_card_fallback_to_store_total{deployment_environment=\"$env\", agent=~\"$staff\"}[$__range]))) / (sum((max_over_time(callcenter_card_fallback_to_store_total{deployment_environment=\"$env\", agent=~\"$staff\"}[$__range]) unless callcenter_card_fallback_to_store_total{deployment_environment=\"$env\", agent=~\"$staff\"} offset $__range or increase(callcenter_card_fallback_to_store_total{deployment_environment=\"$env\", agent=~\"$staff\"}[$__range]))) + sum((max_over_time(callcenter_card_attempts_total{deployment_environment=\"$env\", stage=\"charge\", outcome=\"ok\"}[$__range]) unless callcenter_card_attempts_total{deployment_environment=\"$env\", stage=\"charge\", outcome=\"ok\"} offset $__range or increase(callcenter_card_attempts_total{deployment_environment=\"$env\", stage=\"charge\", outcome=\"ok\"}[$__range]))))",
+     "refId": "A",
+     "legendFormat": "__auto",
+     "range": false,
+     "instant": true
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "unit": "percentunit",
+     "thresholds": {
+      "mode": "absolute",
+      "steps": [
+       {
+        "color": "green",
+        "value": null
+       },
+       {
+        "color": "orange",
+        "value": 0.05
+       },
+       {
+        "color": "red",
+        "value": 0.1
+       }
+      ]
+     },
+     "color": {
+      "mode": "thresholds"
+     },
+     "noValue": "no data",
+     "decimals": 0
+    },
+    "overrides": []
+   },
+   "options": {
+    "colorMode": "background",
+    "graphMode": "none",
+    "justifyMode": "center",
+    "textMode": "auto",
+    "wideLayout": true,
+    "showPercentChange": false,
+    "orientation": "auto",
+    "reduceOptions": {
+     "calcs": [
+      "lastNotNull"
+     ],
+     "fields": "",
+     "values": false
+    }
+   }
+  },
+  {
+   "type": "timeseries",
+   "title": "Charged at the store instead, by reason (per 15 min)",
+   "description": "Orders where an agent pressed Card and it didn't go through (refused, declined or no answer), and the card was later run on a store terminal instead: the store had to charge a card the call center couldn't. Each case costs the store time on the phone or at the door. Per 15 minutes, by why the call center's card failed: declined, invalid (wrong details), over limit, refused with no reason, too many tries, no response, other. Normal: an empty graph or a single bar a day. Not normal: refused_unknown / no_response bars: the call center's computer or network, not the card (see Network & clock).\n\n**Coming with the next release:** shows No data until the release that sends it is live. (the Pi's `callcenter_card_fallback_to_store_total` {reason, agent, store_tender} and its digest event `card.fallback_to_store`: the agent release after 2026-11-18.)",
+   "datasource": {
+    "type": "prometheus",
+    "uid": "prometheus"
+   },
+   "id": 25,
+   "gridPos": {
+    "x": 4,
+    "y": 41,
+    "w": 10,
+    "h": 8
+   },
+   "targets": [
+    {
+     "datasource": {
+      "type": "prometheus",
+      "uid": "prometheus"
+     },
+     "expr": "sum by (reason) ((max_over_time(callcenter_card_fallback_to_store_total{deployment_environment=\"$env\", agent=~\"$staff\"}[$__interval]) unless callcenter_card_fallback_to_store_total{deployment_environment=\"$env\", agent=~\"$staff\"} offset $__interval or increase(callcenter_card_fallback_to_store_total{deployment_environment=\"$env\", agent=~\"$staff\"}[$__interval])))",
+     "refId": "A",
+     "legendFormat": "{{reason}}",
+     "range": true,
+     "instant": false
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "unit": "none",
+     "custom": {
+      "drawStyle": "bars",
+      "lineWidth": 1,
+      "fillOpacity": 80,
+      "showPoints": "never",
+      "spanNulls": false,
+      "stacking": {
+       "mode": "normal",
+       "group": "A"
+      },
+      "thresholdsStyle": {
+       "mode": "off"
+      }
+     },
+     "noValue": "no data",
+     "color": {
+      "mode": "palette-classic"
+     },
+     "decimals": 0
+    },
+    "overrides": []
+   },
+   "options": {
+    "legend": {
+     "displayMode": "table",
+     "placement": "right",
+     "calcs": [
+      "sum"
+     ]
+    },
+    "tooltip": {
+     "mode": "multi",
+     "sort": "desc"
+    }
+   },
+   "interval": "15m"
+  },
+  {
+   "type": "bargauge",
+   "title": "Charged at the store instead, per agent",
+   "description": "Orders where an agent pressed Card and it didn't go through (refused, declined or no answer), and the card was later run on a store terminal instead: the store had to charge a card the call center couldn't. Each case costs the store time on the phone or at the door. Over the time range, per agent. Normal: 0–1 each. Amber: 2–3. Red: more than 3: sit with that agent on a card call, and check their clock and connection. (A starting guess: tune it after the first week of real data.)\n\n**Coming with the next release:** shows No data until the release that sends it is live. (the Pi's `callcenter_card_fallback_to_store_total` {reason, agent, store_tender} and its digest event `card.fallback_to_store`: the agent release after 2026-11-18.)",
+   "datasource": {
+    "type": "prometheus",
+    "uid": "prometheus"
+   },
+   "id": 26,
+   "gridPos": {
+    "x": 14,
+    "y": 41,
+    "w": 10,
+    "h": 8
+   },
+   "targets": [
+    {
+     "datasource": {
+      "type": "prometheus",
+      "uid": "prometheus"
+     },
+     "expr": "sort_desc(sum by (agent) ((max_over_time(callcenter_card_fallback_to_store_total{deployment_environment=\"$env\", agent=~\"$staff\"}[$__range]) unless callcenter_card_fallback_to_store_total{deployment_environment=\"$env\", agent=~\"$staff\"} offset $__range or increase(callcenter_card_fallback_to_store_total{deployment_environment=\"$env\", agent=~\"$staff\"}[$__range]))))",
+     "refId": "A",
+     "legendFormat": "{{agent}}",
+     "range": false,
+     "instant": true
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "unit": "none",
+     "thresholds": {
+      "mode": "absolute",
+      "steps": [
+       {
+        "color": "green",
+        "value": null
+       },
+       {
+        "color": "orange",
+        "value": 2
+       },
+       {
+        "color": "red",
+        "value": 4
+       }
+      ]
+     },
+     "color": {
+      "mode": "thresholds"
+     },
+     "noValue": "no data",
+     "min": 0,
+     "decimals": 0
+    },
+    "overrides": []
+   },
+   "options": {
+    "orientation": "horizontal",
+    "displayMode": "basic",
+    "showUnfilled": true,
+    "valueMode": "color",
+    "namePlacement": "left",
+    "sizing": "auto",
+    "minVizHeight": 16,
+    "maxVizHeight": 24,
+    "reduceOptions": {
+     "calcs": [
+      "lastNotNull"
+     ],
+     "fields": "",
+     "values": false
+    }
+   }
+  },
+  {
+   "type": "table",
+   "title": "Today's cases",
+   "description": "Orders where an agent pressed Card and it didn't go through (refused, declined or no answer), and the card was later run on a store terminal instead: the store had to charge a card the call center couldn't. Each case costs the store time on the phone or at the door. One row per case from the 7-day log digest, newest first: when the store charged it, the order number, the agent, why the call center's card failed (with Square's last code and the number of tries), how many minutes later the store charged it, and how (the reader, a typed card at the store, or the Square app). Use it to call the agent and the store about a specific order.\n\n**Coming with the next release:** shows No data until the release that sends it is live. (the Pi's `callcenter_card_fallback_to_store_total` {reason, agent, store_tender} and its digest event `card.fallback_to_store`: the agent release after 2026-11-18.) The record is the Pi's digest event card.fallback_to_store (agent contract §2.10cf \"Card fallback to the store\"): store terminal and cashier = who charged it at the store.",
+   "datasource": {
+    "type": "loki",
+    "uid": "loki"
+   },
+   "id": 27,
+   "gridPos": {
+    "x": 0,
+    "y": 49,
+    "w": 24,
+    "h": 7
+   },
+   "targets": [
+    {
+     "datasource": {
+      "type": "loki",
+      "uid": "loki"
+     },
+     "expr": "{deployment_environment=\"$env\", detail=\"digest\"} | ui_kind=\"card\" | ui_name=\"fallback_to_store\"",
+     "refId": "A",
+     "legendFormat": "",
+     "queryType": "range"
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "unit": "none",
+     "noValue": "–",
+     "custom": {
+      "align": "auto",
+      "minWidth": 70
+     }
+    },
+    "overrides": [
+     {
+      "matcher": {
+       "id": "byName",
+       "options": "time"
+      },
+      "properties": [
+       {
+        "id": "custom.width",
+        "value": 170
+       }
+      ]
+     },
+     {
+      "matcher": {
+       "id": "byName",
+       "options": "minutes later"
+      },
+      "properties": [
+       {
+        "id": "decimals",
+        "value": 0
+       },
+       {
+        "id": "thresholds",
+        "value": {
+         "mode": "absolute",
+         "steps": [
+          {
+           "color": "green",
+           "value": null
+          },
+          {
+           "color": "orange",
+           "value": 15
+          },
+          {
+           "color": "red",
+           "value": 60
+          }
+         ]
+        }
+       },
+       {
+        "id": "color",
+        "value": {
+         "mode": "thresholds"
+        }
+       },
+       {
+        "id": "custom.cellOptions",
+        "value": {
+         "type": "color-background",
+         "mode": "basic"
+        }
+       },
+       {
+        "id": "mappings",
+        "value": [
+         {
+          "type": "special",
+          "options": {
+           "match": "null",
+           "result": {
+            "text": "–",
+            "color": "transparent",
+            "index": 0
+           }
+          }
+         }
+        ]
+       }
+      ]
+     },
+     {
+      "matcher": {
+       "id": "byName",
+       "options": "attempts"
+      },
+      "properties": [
+       {
+        "id": "decimals",
+        "value": 0
+       },
+       {
+        "id": "thresholds",
+        "value": {
+         "mode": "absolute",
+         "steps": [
+          {
+           "color": "green",
+           "value": null
+          },
+          {
+           "color": "orange",
+           "value": 2
+          },
+          {
+           "color": "red",
+           "value": 3
+          }
+         ]
+        }
+       },
+       {
+        "id": "color",
+        "value": {
+         "mode": "thresholds"
+        }
+       },
+       {
+        "id": "custom.cellOptions",
+        "value": {
+         "type": "color-background",
+         "mode": "basic"
+        }
+       },
+       {
+        "id": "mappings",
+        "value": [
+         {
+          "type": "special",
+          "options": {
+           "match": "null",
+           "result": {
+            "text": "–",
+            "color": "transparent",
+            "index": 0
+           }
+          }
+         }
+        ]
+       }
+      ]
+     }
+    ]
+   },
+   "options": {
+    "showHeader": true,
+    "cellHeight": "sm",
+    "footer": {
+     "show": false,
+     "reducer": [
+      "sum"
+     ],
+     "fields": ""
+    },
+    "sortBy": [
+     {
+      "displayName": "time",
+      "desc": true
+     }
+    ]
+   },
+   "transformations": [
+    {
+     "id": "extractFields",
+     "options": {
+      "source": "labels",
+      "replace": true,
+      "keepTime": true
+     }
+    },
+    {
+     "id": "organize",
+     "options": {
+      "excludeByName": {
+       "labels": true,
+       "Line": true,
+       "tsNs": true,
+       "id": true,
+       "service_name": true,
+       "deployment_environment": true,
+       "detail": true,
+       "ui_kind": true,
+       "ui_name": true,
+       "level": true,
+       "severity_text": true,
+       "severity_number": true,
+       "observed_timestamp": true,
+       "trace_id": true,
+       "span_id": true,
+       "tenant": true,
+       "location": true,
+       "service_instance_id": true,
+       "device_id": true,
+       "scope_name": true,
+       "scope_version": true,
+       "staff_id": true,
+       "flags": true,
+       "detected_level": true,
+       "collector_version": true,
+       "client_version": true,
+       "store": true,
+       "TraceID": true
+      },
+      "renameByName": {
+       "Time": "time",
+       "ui_props_order_number": "order #",
+       "ui_props_agent": "agent",
+       "ui_props_reason": "reason",
+       "ui_props_last_code": "last code",
+       "ui_props_cc_attempts": "attempts",
+       "ui_props_minutes_to_store": "minutes later",
+       "ui_props_store_tender": "store tender",
+       "device": "store terminal",
+       "staff": "cashier"
+      },
+      "indexByName": {
+       "Time": 0,
+       "ui_props_order_number": 1,
+       "ui_props_agent": 2,
+       "ui_props_reason": 3,
+       "ui_props_last_code": 4,
+       "ui_props_cc_attempts": 5,
+       "ui_props_minutes_to_store": 6,
+       "ui_props_store_tender": 7,
+       "device": 8,
+       "staff": 9
+      }
+     }
+    }
+   ]
+  },
+  {
+   "type": "row",
+   "title": "Network & clock",
+   "collapsed": false,
+   "id": 28,
+   "gridPos": {
+    "x": 0,
+    "y": 56,
+    "w": 24,
+    "h": 1
+   },
+   "panels": []
+  },
+  {
+   "type": "timeseries",
+   "title": "Clock offset per agent",
+   "description": "Clock offset: how far the agent's PC clock is from ours (+ = ahead), at each sample (sign-in, every 5 minutes, around each card). Normal: under 5 s (green band). Amber band: 5 s – 2 minutes (drifting: fix it soon). Bad: over 2 minutes (red band): the agent sees a red banner and Square's card box can fail. Fix: turn on automatic time and time zone in Windows (Manila), then Check again on the banner.",
+   "datasource": {
+    "type": "prometheus",
+    "uid": "prometheus"
+   },
+   "id": 29,
+   "gridPos": {
+    "x": 0,
+    "y": 57,
+    "w": 12,
+    "h": 8
+   },
+   "targets": [
+    {
+     "datasource": {
+      "type": "prometheus",
+      "uid": "prometheus"
+     },
+     "expr": "callcenter_clock_offset_milliseconds{deployment_environment=\"$env\", staff=~\"$staff\", isp=~\"$isp\"} / 1000",
+     "refId": "A",
+     "legendFormat": "{{staff}} ({{isp}})",
+     "range": true,
+     "instant": false
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "unit": "s",
+     "custom": {
+      "drawStyle": "line",
+      "lineWidth": 2,
+      "fillOpacity": 0,
+      "showPoints": "never",
+      "spanNulls": true,
+      "stacking": {
+       "mode": "none",
+       "group": "A"
+      },
+      "thresholdsStyle": {
+       "mode": "line+area"
+      },
+      "axisSoftMin": -180,
+      "axisSoftMax": 180
+     },
+     "noValue": "no data",
+     "color": {
+      "mode": "palette-classic"
+     },
+     "thresholds": {
+      "mode": "absolute",
+      "steps": [
+       {
+        "color": "red",
+        "value": null
+       },
+       {
+        "color": "orange",
+        "value": -120
+       },
+       {
+        "color": "green",
+        "value": -5
+       },
+       {
+        "color": "orange",
+        "value": 5
+       },
+       {
+        "color": "red",
+        "value": 120
+       }
+      ]
+     }
+    },
+    "overrides": []
+   },
+   "options": {
+    "legend": {
+     "displayMode": "table",
+     "placement": "right",
+     "calcs": [
+      "mean",
+      "max"
+     ]
+    },
+    "tooltip": {
+     "mode": "multi",
+     "sort": "desc"
+    }
+   }
+  },
+  {
+   "type": "timeseries",
+   "title": "Clock problems per agent (per 5 min)",
+   "description": "Clock samples that were bad, per agent and per 5 minutes: offset = over 2 minutes off, tz = the computer's time zone is not Manila (Square and the receipts then read the wrong time). Normal: an empty graph. Not normal: any bar; fix that computer's clock (automatic time + time zone Manila).",
+   "datasource": {
+    "type": "prometheus",
+    "uid": "prometheus"
+   },
+   "id": 30,
+   "gridPos": {
+    "x": 12,
+    "y": 57,
+    "w": 12,
+    "h": 8
+   },
+   "targets": [
+    {
+     "datasource": {
+      "type": "prometheus",
+      "uid": "prometheus"
+     },
+     "expr": "sum by (staff, reason) ((max_over_time(callcenter_clock_bad_total{deployment_environment=\"$env\", staff=~\"$staff\"}[$__interval]) unless callcenter_clock_bad_total{deployment_environment=\"$env\", staff=~\"$staff\"} offset $__interval or increase(callcenter_clock_bad_total{deployment_environment=\"$env\", staff=~\"$staff\"}[$__interval])))",
+     "refId": "A",
+     "legendFormat": "{{staff}} · {{reason}}",
+     "range": true,
+     "instant": false
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "unit": "none",
+     "custom": {
+      "drawStyle": "bars",
+      "lineWidth": 1,
+      "fillOpacity": 80,
+      "showPoints": "never",
+      "spanNulls": false,
+      "stacking": {
+       "mode": "normal",
+       "group": "A"
+      },
+      "thresholdsStyle": {
+       "mode": "off"
+      }
+     },
+     "noValue": "no data",
+     "color": {
+      "mode": "palette-classic"
+     },
+     "thresholds": {
+      "mode": "absolute",
+      "steps": [
+       {
+        "color": "green",
+        "value": null
+       },
+       {
+        "color": "red",
+        "value": 1
+       }
+      ]
+     },
+     "decimals": 0
+    },
+    "overrides": []
+   },
+   "options": {
+    "legend": {
+     "displayMode": "table",
+     "placement": "right",
+     "calcs": [
+      "sum"
+     ]
+    },
+    "tooltip": {
+     "mode": "multi",
+     "sort": "desc"
+    }
+   },
+   "interval": "5m"
+  },
+  {
+   "type": "timeseries",
+   "title": "Round trip to us per agent and provider (median, 15 min)",
+   "description": "The time from each agent's computer to the call center server (5 tries per sample, the median of them), per agent and internet provider, median over 15-minute windows (half the tries were faster). Normal: under 750 ms (green band). Amber band: 750 ms – 1.5 s. Red band: over 1.5 s: screens lag and calls time out. One agent high = their PC, Wi-Fi or line; every agent on one provider high = that provider. The amber line is a starting guess.",
+   "datasource": {
+    "type": "prometheus",
+    "uid": "prometheus"
+   },
+   "id": 31,
+   "gridPos": {
+    "x": 0,
+    "y": 65,
+    "w": 12,
+    "h": 8
+   },
+   "targets": [
+    {
+     "datasource": {
+      "type": "prometheus",
+      "uid": "prometheus"
+     },
+     "expr": "histogram_quantile(0.5, sum by (le, staff, isp) ((max_over_time(callcenter_net_rtt_milliseconds_bucket{deployment_environment=\"$env\", staff=~\"$staff\", isp=~\"$isp\", target=~\"us\"}[15m]) unless callcenter_net_rtt_milliseconds_bucket{deployment_environment=\"$env\", staff=~\"$staff\", isp=~\"$isp\", target=~\"us\"} offset 15m or increase(callcenter_net_rtt_milliseconds_bucket{deployment_environment=\"$env\", staff=~\"$staff\", isp=~\"$isp\", target=~\"us\"}[15m]))))",
+     "refId": "A",
+     "legendFormat": "{{staff}} ({{isp}})",
+     "range": true,
+     "instant": false
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "unit": "ms",
+     "custom": {
+      "drawStyle": "line",
+      "lineWidth": 2,
+      "fillOpacity": 0,
+      "showPoints": "never",
+      "spanNulls": true,
+      "stacking": {
+       "mode": "none",
+       "group": "A"
+      },
+      "thresholdsStyle": {
+       "mode": "line+area"
+      },
+      "axisSoftMin": 0,
+      "axisSoftMax": 1800
+     },
+     "noValue": "no data",
+     "color": {
+      "mode": "palette-classic"
+     },
+     "thresholds": {
+      "mode": "absolute",
+      "steps": [
+       {
+        "color": "green",
+        "value": null
+       },
+       {
+        "color": "orange",
+        "value": 750
+       },
+       {
+        "color": "red",
+        "value": 1500
+       }
+      ]
+     }
+    },
+    "overrides": []
+   },
+   "options": {
+    "legend": {
+     "displayMode": "table",
+     "placement": "right",
+     "calcs": [
+      "mean",
+      "max"
+     ]
+    },
+    "tooltip": {
+     "mode": "multi",
+     "sort": "desc"
+    }
+   }
+  },
+  {
+   "type": "timeseries",
+   "title": "Round trip to us per agent and provider (p95, 15 min)",
+   "description": "The time from each agent's computer to the call center server (5 tries per sample, the median of them), per agent and internet provider, p95 over 15-minute windows (1 in 20 tries was slower: the spikes callers notice). Normal: under 750 ms (green band). Amber band: 750 ms – 1.5 s. Red band: over 1.5 s: screens lag and calls time out. One agent high = their PC, Wi-Fi or line; every agent on one provider high = that provider. The amber line is a starting guess.",
+   "datasource": {
+    "type": "prometheus",
+    "uid": "prometheus"
+   },
+   "id": 32,
+   "gridPos": {
+    "x": 12,
+    "y": 65,
+    "w": 12,
+    "h": 8
+   },
+   "targets": [
+    {
+     "datasource": {
+      "type": "prometheus",
+      "uid": "prometheus"
+     },
+     "expr": "histogram_quantile(0.95, sum by (le, staff, isp) ((max_over_time(callcenter_net_rtt_milliseconds_bucket{deployment_environment=\"$env\", staff=~\"$staff\", isp=~\"$isp\", target=~\"us\"}[15m]) unless callcenter_net_rtt_milliseconds_bucket{deployment_environment=\"$env\", staff=~\"$staff\", isp=~\"$isp\", target=~\"us\"} offset 15m or increase(callcenter_net_rtt_milliseconds_bucket{deployment_environment=\"$env\", staff=~\"$staff\", isp=~\"$isp\", target=~\"us\"}[15m]))))",
+     "refId": "A",
+     "legendFormat": "{{staff}} ({{isp}})",
+     "range": true,
+     "instant": false
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "unit": "ms",
+     "custom": {
+      "drawStyle": "line",
+      "lineWidth": 2,
+      "fillOpacity": 0,
+      "showPoints": "never",
+      "spanNulls": true,
+      "stacking": {
+       "mode": "none",
+       "group": "A"
+      },
+      "thresholdsStyle": {
+       "mode": "line+area"
+      },
+      "axisSoftMin": 0,
+      "axisSoftMax": 1800
+     },
+     "noValue": "no data",
+     "color": {
+      "mode": "palette-classic"
+     },
+     "thresholds": {
+      "mode": "absolute",
+      "steps": [
+       {
+        "color": "green",
+        "value": null
+       },
+       {
+        "color": "orange",
+        "value": 750
+       },
+       {
+        "color": "red",
+        "value": 1500
+       }
+      ]
+     }
+    },
+    "overrides": []
+   },
+   "options": {
+    "legend": {
+     "displayMode": "table",
+     "placement": "right",
+     "calcs": [
+      "mean",
+      "max"
+     ]
+    },
+    "tooltip": {
+     "mode": "multi",
+     "sort": "desc"
+    }
+   }
+  },
+  {
+   "type": "timeseries",
+   "title": "Round trip to Square per agent and provider (median, 15 min)",
+   "description": "The time from each agent's computer to Square's card script and card server (what the card box needs before it can take a card), per agent and internet provider, median over 15-minute windows (half the tries were faster). Normal: under 1.5 s (green band). Amber band: 1.5–3 s. Red band: over 3 s: Square's card box loads slowly or refuses cards. One agent high = their PC, Wi-Fi or line; every agent on one provider high = that provider. The amber line is a starting guess.",
+   "datasource": {
+    "type": "prometheus",
+    "uid": "prometheus"
+   },
+   "id": 33,
+   "gridPos": {
+    "x": 0,
+    "y": 73,
+    "w": 12,
+    "h": 8
+   },
+   "targets": [
+    {
+     "datasource": {
+      "type": "prometheus",
+      "uid": "prometheus"
+     },
+     "expr": "histogram_quantile(0.5, sum by (le, staff, isp) ((max_over_time(callcenter_net_rtt_milliseconds_bucket{deployment_environment=\"$env\", staff=~\"$staff\", isp=~\"$isp\", target=~\"square_js|pci\"}[15m]) unless callcenter_net_rtt_milliseconds_bucket{deployment_environment=\"$env\", staff=~\"$staff\", isp=~\"$isp\", target=~\"square_js|pci\"} offset 15m or increase(callcenter_net_rtt_milliseconds_bucket{deployment_environment=\"$env\", staff=~\"$staff\", isp=~\"$isp\", target=~\"square_js|pci\"}[15m]))))",
+     "refId": "A",
+     "legendFormat": "{{staff}} ({{isp}})",
+     "range": true,
+     "instant": false
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "unit": "ms",
+     "custom": {
+      "drawStyle": "line",
+      "lineWidth": 2,
+      "fillOpacity": 0,
+      "showPoints": "never",
+      "spanNulls": true,
+      "stacking": {
+       "mode": "none",
+       "group": "A"
+      },
+      "thresholdsStyle": {
+       "mode": "line+area"
+      },
+      "axisSoftMin": 0,
+      "axisSoftMax": 3600
+     },
+     "noValue": "no data",
+     "color": {
+      "mode": "palette-classic"
+     },
+     "thresholds": {
+      "mode": "absolute",
+      "steps": [
+       {
+        "color": "green",
+        "value": null
+       },
+       {
+        "color": "orange",
+        "value": 1500
+       },
+       {
+        "color": "red",
+        "value": 3000
+       }
+      ]
+     }
+    },
+    "overrides": []
+   },
+   "options": {
+    "legend": {
+     "displayMode": "table",
+     "placement": "right",
+     "calcs": [
+      "mean",
+      "max"
+     ]
+    },
+    "tooltip": {
+     "mode": "multi",
+     "sort": "desc"
+    }
+   }
+  },
+  {
+   "type": "timeseries",
+   "title": "Round trip to Square per agent and provider (p95, 15 min)",
+   "description": "The time from each agent's computer to Square's card script and card server (what the card box needs before it can take a card), per agent and internet provider, p95 over 15-minute windows (1 in 20 tries was slower: the spikes callers notice). Normal: under 1.5 s (green band). Amber band: 1.5–3 s. Red band: over 3 s: Square's card box loads slowly or refuses cards. One agent high = their PC, Wi-Fi or line; every agent on one provider high = that provider. The amber line is a starting guess.",
+   "datasource": {
+    "type": "prometheus",
+    "uid": "prometheus"
+   },
+   "id": 34,
+   "gridPos": {
+    "x": 12,
+    "y": 73,
+    "w": 12,
+    "h": 8
+   },
+   "targets": [
+    {
+     "datasource": {
+      "type": "prometheus",
+      "uid": "prometheus"
+     },
+     "expr": "histogram_quantile(0.95, sum by (le, staff, isp) ((max_over_time(callcenter_net_rtt_milliseconds_bucket{deployment_environment=\"$env\", staff=~\"$staff\", isp=~\"$isp\", target=~\"square_js|pci\"}[15m]) unless callcenter_net_rtt_milliseconds_bucket{deployment_environment=\"$env\", staff=~\"$staff\", isp=~\"$isp\", target=~\"square_js|pci\"} offset 15m or increase(callcenter_net_rtt_milliseconds_bucket{deployment_environment=\"$env\", staff=~\"$staff\", isp=~\"$isp\", target=~\"square_js|pci\"}[15m]))))",
+     "refId": "A",
+     "legendFormat": "{{staff}} ({{isp}})",
+     "range": true,
+     "instant": false
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "unit": "ms",
+     "custom": {
+      "drawStyle": "line",
+      "lineWidth": 2,
+      "fillOpacity": 0,
+      "showPoints": "never",
+      "spanNulls": true,
+      "stacking": {
+       "mode": "none",
+       "group": "A"
+      },
+      "thresholdsStyle": {
+       "mode": "line+area"
+      },
+      "axisSoftMin": 0,
+      "axisSoftMax": 3600
+     },
+     "noValue": "no data",
+     "color": {
+      "mode": "palette-classic"
+     },
+     "thresholds": {
+      "mode": "absolute",
+      "steps": [
+       {
+        "color": "green",
+        "value": null
+       },
+       {
+        "color": "orange",
+        "value": 1500
+       },
+       {
+        "color": "red",
+        "value": 3000
+       }
+      ]
+     }
+    },
+    "overrides": []
+   },
+   "options": {
+    "legend": {
+     "displayMode": "table",
+     "placement": "right",
+     "calcs": [
+      "mean",
+      "max"
+     ]
+    },
+    "tooltip": {
+     "mode": "multi",
+     "sort": "desc"
+    }
+   }
+  },
+  {
+   "type": "timeseries",
+   "title": "Failed round trips (per 5 min)",
+   "description": "Round trips from the agents' computers that got no answer in time, per target (us = the call center server, square_js / pci = Square), agent and provider, per 5 minutes. Normal: none. Not normal: any bar: packet loss on that computer's line (one agent) or provider (several on one provider); Square failures alone = Square or the route to it.",
+   "datasource": {
+    "type": "prometheus",
+    "uid": "prometheus"
+   },
+   "id": 35,
+   "gridPos": {
+    "x": 0,
+    "y": 81,
+    "w": 12,
+    "h": 8
+   },
+   "targets": [
+    {
+     "datasource": {
+      "type": "prometheus",
+      "uid": "prometheus"
+     },
+     "expr": "sum by (target, staff, isp) ((max_over_time(callcenter_net_failures_total{deployment_environment=\"$env\", staff=~\"$staff\", isp=~\"$isp\"}[$__interval]) unless callcenter_net_failures_total{deployment_environment=\"$env\", staff=~\"$staff\", isp=~\"$isp\"} offset $__interval or increase(callcenter_net_failures_total{deployment_environment=\"$env\", staff=~\"$staff\", isp=~\"$isp\"}[$__interval])))",
+     "refId": "A",
+     "legendFormat": "{{target}} · {{staff}} ({{isp}})",
+     "range": true,
+     "instant": false
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "unit": "none",
+     "custom": {
+      "drawStyle": "bars",
+      "lineWidth": 1,
+      "fillOpacity": 80,
+      "showPoints": "never",
+      "spanNulls": false,
+      "stacking": {
+       "mode": "normal",
+       "group": "A"
+      },
+      "thresholdsStyle": {
+       "mode": "off"
+      }
+     },
+     "noValue": "no data",
+     "color": {
+      "mode": "palette-classic"
+     },
+     "decimals": 0
+    },
+    "overrides": []
+   },
+   "options": {
+    "legend": {
+     "displayMode": "table",
+     "placement": "right",
+     "calcs": [
+      "sum"
+     ]
+    },
+    "tooltip": {
+     "mode": "multi",
+     "sort": "desc"
+    }
+   },
+   "interval": "5m"
+  },
+  {
+   "type": "timeseries",
+   "title": "\"Check my connection\" runs by verdict (per 5 min)",
+   "description": "Each time an agent pressed Check my connection (the ? sheet, or the card window after a refusal), by its verdict: ok = internet, clock and Square all fine; clock / tz = the computer's clock or time zone; offline; us_loss / us_slow = their internet to us; square_* = Square or the route to it. Normal: a few runs, mostly ok. Not normal: many runs (agents are struggling) or repeated non-ok verdicts for one agent.",
+   "datasource": {
+    "type": "prometheus",
+    "uid": "prometheus"
+   },
+   "id": 36,
+   "gridPos": {
+    "x": 12,
+    "y": 81,
+    "w": 12,
+    "h": 8
+   },
+   "targets": [
+    {
+     "datasource": {
+      "type": "prometheus",
+      "uid": "prometheus"
+     },
+     "expr": "sum by (verdict) ((max_over_time(callcenter_net_checks_total{deployment_environment=\"$env\", staff=~\"$staff\", isp=~\"$isp\"}[$__interval]) unless callcenter_net_checks_total{deployment_environment=\"$env\", staff=~\"$staff\", isp=~\"$isp\"} offset $__interval or increase(callcenter_net_checks_total{deployment_environment=\"$env\", staff=~\"$staff\", isp=~\"$isp\"}[$__interval])))",
+     "refId": "A",
+     "legendFormat": "{{verdict}}",
+     "range": true,
+     "instant": false
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "unit": "none",
+     "custom": {
+      "drawStyle": "bars",
+      "lineWidth": 1,
+      "fillOpacity": 80,
+      "showPoints": "never",
+      "spanNulls": false,
+      "stacking": {
+       "mode": "normal",
+       "group": "A"
+      },
+      "thresholdsStyle": {
+       "mode": "off"
+      }
+     },
+     "noValue": "no data",
+     "color": {
+      "mode": "palette-classic"
+     },
+     "decimals": 0
+    },
+    "overrides": [
+     {
+      "matcher": {
+       "id": "byName",
+       "options": "ok"
+      },
+      "properties": [
+       {
+        "id": "color",
+        "value": {
+         "mode": "fixed",
+         "fixedColor": "green"
+        }
+       }
+      ]
+     },
+     {
+      "matcher": {
+       "id": "byName",
+       "options": "clock"
+      },
+      "properties": [
+       {
+        "id": "color",
+        "value": {
+         "mode": "fixed",
+         "fixedColor": "red"
+        }
+       }
+      ]
+     },
+     {
+      "matcher": {
+       "id": "byName",
+       "options": "tz"
+      },
+      "properties": [
+       {
+        "id": "color",
+        "value": {
+         "mode": "fixed",
+         "fixedColor": "red"
+        }
+       }
+      ]
+     },
+     {
+      "matcher": {
+       "id": "byName",
+       "options": "offline"
+      },
+      "properties": [
+       {
+        "id": "color",
+        "value": {
+         "mode": "fixed",
+         "fixedColor": "red"
+        }
+       }
+      ]
+     },
+     {
+      "matcher": {
+       "id": "byName",
+       "options": "us_loss"
+      },
+      "properties": [
+       {
+        "id": "color",
+        "value": {
+         "mode": "fixed",
+         "fixedColor": "orange"
+        }
+       }
+      ]
+     },
+     {
+      "matcher": {
+       "id": "byName",
+       "options": "us_slow"
+      },
+      "properties": [
+       {
+        "id": "color",
+        "value": {
+         "mode": "fixed",
+         "fixedColor": "orange"
+        }
+       }
+      ]
+     },
+     {
+      "matcher": {
+       "id": "byName",
+       "options": "square_loss"
+      },
+      "properties": [
+       {
+        "id": "color",
+        "value": {
+         "mode": "fixed",
+         "fixedColor": "purple"
+        }
+       }
+      ]
+     },
+     {
+      "matcher": {
+       "id": "byName",
+       "options": "square_slow"
+      },
+      "properties": [
+       {
+        "id": "color",
+        "value": {
+         "mode": "fixed",
+         "fixedColor": "purple"
+        }
+       }
+      ]
+     },
+     {
+      "matcher": {
+       "id": "byName",
+       "options": "square_down"
+      },
+      "properties": [
+       {
+        "id": "color",
+        "value": {
+         "mode": "fixed",
+         "fixedColor": "dark-red"
+        }
+       }
+      ]
+     }
+    ]
+   },
+   "options": {
+    "legend": {
+     "displayMode": "table",
+     "placement": "right",
+     "calcs": [
+      "sum"
+     ]
+    },
+    "tooltip": {
+     "mode": "multi",
+     "sort": "desc"
+    }
+   },
+   "interval": "5m"
+  },
+  {
+   "type": "table",
+   "title": "Providers in use",
+   "description": "Each internet provider the agents' computers came from over the time range (from an offline address table; the address itself is never stored): agents on it, round trip to us and to Square (p95) and failed round trips. Normal: every provider green. Not normal: one provider amber / red for every agent on it: that provider; talk to the agents about a backup line.",
+   "datasource": {
+    "type": "prometheus",
+    "uid": "prometheus"
+   },
+   "id": 37,
+   "gridPos": {
+    "x": 0,
+    "y": 89,
+    "w": 12,
+    "h": 7
+   },
+   "targets": [
+    {
+     "datasource": {
+      "type": "prometheus",
+      "uid": "prometheus"
+     },
+     "expr": "count by (isp) (count by (isp, staff) ((max_over_time(callcenter_net_rtt_milliseconds_count{deployment_environment=\"$env\", staff=~\"$staff\", isp=~\"$isp\", target=\"us\"}[$__range]) unless callcenter_net_rtt_milliseconds_count{deployment_environment=\"$env\", staff=~\"$staff\", isp=~\"$isp\", target=\"us\"} offset $__range or increase(callcenter_net_rtt_milliseconds_count{deployment_environment=\"$env\", staff=~\"$staff\", isp=~\"$isp\", target=\"us\"}[$__range])) > 0))",
+     "refId": "A",
+     "legendFormat": "__auto",
+     "range": false,
+     "instant": true,
+     "format": "table"
+    },
+    {
+     "datasource": {
+      "type": "prometheus",
+      "uid": "prometheus"
+     },
+     "expr": "histogram_quantile(0.95, sum by (le, isp) ((max_over_time(callcenter_net_rtt_milliseconds_bucket{deployment_environment=\"$env\", staff=~\"$staff\", isp=~\"$isp\", target=~\"us\"}[$__range]) unless callcenter_net_rtt_milliseconds_bucket{deployment_environment=\"$env\", staff=~\"$staff\", isp=~\"$isp\", target=~\"us\"} offset $__range or increase(callcenter_net_rtt_milliseconds_bucket{deployment_environment=\"$env\", staff=~\"$staff\", isp=~\"$isp\", target=~\"us\"}[$__range]))))",
+     "refId": "B",
+     "legendFormat": "__auto",
+     "range": false,
+     "instant": true,
+     "format": "table"
+    },
+    {
+     "datasource": {
+      "type": "prometheus",
+      "uid": "prometheus"
+     },
+     "expr": "histogram_quantile(0.95, sum by (le, isp) ((max_over_time(callcenter_net_rtt_milliseconds_bucket{deployment_environment=\"$env\", staff=~\"$staff\", isp=~\"$isp\", target=~\"square_js|pci\"}[$__range]) unless callcenter_net_rtt_milliseconds_bucket{deployment_environment=\"$env\", staff=~\"$staff\", isp=~\"$isp\", target=~\"square_js|pci\"} offset $__range or increase(callcenter_net_rtt_milliseconds_bucket{deployment_environment=\"$env\", staff=~\"$staff\", isp=~\"$isp\", target=~\"square_js|pci\"}[$__range]))))",
+     "refId": "C",
+     "legendFormat": "__auto",
+     "range": false,
+     "instant": true,
+     "format": "table"
+    },
+    {
+     "datasource": {
+      "type": "prometheus",
+      "uid": "prometheus"
+     },
+     "expr": "sum by (isp) ((max_over_time(callcenter_net_failures_total{deployment_environment=\"$env\", staff=~\"$staff\", isp=~\"$isp\"}[$__range]) unless callcenter_net_failures_total{deployment_environment=\"$env\", staff=~\"$staff\", isp=~\"$isp\"} offset $__range or increase(callcenter_net_failures_total{deployment_environment=\"$env\", staff=~\"$staff\", isp=~\"$isp\"}[$__range])))",
+     "refId": "D",
+     "legendFormat": "__auto",
+     "range": false,
+     "instant": true,
+     "format": "table"
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "unit": "none",
+     "noValue": "–",
+     "custom": {
+      "align": "auto",
+      "minWidth": 70
+     }
+    },
+    "overrides": [
+     {
+      "matcher": {
+       "id": "byName",
+       "options": "agents"
+      },
+      "properties": [
+       {
+        "id": "decimals",
+        "value": 0
+       }
+      ]
+     },
+     {
+      "matcher": {
+       "id": "byName",
+       "options": "to us p95"
+      },
+      "properties": [
+       {
+        "id": "unit",
+        "value": "ms"
+       },
+       {
+        "id": "decimals",
+        "value": 0
+       },
+       {
+        "id": "thresholds",
+        "value": {
+         "mode": "absolute",
+         "steps": [
+          {
+           "color": "green",
+           "value": null
+          },
+          {
+           "color": "orange",
+           "value": 750
+          },
+          {
+           "color": "red",
+           "value": 1500
+          }
+         ]
+        }
+       },
+       {
+        "id": "color",
+        "value": {
+         "mode": "thresholds"
+        }
+       },
+       {
+        "id": "custom.cellOptions",
+        "value": {
+         "type": "color-background",
+         "mode": "basic"
+        }
+       },
+       {
+        "id": "mappings",
+        "value": [
+         {
+          "type": "special",
+          "options": {
+           "match": "null",
+           "result": {
+            "text": "–",
+            "color": "transparent",
+            "index": 0
+           }
+          }
+         }
+        ]
+       }
+      ]
+     },
+     {
+      "matcher": {
+       "id": "byName",
+       "options": "to Square p95"
+      },
+      "properties": [
+       {
+        "id": "unit",
+        "value": "ms"
+       },
+       {
+        "id": "decimals",
+        "value": 0
+       },
+       {
+        "id": "thresholds",
+        "value": {
+         "mode": "absolute",
+         "steps": [
+          {
+           "color": "green",
+           "value": null
+          },
+          {
+           "color": "orange",
+           "value": 1500
+          },
+          {
+           "color": "red",
+           "value": 3000
+          }
+         ]
+        }
+       },
+       {
+        "id": "color",
+        "value": {
+         "mode": "thresholds"
+        }
+       },
+       {
+        "id": "custom.cellOptions",
+        "value": {
+         "type": "color-background",
+         "mode": "basic"
+        }
+       },
+       {
+        "id": "mappings",
+        "value": [
+         {
+          "type": "special",
+          "options": {
+           "match": "null",
+           "result": {
+            "text": "–",
+            "color": "transparent",
+            "index": 0
+           }
+          }
+         }
+        ]
+       }
+      ]
+     },
+     {
+      "matcher": {
+       "id": "byName",
+       "options": "failed"
+      },
+      "properties": [
+       {
+        "id": "decimals",
+        "value": 0
+       },
+       {
+        "id": "thresholds",
+        "value": {
+         "mode": "absolute",
+         "steps": [
+          {
+           "color": "green",
+           "value": null
+          },
+          {
+           "color": "orange",
+           "value": 1
+          },
+          {
+           "color": "red",
+           "value": 10
+          }
+         ]
+        }
+       },
+       {
+        "id": "color",
+        "value": {
+         "mode": "thresholds"
+        }
+       },
+       {
+        "id": "custom.cellOptions",
+        "value": {
+         "type": "color-background",
+         "mode": "basic"
+        }
+       },
+       {
+        "id": "mappings",
+        "value": [
+         {
+          "type": "special",
+          "options": {
+           "match": "null",
+           "result": {
+            "text": "–",
+            "color": "transparent",
+            "index": 0
+           }
+          }
+         }
+        ]
+       }
+      ]
+     }
+    ]
+   },
+   "options": {
+    "showHeader": true,
+    "cellHeight": "sm",
+    "footer": {
+     "show": false,
+     "reducer": [
+      "sum"
+     ],
+     "fields": ""
+    },
+    "sortBy": [
+     {
+      "displayName": "agents",
+      "desc": true
+     }
+    ]
+   },
+   "transformations": [
+    {
+     "id": "merge",
+     "options": {}
+    },
+    {
+     "id": "organize",
+     "options": {
+      "excludeByName": {
+       "Time": true
+      },
+      "renameByName": {
+       "isp": "provider",
+       "Value #A": "agents",
+       "Value #B": "to us p95",
+       "Value #C": "to Square p95",
+       "Value #D": "failed"
+      }
+     }
+    }
+   ]
+  },
+  {
+   "type": "table",
+   "title": "Connection checks: who and what they found",
+   "description": "Check my connection runs over the time range, per agent, provider, verdict and where it was pressed (button = the ? sheet, card_dialog = after a card refusal). Normal: few rows, verdict ok. Not normal: one agent with many non-ok runs; the verdict says what to fix.",
+   "datasource": {
+    "type": "prometheus",
+    "uid": "prometheus"
+   },
+   "id": 38,
+   "gridPos": {
+    "x": 12,
+    "y": 89,
+    "w": 12,
+    "h": 7
+   },
+   "targets": [
+    {
+     "datasource": {
+      "type": "prometheus",
+      "uid": "prometheus"
+     },
+     "expr": "sort_desc(sum by (staff, isp, verdict, via) ((max_over_time(callcenter_net_checks_total{deployment_environment=\"$env\", staff=~\"$staff\", isp=~\"$isp\"}[$__range]) unless callcenter_net_checks_total{deployment_environment=\"$env\", staff=~\"$staff\", isp=~\"$isp\"} offset $__range or increase(callcenter_net_checks_total{deployment_environment=\"$env\", staff=~\"$staff\", isp=~\"$isp\"}[$__range]))) > 0)",
+     "refId": "A",
+     "legendFormat": "__auto",
+     "range": false,
+     "instant": true,
+     "format": "table"
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "unit": "none",
+     "noValue": "–",
+     "custom": {
+      "align": "auto",
+      "minWidth": 70
+     }
+    },
+    "overrides": [
+     {
+      "matcher": {
+       "id": "byName",
+       "options": "runs"
+      },
+      "properties": [
+       {
+        "id": "decimals",
+        "value": 0
+       }
+      ]
+     },
+     {
+      "matcher": {
+       "id": "byName",
+       "options": "verdict"
+      },
+      "properties": [
+       {
+        "id": "mappings",
+        "value": [
+         {
+          "type": "value",
+          "options": {
+           "ok": {
+            "color": "green",
+            "index": 0
+           }
+          }
+         },
+         {
+          "type": "regex",
+          "options": {
+           "pattern": ".+",
+           "result": {
+            "color": "red",
+            "index": 1
+           }
+          }
+         }
+        ]
+       },
+       {
+        "id": "custom.cellOptions",
+        "value": {
+         "type": "color-text"
+        }
+       }
+      ]
+     }
+    ]
+   },
+   "options": {
+    "showHeader": true,
+    "cellHeight": "sm",
+    "footer": {
+     "show": false,
+     "reducer": [
+      "sum"
+     ],
+     "fields": ""
+    },
+    "sortBy": [
+     {
+      "displayName": "runs",
+      "desc": true
+     }
+    ]
+   },
+   "transformations": [
+    {
+     "id": "merge",
+     "options": {}
+    },
+    {
+     "id": "organize",
+     "options": {
+      "excludeByName": {
+       "Time": true
+      },
+      "renameByName": {
+       "staff": "agent",
+       "isp": "provider",
+       "Value": "runs",
+       "Value #A": "runs"
+      }
+     }
+    }
+   ]
+  },
+  {
+   "type": "row",
+   "title": "Speed & efficiency",
+   "collapsed": false,
+   "id": 39,
+   "gridPos": {
+    "x": 0,
+    "y": 96,
+    "w": 24,
+    "h": 1
+   },
+   "panels": []
+  },
+  {
+   "type": "timeseries",
+   "title": "Time per order per agent (average, 1 h)",
+   "description": "Each agent's average time per finished order, from the first touch to done, over the last hour at each point. (An average, not a median: the order-time buckets stop at 30 s, so a median from them can't see minutes; the true median of the day is the tile at the top.) Normal: under 3 minutes (green band). Amber band: 3–5 minutes. Red band: over 5 minutes: see which step is slow beside it. (A starting guess: tune it after the first week of real data.)",
+   "datasource": {
+    "type": "prometheus",
+    "uid": "prometheus"
+   },
+   "id": 40,
+   "gridPos": {
+    "x": 0,
+    "y": 97,
+    "w": 12,
+    "h": 8
+   },
+   "targets": [
+    {
+     "datasource": {
+      "type": "prometheus",
+      "uid": "prometheus"
+     },
+     "expr": "sum by (staff) ((max_over_time(callcenter_ui_order_duration_milliseconds_sum{deployment_environment=\"$env\", staff=~\"$staff\", outcome=~\"sent|cash_out|changes_sent\"}[1h]) unless callcenter_ui_order_duration_milliseconds_sum{deployment_environment=\"$env\", staff=~\"$staff\", outcome=~\"sent|cash_out|changes_sent\"} offset 1h or increase(callcenter_ui_order_duration_milliseconds_sum{deployment_environment=\"$env\", staff=~\"$staff\", outcome=~\"sent|cash_out|changes_sent\"}[1h]))) / sum by (staff) ((max_over_time(callcenter_ui_order_duration_milliseconds_count{deployment_environment=\"$env\", staff=~\"$staff\", outcome=~\"sent|cash_out|changes_sent\"}[1h]) unless callcenter_ui_order_duration_milliseconds_count{deployment_environment=\"$env\", staff=~\"$staff\", outcome=~\"sent|cash_out|changes_sent\"} offset 1h or increase(callcenter_ui_order_duration_milliseconds_count{deployment_environment=\"$env\", staff=~\"$staff\", outcome=~\"sent|cash_out|changes_sent\"}[1h])))",
+     "refId": "A",
+     "legendFormat": "{{staff}}",
+     "range": true,
+     "instant": false
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "unit": "ms",
+     "custom": {
+      "drawStyle": "line",
+      "lineWidth": 2,
+      "fillOpacity": 0,
+      "showPoints": "never",
+      "spanNulls": true,
+      "stacking": {
+       "mode": "none",
+       "group": "A"
+      },
+      "thresholdsStyle": {
+       "mode": "line+area"
+      },
+      "axisSoftMin": 0,
+      "axisSoftMax": 360000
+     },
+     "noValue": "no data",
+     "color": {
+      "mode": "palette-classic"
+     },
+     "thresholds": {
+      "mode": "absolute",
+      "steps": [
+       {
+        "color": "green",
+        "value": null
+       },
+       {
+        "color": "orange",
+        "value": 180000
+       },
+       {
+        "color": "red",
+        "value": 300000
+       }
+      ]
+     }
+    },
+    "overrides": []
+   },
+   "options": {
+    "legend": {
+     "displayMode": "table",
+     "placement": "right",
+     "calcs": [
+      "mean",
+      "max"
+     ]
+    },
+    "tooltip": {
+     "mode": "multi",
+     "sort": "desc"
+    }
+   }
+  },
+  {
+   "type": "timeseries",
+   "title": "Time on each step (average, 1 h)",
+   "description": "Where an order's time goes, per step, averaged over the last hour: phone (typing the number), account (finding / checking the customer), customer_form (a new customer's details), menu (building the order), cash_out (payment and send). Normal: menu is the biggest share; phone and account a few seconds. Not normal: one step that grows after a release (compare with the release markers) or phone / account taking minutes (search or screen pop trouble).",
+   "datasource": {
+    "type": "prometheus",
+    "uid": "prometheus"
+   },
+   "id": 41,
+   "gridPos": {
+    "x": 12,
+    "y": 97,
+    "w": 12,
+    "h": 8
+   },
+   "targets": [
+    {
+     "datasource": {
+      "type": "prometheus",
+      "uid": "prometheus"
+     },
+     "expr": "sum by (step) ((max_over_time(callcenter_ui_step_duration_milliseconds_sum{deployment_environment=\"$env\", staff=~\"$staff\"}[1h]) unless callcenter_ui_step_duration_milliseconds_sum{deployment_environment=\"$env\", staff=~\"$staff\"} offset 1h or increase(callcenter_ui_step_duration_milliseconds_sum{deployment_environment=\"$env\", staff=~\"$staff\"}[1h]))) / sum by (step) ((max_over_time(callcenter_ui_step_duration_milliseconds_count{deployment_environment=\"$env\", staff=~\"$staff\"}[1h]) unless callcenter_ui_step_duration_milliseconds_count{deployment_environment=\"$env\", staff=~\"$staff\"} offset 1h or increase(callcenter_ui_step_duration_milliseconds_count{deployment_environment=\"$env\", staff=~\"$staff\"}[1h])))",
+     "refId": "A",
+     "legendFormat": "{{step}}",
+     "range": true,
+     "instant": false
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "unit": "ms",
+     "custom": {
+      "drawStyle": "line",
+      "lineWidth": 2,
+      "fillOpacity": 0,
+      "showPoints": "never",
+      "spanNulls": true,
+      "stacking": {
+       "mode": "none",
+       "group": "A"
+      },
+      "thresholdsStyle": {
+       "mode": "off"
+      }
+     },
+     "noValue": "no data",
+     "color": {
+      "mode": "palette-classic"
+     }
+    },
+    "overrides": []
+   },
+   "options": {
+    "legend": {
+     "displayMode": "table",
+     "placement": "right",
+     "calcs": [
+      "mean",
+      "max"
+     ]
+    },
+    "tooltip": {
+     "mode": "multi",
+     "sort": "desc"
+    }
+   }
+  },
+  {
+   "type": "timeseries",
+   "title": "Items per order per agent (1 h)",
+   "description": "Average lines (items) on each finished order, per agent, over the last hour, from the 7-day log digest (so it shows the last 7 days at most). No right number (it's what callers order); use it to read the time per order: more items take longer. A sudden drop for one agent can mean orders split in two.",
+   "datasource": {
+    "type": "loki",
+    "uid": "loki"
+   },
+   "id": 42,
+   "gridPos": {
+    "x": 0,
+    "y": 105,
+    "w": 8,
+    "h": 8
+   },
+   "targets": [
+    {
+     "datasource": {
+      "type": "loki",
+      "uid": "loki"
+     },
+     "expr": "avg_over_time({service_name=\"quicc-callcenter\", deployment_environment=\"$env\", detail=\"digest\"} | ui_kind=\"order\" | ui_name=~\"sent|cash_out\" | staff=~\"$staff\" | unwrap ui_lines | __error__=\"\" [1h]) by (staff)",
+     "refId": "A",
+     "legendFormat": "{{staff}}",
+     "queryType": "range"
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "unit": "none",
+     "custom": {
+      "drawStyle": "line",
+      "lineWidth": 2,
+      "fillOpacity": 0,
+      "showPoints": "never",
+      "spanNulls": true,
+      "stacking": {
+       "mode": "none",
+       "group": "A"
+      },
+      "thresholdsStyle": {
+       "mode": "off"
+      }
+     },
+     "noValue": "no data",
+     "color": {
+      "mode": "palette-classic"
+     },
+     "decimals": 1
+    },
+    "overrides": []
+   },
+   "options": {
+    "legend": {
+     "displayMode": "table",
+     "placement": "right",
+     "calcs": [
+      "mean",
+      "max"
+     ]
+    },
+    "tooltip": {
+     "mode": "multi",
+     "sort": "desc"
+    }
+   }
+  },
+  {
+   "type": "timeseries",
+   "title": "Keys per order per agent (1 h)",
+   "description": "Keystrokes per finished order, per agent, over the last hour (named keys and typed characters; never what was typed). Lower is faster. No fixed limit: compare agents with each other and with themselves before / after a release (the purple markers). A rise after a release = the change made them type more.",
+   "datasource": {
+    "type": "prometheus",
+    "uid": "prometheus"
+   },
+   "id": 43,
+   "gridPos": {
+    "x": 8,
+    "y": 105,
+    "w": 8,
+    "h": 8
+   },
+   "targets": [
+    {
+     "datasource": {
+      "type": "prometheus",
+      "uid": "prometheus"
+     },
+     "expr": "sum by (staff) ((max_over_time(callcenter_ui_order_inputs_total{deployment_environment=\"$env\", staff=~\"$staff\", input=\"keys\"}[1h]) unless callcenter_ui_order_inputs_total{deployment_environment=\"$env\", staff=~\"$staff\", input=\"keys\"} offset 1h or increase(callcenter_ui_order_inputs_total{deployment_environment=\"$env\", staff=~\"$staff\", input=\"keys\"}[1h]))) / sum by (staff) ((max_over_time(callcenter_ui_order_duration_milliseconds_count{deployment_environment=\"$env\", staff=~\"$staff\", outcome=~\"sent|cash_out|changes_sent\"}[1h]) unless callcenter_ui_order_duration_milliseconds_count{deployment_environment=\"$env\", staff=~\"$staff\", outcome=~\"sent|cash_out|changes_sent\"} offset 1h or increase(callcenter_ui_order_duration_milliseconds_count{deployment_environment=\"$env\", staff=~\"$staff\", outcome=~\"sent|cash_out|changes_sent\"}[1h])))",
+     "refId": "A",
+     "legendFormat": "{{staff}}",
+     "range": true,
+     "instant": false
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "unit": "none",
+     "custom": {
+      "drawStyle": "line",
+      "lineWidth": 2,
+      "fillOpacity": 0,
+      "showPoints": "never",
+      "spanNulls": true,
+      "stacking": {
+       "mode": "none",
+       "group": "A"
+      },
+      "thresholdsStyle": {
+       "mode": "off"
+      }
+     },
+     "noValue": "no data",
+     "color": {
+      "mode": "palette-classic"
+     },
+     "decimals": 0
+    },
+    "overrides": []
+   },
+   "options": {
+    "legend": {
+     "displayMode": "table",
+     "placement": "right",
+     "calcs": [
+      "mean",
+      "max"
+     ]
+    },
+    "tooltip": {
+     "mode": "multi",
+     "sort": "desc"
+    }
+   }
+  },
+  {
+   "type": "timeseries",
+   "title": "Clicks per order per agent (1 h)",
+   "description": "Mouse clicks per finished order, per agent, over the last hour. The call center is built to be used from the keyboard: fewer clicks = faster. No fixed limit: an agent far above the others may not know the keys (F-keys, type to order); a rise after a release = the change pushed them to the mouse.",
+   "datasource": {
+    "type": "prometheus",
+    "uid": "prometheus"
+   },
+   "id": 44,
+   "gridPos": {
+    "x": 16,
+    "y": 105,
+    "w": 8,
+    "h": 8
+   },
+   "targets": [
+    {
+     "datasource": {
+      "type": "prometheus",
+      "uid": "prometheus"
+     },
+     "expr": "sum by (staff) ((max_over_time(callcenter_ui_order_inputs_total{deployment_environment=\"$env\", staff=~\"$staff\", input=\"clicks\"}[1h]) unless callcenter_ui_order_inputs_total{deployment_environment=\"$env\", staff=~\"$staff\", input=\"clicks\"} offset 1h or increase(callcenter_ui_order_inputs_total{deployment_environment=\"$env\", staff=~\"$staff\", input=\"clicks\"}[1h]))) / sum by (staff) ((max_over_time(callcenter_ui_order_duration_milliseconds_count{deployment_environment=\"$env\", staff=~\"$staff\", outcome=~\"sent|cash_out|changes_sent\"}[1h]) unless callcenter_ui_order_duration_milliseconds_count{deployment_environment=\"$env\", staff=~\"$staff\", outcome=~\"sent|cash_out|changes_sent\"} offset 1h or increase(callcenter_ui_order_duration_milliseconds_count{deployment_environment=\"$env\", staff=~\"$staff\", outcome=~\"sent|cash_out|changes_sent\"}[1h])))",
+     "refId": "A",
+     "legendFormat": "{{staff}}",
+     "range": true,
+     "instant": false
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "unit": "none",
+     "custom": {
+      "drawStyle": "line",
+      "lineWidth": 2,
+      "fillOpacity": 0,
+      "showPoints": "never",
+      "spanNulls": true,
+      "stacking": {
+       "mode": "none",
+       "group": "A"
+      },
+      "thresholdsStyle": {
+       "mode": "off"
+      }
+     },
+     "noValue": "no data",
+     "color": {
+      "mode": "palette-classic"
+     },
+     "decimals": 0
+    },
+    "overrides": []
+   },
+   "options": {
+    "legend": {
+     "displayMode": "table",
+     "placement": "right",
+     "calcs": [
+      "mean",
+      "max"
+     ]
+    },
+    "tooltip": {
+     "mode": "multi",
+     "sort": "desc"
+    }
+   }
+  },
+  {
+   "type": "bargauge",
+   "title": "What they search for (picks)",
+   "description": "Searches that ended with a pick over the time range, by what was picked: item (a menu item), choice (a modifier / topping), size, alias (a shortcut word the store set up), customer, order. No right number: it shows which searches the agents lean on. Many choice picks = mods are found by search, not the buttons; alias picks show the shortcuts are used.",
+   "datasource": {
+    "type": "prometheus",
+    "uid": "prometheus"
+   },
+   "id": 45,
+   "gridPos": {
+    "x": 0,
+    "y": 113,
+    "w": 8,
+    "h": 8
+   },
+   "targets": [
+    {
+     "datasource": {
+      "type": "prometheus",
+      "uid": "prometheus"
+     },
+     "expr": "sort_desc(sum by (kind) ((max_over_time(callcenter_ui_search_duration_milliseconds_count{deployment_environment=\"$env\", staff=~\"$staff\", outcome=\"pick\"}[$__range]) unless callcenter_ui_search_duration_milliseconds_count{deployment_environment=\"$env\", staff=~\"$staff\", outcome=\"pick\"} offset $__range or increase(callcenter_ui_search_duration_milliseconds_count{deployment_environment=\"$env\", staff=~\"$staff\", outcome=\"pick\"}[$__range]))))",
+     "refId": "A",
+     "legendFormat": "{{kind}}",
+     "range": false,
+     "instant": true
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "unit": "none",
+     "thresholds": {
+      "mode": "absolute",
+      "steps": [
+       {
+        "color": "blue",
+        "value": null
+       }
+      ]
+     },
+     "color": {
+      "mode": "thresholds"
+     },
+     "noValue": "no data",
+     "min": 0,
+     "decimals": 0
+    },
+    "overrides": []
+   },
+   "options": {
+    "orientation": "horizontal",
+    "displayMode": "basic",
+    "showUnfilled": true,
+    "valueMode": "color",
+    "namePlacement": "left",
+    "sizing": "auto",
+    "minVizHeight": 16,
+    "maxVizHeight": 24,
+    "reduceOptions": {
+     "calcs": [
+      "lastNotNull"
+     ],
+     "fields": "",
+     "values": false
+    }
+   }
+  },
+  {
+   "type": "timeseries",
+   "title": "Searches that found it, per agent (1 h)",
+   "description": "The share of searches that ended with a pick (the rest were abandoned: Esc, cleared or left), per agent, over the last hour. Normal: 80 % or more (green band). Amber: 60–80 %. Red: under 60 %: the agent isn't finding things by search; look at the aliases and how they type. (A starting guess: tune it after the first week of real data.)",
+   "datasource": {
+    "type": "prometheus",
+    "uid": "prometheus"
+   },
+   "id": 46,
+   "gridPos": {
+    "x": 8,
+    "y": 113,
+    "w": 8,
+    "h": 8
+   },
+   "targets": [
+    {
+     "datasource": {
+      "type": "prometheus",
+      "uid": "prometheus"
+     },
+     "expr": "sum by (staff) ((max_over_time(callcenter_ui_search_duration_milliseconds_count{deployment_environment=\"$env\", staff=~\"$staff\", outcome=\"pick\"}[1h]) unless callcenter_ui_search_duration_milliseconds_count{deployment_environment=\"$env\", staff=~\"$staff\", outcome=\"pick\"} offset 1h or increase(callcenter_ui_search_duration_milliseconds_count{deployment_environment=\"$env\", staff=~\"$staff\", outcome=\"pick\"}[1h]))) / sum by (staff) ((max_over_time(callcenter_ui_search_duration_milliseconds_count{deployment_environment=\"$env\", staff=~\"$staff\"}[1h]) unless callcenter_ui_search_duration_milliseconds_count{deployment_environment=\"$env\", staff=~\"$staff\"} offset 1h or increase(callcenter_ui_search_duration_milliseconds_count{deployment_environment=\"$env\", staff=~\"$staff\"}[1h])))",
+     "refId": "A",
+     "legendFormat": "{{staff}}",
+     "range": true,
+     "instant": false
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "unit": "percentunit",
+     "custom": {
+      "drawStyle": "line",
+      "lineWidth": 2,
+      "fillOpacity": 0,
+      "showPoints": "never",
+      "spanNulls": true,
+      "stacking": {
+       "mode": "none",
+       "group": "A"
+      },
+      "thresholdsStyle": {
+       "mode": "line+area"
+      },
+      "axisSoftMin": 0,
+      "axisSoftMax": 1
+     },
+     "noValue": "no data",
+     "color": {
+      "mode": "palette-classic"
+     },
+     "thresholds": {
+      "mode": "absolute",
+      "steps": [
+       {
+        "color": "red",
+        "value": null
+       },
+       {
+        "color": "orange",
+        "value": 0.6
+       },
+       {
+        "color": "green",
+        "value": 0.8
+       }
+      ]
+     }
+    },
+    "overrides": []
+   },
+   "options": {
+    "legend": {
+     "displayMode": "table",
+     "placement": "right",
+     "calcs": [
+      "mean",
+      "max"
+     ]
+    },
+    "tooltip": {
+     "mode": "multi",
+     "sort": "desc"
+    }
+   }
+  },
+  {
+   "type": "timeseries",
+   "title": "Search: time to the pick (median, 1 h)",
+   "description": "From the first key of a search to the pick, by what was picked, median over the last hour. Normal: under 3 s (amber line at 3 s, red at 5 s). Not normal: a kind that keeps rising: the search ranks it badly; add an alias. (A starting guess: tune it after the first week of real data.)",
+   "datasource": {
+    "type": "prometheus",
+    "uid": "prometheus"
+   },
+   "id": 47,
+   "gridPos": {
+    "x": 16,
+    "y": 113,
+    "w": 8,
+    "h": 8
+   },
+   "targets": [
+    {
+     "datasource": {
+      "type": "prometheus",
+      "uid": "prometheus"
+     },
+     "expr": "histogram_quantile(0.5, sum by (le, kind) ((max_over_time(callcenter_ui_search_duration_milliseconds_bucket{deployment_environment=\"$env\", staff=~\"$staff\", outcome=\"pick\"}[1h]) unless callcenter_ui_search_duration_milliseconds_bucket{deployment_environment=\"$env\", staff=~\"$staff\", outcome=\"pick\"} offset 1h or increase(callcenter_ui_search_duration_milliseconds_bucket{deployment_environment=\"$env\", staff=~\"$staff\", outcome=\"pick\"}[1h]))))",
+     "refId": "A",
+     "legendFormat": "{{kind}}",
+     "range": true,
+     "instant": false
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "unit": "ms",
+     "custom": {
+      "drawStyle": "line",
+      "lineWidth": 2,
+      "fillOpacity": 0,
+      "showPoints": "never",
+      "spanNulls": true,
+      "stacking": {
+       "mode": "none",
+       "group": "A"
+      },
+      "thresholdsStyle": {
+       "mode": "line"
+      },
+      "axisSoftMin": 0,
+      "axisSoftMax": 6000
+     },
+     "noValue": "no data",
+     "color": {
+      "mode": "palette-classic"
+     },
+     "thresholds": {
+      "mode": "absolute",
+      "steps": [
+       {
+        "color": "green",
+        "value": null
+       },
+       {
+        "color": "orange",
+        "value": 3000
+       },
+       {
+        "color": "red",
+        "value": 5000
+       }
+      ]
+     }
+    },
+    "overrides": []
+   },
+   "options": {
+    "legend": {
+     "displayMode": "table",
+     "placement": "right",
+     "calcs": [
+      "mean",
+      "max"
+     ]
+    },
+    "tooltip": {
+     "mode": "multi",
+     "sort": "desc"
+    }
+   }
+  },
+  {
+   "type": "timeseries",
+   "title": "How items were added (share, 1 h)",
+   "description": "Of the items the agents added in the last hour, the share found by the menu buttons, by search, or by an alias (a shortcut word). No right split; it shows whether search and aliases are being used. A release that adds aliases should grow \"alias\".",
+   "datasource": {
+    "type": "prometheus",
+    "uid": "prometheus"
+   },
+   "id": 48,
+   "gridPos": {
+    "x": 0,
+    "y": 121,
+    "w": 8,
+    "h": 8
+   },
+   "targets": [
+    {
+     "datasource": {
+      "type": "prometheus",
+      "uid": "prometheus"
+     },
+     "expr": "sum by (via) ((max_over_time(callcenter_ui_item_duration_milliseconds_count{deployment_environment=\"$env\", staff=~\"$staff\"}[1h]) unless callcenter_ui_item_duration_milliseconds_count{deployment_environment=\"$env\", staff=~\"$staff\"} offset 1h or increase(callcenter_ui_item_duration_milliseconds_count{deployment_environment=\"$env\", staff=~\"$staff\"}[1h]))) / ignoring(via) group_left sum((max_over_time(callcenter_ui_item_duration_milliseconds_count{deployment_environment=\"$env\", staff=~\"$staff\"}[1h]) unless callcenter_ui_item_duration_milliseconds_count{deployment_environment=\"$env\", staff=~\"$staff\"} offset 1h or increase(callcenter_ui_item_duration_milliseconds_count{deployment_environment=\"$env\", staff=~\"$staff\"}[1h])))",
+     "refId": "A",
+     "legendFormat": "{{via}}",
+     "range": true,
+     "instant": false
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "unit": "percentunit",
+     "custom": {
+      "drawStyle": "line",
+      "lineWidth": 2,
+      "fillOpacity": 60,
+      "showPoints": "never",
+      "spanNulls": true,
+      "stacking": {
+       "mode": "normal",
+       "group": "A"
+      },
+      "thresholdsStyle": {
+       "mode": "off"
+      },
+      "axisSoftMin": 0,
+      "axisSoftMax": 1
+     },
+     "noValue": "no data",
+     "color": {
+      "mode": "palette-classic"
+     }
+    },
+    "overrides": []
+   },
+   "options": {
+    "legend": {
+     "displayMode": "table",
+     "placement": "right",
+     "calcs": [
+      "mean",
+      "max"
+     ]
+    },
+    "tooltip": {
+     "mode": "multi",
+     "sort": "desc"
+    }
+   }
+  },
+  {
+   "type": "bargauge",
+   "title": "F-keys and chords used",
+   "description": "Named keys and chords pressed over the time range (F1–F12, Escape, Enter, the arrows, ctrl+z …), most used first. No right number: it shows which shortcuts are used at all. A shortcut nobody presses = nobody knows it (train it) or it isn't needed.",
+   "datasource": {
+    "type": "prometheus",
+    "uid": "prometheus"
+   },
+   "id": 49,
+   "gridPos": {
+    "x": 8,
+    "y": 121,
+    "w": 8,
+    "h": 8
+   },
+   "targets": [
+    {
+     "datasource": {
+      "type": "prometheus",
+      "uid": "prometheus"
+     },
+     "expr": "topk(15, sum by (name) ((max_over_time(callcenter_ui_events_total{deployment_environment=\"$env\", staff=~\"$staff\", kind=\"key\"}[$__range]) unless callcenter_ui_events_total{deployment_environment=\"$env\", staff=~\"$staff\", kind=\"key\"} offset $__range or increase(callcenter_ui_events_total{deployment_environment=\"$env\", staff=~\"$staff\", kind=\"key\"}[$__range]))))",
+     "refId": "A",
+     "legendFormat": "{{name}}",
+     "range": false,
+     "instant": true
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "unit": "none",
+     "thresholds": {
+      "mode": "absolute",
+      "steps": [
+       {
+        "color": "blue",
+        "value": null
+       }
+      ]
+     },
+     "color": {
+      "mode": "thresholds"
+     },
+     "noValue": "no data",
+     "min": 0,
+     "decimals": 0
+    },
+    "overrides": []
+   },
+   "options": {
+    "orientation": "horizontal",
+    "displayMode": "basic",
+    "showUnfilled": true,
+    "valueMode": "color",
+    "namePlacement": "left",
+    "sizing": "auto",
+    "minVizHeight": 16,
+    "maxVizHeight": 24,
+    "reduceOptions": {
+     "calcs": [
+      "lastNotNull"
+     ],
+     "fields": "",
+     "values": false
+    }
+   }
+  },
+  {
+   "type": "timeseries",
+   "title": "F-keys per order per agent (1 h)",
+   "description": "F-key presses per finished order, per agent, over the last hour. More F-keys usually means fewer clicks and a faster order. No fixed limit: compare agents; an agent near 0 is doing everything with the mouse.",
+   "datasource": {
+    "type": "prometheus",
+    "uid": "prometheus"
+   },
+   "id": 50,
+   "gridPos": {
+    "x": 16,
+    "y": 121,
+    "w": 8,
+    "h": 8
+   },
+   "targets": [
+    {
+     "datasource": {
+      "type": "prometheus",
+      "uid": "prometheus"
+     },
+     "expr": "sum by (staff) ((max_over_time(callcenter_ui_order_inputs_total{deployment_environment=\"$env\", staff=~\"$staff\", input=\"fkeys\"}[1h]) unless callcenter_ui_order_inputs_total{deployment_environment=\"$env\", staff=~\"$staff\", input=\"fkeys\"} offset 1h or increase(callcenter_ui_order_inputs_total{deployment_environment=\"$env\", staff=~\"$staff\", input=\"fkeys\"}[1h]))) / sum by (staff) ((max_over_time(callcenter_ui_order_duration_milliseconds_count{deployment_environment=\"$env\", staff=~\"$staff\", outcome=~\"sent|cash_out|changes_sent\"}[1h]) unless callcenter_ui_order_duration_milliseconds_count{deployment_environment=\"$env\", staff=~\"$staff\", outcome=~\"sent|cash_out|changes_sent\"} offset 1h or increase(callcenter_ui_order_duration_milliseconds_count{deployment_environment=\"$env\", staff=~\"$staff\", outcome=~\"sent|cash_out|changes_sent\"}[1h])))",
+     "refId": "A",
+     "legendFormat": "{{staff}}",
+     "range": true,
+     "instant": false
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "unit": "none",
+     "custom": {
+      "drawStyle": "line",
+      "lineWidth": 2,
+      "fillOpacity": 0,
+      "showPoints": "never",
+      "spanNulls": true,
+      "stacking": {
+       "mode": "none",
+       "group": "A"
+      },
+      "thresholdsStyle": {
+       "mode": "off"
+      }
+     },
+     "noValue": "no data",
+     "color": {
+      "mode": "palette-classic"
+     },
+     "decimals": 1
+    },
+    "overrides": []
+   },
+   "options": {
+    "legend": {
+     "displayMode": "table",
+     "placement": "right",
+     "calcs": [
+      "mean",
+      "max"
+     ]
+    },
+    "tooltip": {
+     "mode": "multi",
+     "sort": "desc"
+    }
+   }
+  },
+  {
+   "type": "timeseries",
+   "title": "Right-clicks per order per agent (1 h)",
+   "description": "Right-clicks (the line menu: change, remove, quantity, note, price…) per finished order, per agent, over the last hour. No fixed limit: it shows the right-click menu is used. Many per order = a lot of editing after adding; look at the undo graph beside it.",
+   "datasource": {
+    "type": "prometheus",
+    "uid": "prometheus"
+   },
+   "id": 51,
+   "gridPos": {
+    "x": 0,
+    "y": 129,
+    "w": 8,
+    "h": 8
+   },
+   "targets": [
+    {
+     "datasource": {
+      "type": "prometheus",
+      "uid": "prometheus"
+     },
+     "expr": "sum by (staff) ((max_over_time(callcenter_ui_order_inputs_total{deployment_environment=\"$env\", staff=~\"$staff\", input=\"right_clicks\"}[1h]) unless callcenter_ui_order_inputs_total{deployment_environment=\"$env\", staff=~\"$staff\", input=\"right_clicks\"} offset 1h or increase(callcenter_ui_order_inputs_total{deployment_environment=\"$env\", staff=~\"$staff\", input=\"right_clicks\"}[1h]))) / sum by (staff) ((max_over_time(callcenter_ui_order_duration_milliseconds_count{deployment_environment=\"$env\", staff=~\"$staff\", outcome=~\"sent|cash_out|changes_sent\"}[1h]) unless callcenter_ui_order_duration_milliseconds_count{deployment_environment=\"$env\", staff=~\"$staff\", outcome=~\"sent|cash_out|changes_sent\"} offset 1h or increase(callcenter_ui_order_duration_milliseconds_count{deployment_environment=\"$env\", staff=~\"$staff\", outcome=~\"sent|cash_out|changes_sent\"}[1h])))",
+     "refId": "A",
+     "legendFormat": "{{staff}}",
+     "range": true,
+     "instant": false
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "unit": "none",
+     "custom": {
+      "drawStyle": "line",
+      "lineWidth": 2,
+      "fillOpacity": 0,
+      "showPoints": "never",
+      "spanNulls": true,
+      "stacking": {
+       "mode": "none",
+       "group": "A"
+      },
+      "thresholdsStyle": {
+       "mode": "off"
+      }
+     },
+     "noValue": "no data",
+     "color": {
+      "mode": "palette-classic"
+     },
+     "decimals": 1
+    },
+    "overrides": []
+   },
+   "options": {
+    "legend": {
+     "displayMode": "table",
+     "placement": "right",
+     "calcs": [
+      "mean",
+      "max"
+     ]
+    },
+    "tooltip": {
+     "mode": "multi",
+     "sort": "desc"
+    }
+   }
+  },
+  {
+   "type": "timeseries",
+   "title": "Undo per order per agent (1 h)",
+   "description": "Undo presses (ctrl+z) per finished order, per agent, over the last hour: mistakes taken back. Normal: under 1 per order (green band). Amber: 1–2. Red: over 2: the agent keeps correcting; a rise after a release = the change causes mistakes. (A starting guess: tune it after the first week of real data.)",
+   "datasource": {
+    "type": "prometheus",
+    "uid": "prometheus"
+   },
+   "id": 52,
+   "gridPos": {
+    "x": 8,
+    "y": 129,
+    "w": 8,
+    "h": 8
+   },
+   "targets": [
+    {
+     "datasource": {
+      "type": "prometheus",
+      "uid": "prometheus"
+     },
+     "expr": "sum by (staff) ((max_over_time(callcenter_ui_order_inputs_total{deployment_environment=\"$env\", staff=~\"$staff\", input=\"undos\"}[1h]) unless callcenter_ui_order_inputs_total{deployment_environment=\"$env\", staff=~\"$staff\", input=\"undos\"} offset 1h or increase(callcenter_ui_order_inputs_total{deployment_environment=\"$env\", staff=~\"$staff\", input=\"undos\"}[1h]))) / sum by (staff) ((max_over_time(callcenter_ui_order_duration_milliseconds_count{deployment_environment=\"$env\", staff=~\"$staff\", outcome=~\"sent|cash_out|changes_sent\"}[1h]) unless callcenter_ui_order_duration_milliseconds_count{deployment_environment=\"$env\", staff=~\"$staff\", outcome=~\"sent|cash_out|changes_sent\"} offset 1h or increase(callcenter_ui_order_duration_milliseconds_count{deployment_environment=\"$env\", staff=~\"$staff\", outcome=~\"sent|cash_out|changes_sent\"}[1h])))",
+     "refId": "A",
+     "legendFormat": "{{staff}}",
+     "range": true,
+     "instant": false
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "unit": "none",
+     "custom": {
+      "drawStyle": "line",
+      "lineWidth": 2,
+      "fillOpacity": 0,
+      "showPoints": "never",
+      "spanNulls": true,
+      "stacking": {
+       "mode": "none",
+       "group": "A"
+      },
+      "thresholdsStyle": {
+       "mode": "line+area"
+      },
+      "axisSoftMin": 0,
+      "axisSoftMax": 2.5
+     },
+     "noValue": "no data",
+     "color": {
+      "mode": "palette-classic"
+     },
+     "thresholds": {
+      "mode": "absolute",
+      "steps": [
+       {
+        "color": "green",
+        "value": null
+       },
+       {
+        "color": "orange",
+        "value": 1
+       },
+       {
+        "color": "red",
+        "value": 2
+       }
+      ]
+     },
+     "decimals": 1
+    },
+    "overrides": []
+   },
+   "options": {
+    "legend": {
+     "displayMode": "table",
+     "placement": "right",
+     "calcs": [
+      "mean",
+      "max"
+     ]
+    },
+    "tooltip": {
+     "mode": "multi",
+     "sort": "desc"
+    }
+   }
+  },
+  {
+   "type": "timeseries",
+   "title": "Orders opened by a screen pop (share, 1 h)",
+   "description": "The share of finished orders that started from a screen pop (the caller's number popped up and the agent took it), per agent, over the last hour. Higher is faster (no typing the number). Not normal: a drop to 0 while calls come in = the phone link isn't popping; check the phone system.",
+   "datasource": {
+    "type": "prometheus",
+    "uid": "prometheus"
+   },
+   "id": 53,
+   "gridPos": {
+    "x": 16,
+    "y": 129,
+    "w": 8,
+    "h": 8
+   },
+   "targets": [
+    {
+     "datasource": {
+      "type": "prometheus",
+      "uid": "prometheus"
+     },
+     "expr": "sum by (staff) ((max_over_time(callcenter_ui_order_duration_milliseconds_count{deployment_environment=\"$env\", staff=~\"$staff\", outcome=~\"sent|cash_out|changes_sent\", pop=\"yes\"}[1h]) unless callcenter_ui_order_duration_milliseconds_count{deployment_environment=\"$env\", staff=~\"$staff\", outcome=~\"sent|cash_out|changes_sent\", pop=\"yes\"} offset 1h or increase(callcenter_ui_order_duration_milliseconds_count{deployment_environment=\"$env\", staff=~\"$staff\", outcome=~\"sent|cash_out|changes_sent\", pop=\"yes\"}[1h]))) / sum by (staff) ((max_over_time(callcenter_ui_order_duration_milliseconds_count{deployment_environment=\"$env\", staff=~\"$staff\", outcome=~\"sent|cash_out|changes_sent\"}[1h]) unless callcenter_ui_order_duration_milliseconds_count{deployment_environment=\"$env\", staff=~\"$staff\", outcome=~\"sent|cash_out|changes_sent\"} offset 1h or increase(callcenter_ui_order_duration_milliseconds_count{deployment_environment=\"$env\", staff=~\"$staff\", outcome=~\"sent|cash_out|changes_sent\"}[1h])))",
+     "refId": "A",
+     "legendFormat": "{{staff}}",
+     "range": true,
+     "instant": false
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "unit": "percentunit",
+     "custom": {
+      "drawStyle": "line",
+      "lineWidth": 2,
+      "fillOpacity": 0,
+      "showPoints": "never",
+      "spanNulls": true,
+      "stacking": {
+       "mode": "none",
+       "group": "A"
+      },
+      "thresholdsStyle": {
+       "mode": "off"
+      },
+      "axisSoftMin": 0,
+      "axisSoftMax": 1
+     },
+     "noValue": "no data",
+     "color": {
+      "mode": "palette-classic"
+     }
+    },
+    "overrides": []
+   },
+   "options": {
+    "legend": {
+     "displayMode": "table",
+     "placement": "right",
+     "calcs": [
+      "mean",
+      "max"
+     ]
+    },
+    "tooltip": {
+     "mode": "multi",
+     "sort": "desc"
+    }
+   }
+  },
+  {
+   "type": "table",
+   "title": "By app version (before vs after a release)",
+   "description": "The same numbers per call center app version, over the time range (widen the range to include the version before). Use it to see whether a release helped: time per order, keys, clicks, undo and search picks per order should go down or stay the same. Green / red = better / worse than the version before is up to you to read: no colours here.",
+   "datasource": {
+    "type": "prometheus",
+    "uid": "prometheus"
+   },
+   "id": 54,
+   "gridPos": {
+    "x": 0,
+    "y": 137,
+    "w": 24,
+    "h": 6
+   },
+   "targets": [
+    {
+     "datasource": {
+      "type": "prometheus",
+      "uid": "prometheus"
+     },
+     "expr": "sum by (version) ((max_over_time(callcenter_ui_order_duration_milliseconds_count{deployment_environment=\"$env\", staff=~\"$staff\", outcome=~\"sent|cash_out|changes_sent\"}[$__range]) unless callcenter_ui_order_duration_milliseconds_count{deployment_environment=\"$env\", staff=~\"$staff\", outcome=~\"sent|cash_out|changes_sent\"} offset $__range or increase(callcenter_ui_order_duration_milliseconds_count{deployment_environment=\"$env\", staff=~\"$staff\", outcome=~\"sent|cash_out|changes_sent\"}[$__range])))",
+     "refId": "A",
+     "legendFormat": "__auto",
+     "range": false,
+     "instant": true,
+     "format": "table"
+    },
+    {
+     "datasource": {
+      "type": "prometheus",
+      "uid": "prometheus"
+     },
+     "expr": "sum by (version) ((max_over_time(callcenter_ui_order_duration_milliseconds_sum{deployment_environment=\"$env\", staff=~\"$staff\", outcome=~\"sent|cash_out|changes_sent\"}[$__range]) unless callcenter_ui_order_duration_milliseconds_sum{deployment_environment=\"$env\", staff=~\"$staff\", outcome=~\"sent|cash_out|changes_sent\"} offset $__range or increase(callcenter_ui_order_duration_milliseconds_sum{deployment_environment=\"$env\", staff=~\"$staff\", outcome=~\"sent|cash_out|changes_sent\"}[$__range]))) / sum by (version) ((max_over_time(callcenter_ui_order_duration_milliseconds_count{deployment_environment=\"$env\", staff=~\"$staff\", outcome=~\"sent|cash_out|changes_sent\"}[$__range]) unless callcenter_ui_order_duration_milliseconds_count{deployment_environment=\"$env\", staff=~\"$staff\", outcome=~\"sent|cash_out|changes_sent\"} offset $__range or increase(callcenter_ui_order_duration_milliseconds_count{deployment_environment=\"$env\", staff=~\"$staff\", outcome=~\"sent|cash_out|changes_sent\"}[$__range])))",
+     "refId": "B",
+     "legendFormat": "__auto",
+     "range": false,
+     "instant": true,
+     "format": "table"
+    },
+    {
+     "datasource": {
+      "type": "prometheus",
+      "uid": "prometheus"
+     },
+     "expr": "sum by (version) ((max_over_time(callcenter_ui_order_inputs_total{deployment_environment=\"$env\", staff=~\"$staff\", input=\"keys\"}[$__range]) unless callcenter_ui_order_inputs_total{deployment_environment=\"$env\", staff=~\"$staff\", input=\"keys\"} offset $__range or increase(callcenter_ui_order_inputs_total{deployment_environment=\"$env\", staff=~\"$staff\", input=\"keys\"}[$__range]))) / sum by (version) ((max_over_time(callcenter_ui_order_duration_milliseconds_count{deployment_environment=\"$env\", staff=~\"$staff\", outcome=~\"sent|cash_out|changes_sent\"}[$__range]) unless callcenter_ui_order_duration_milliseconds_count{deployment_environment=\"$env\", staff=~\"$staff\", outcome=~\"sent|cash_out|changes_sent\"} offset $__range or increase(callcenter_ui_order_duration_milliseconds_count{deployment_environment=\"$env\", staff=~\"$staff\", outcome=~\"sent|cash_out|changes_sent\"}[$__range])))",
+     "refId": "C",
+     "legendFormat": "__auto",
+     "range": false,
+     "instant": true,
+     "format": "table"
+    },
+    {
+     "datasource": {
+      "type": "prometheus",
+      "uid": "prometheus"
+     },
+     "expr": "sum by (version) ((max_over_time(callcenter_ui_order_inputs_total{deployment_environment=\"$env\", staff=~\"$staff\", input=\"clicks\"}[$__range]) unless callcenter_ui_order_inputs_total{deployment_environment=\"$env\", staff=~\"$staff\", input=\"clicks\"} offset $__range or increase(callcenter_ui_order_inputs_total{deployment_environment=\"$env\", staff=~\"$staff\", input=\"clicks\"}[$__range]))) / sum by (version) ((max_over_time(callcenter_ui_order_duration_milliseconds_count{deployment_environment=\"$env\", staff=~\"$staff\", outcome=~\"sent|cash_out|changes_sent\"}[$__range]) unless callcenter_ui_order_duration_milliseconds_count{deployment_environment=\"$env\", staff=~\"$staff\", outcome=~\"sent|cash_out|changes_sent\"} offset $__range or increase(callcenter_ui_order_duration_milliseconds_count{deployment_environment=\"$env\", staff=~\"$staff\", outcome=~\"sent|cash_out|changes_sent\"}[$__range])))",
+     "refId": "D",
+     "legendFormat": "__auto",
+     "range": false,
+     "instant": true,
+     "format": "table"
+    },
+    {
+     "datasource": {
+      "type": "prometheus",
+      "uid": "prometheus"
+     },
+     "expr": "sum by (version) ((max_over_time(callcenter_ui_order_inputs_total{deployment_environment=\"$env\", staff=~\"$staff\", input=\"fkeys\"}[$__range]) unless callcenter_ui_order_inputs_total{deployment_environment=\"$env\", staff=~\"$staff\", input=\"fkeys\"} offset $__range or increase(callcenter_ui_order_inputs_total{deployment_environment=\"$env\", staff=~\"$staff\", input=\"fkeys\"}[$__range]))) / sum by (version) ((max_over_time(callcenter_ui_order_duration_milliseconds_count{deployment_environment=\"$env\", staff=~\"$staff\", outcome=~\"sent|cash_out|changes_sent\"}[$__range]) unless callcenter_ui_order_duration_milliseconds_count{deployment_environment=\"$env\", staff=~\"$staff\", outcome=~\"sent|cash_out|changes_sent\"} offset $__range or increase(callcenter_ui_order_duration_milliseconds_count{deployment_environment=\"$env\", staff=~\"$staff\", outcome=~\"sent|cash_out|changes_sent\"}[$__range])))",
+     "refId": "E",
+     "legendFormat": "__auto",
+     "range": false,
+     "instant": true,
+     "format": "table"
+    },
+    {
+     "datasource": {
+      "type": "prometheus",
+      "uid": "prometheus"
+     },
+     "expr": "sum by (version) ((max_over_time(callcenter_ui_order_inputs_total{deployment_environment=\"$env\", staff=~\"$staff\", input=\"undos\"}[$__range]) unless callcenter_ui_order_inputs_total{deployment_environment=\"$env\", staff=~\"$staff\", input=\"undos\"} offset $__range or increase(callcenter_ui_order_inputs_total{deployment_environment=\"$env\", staff=~\"$staff\", input=\"undos\"}[$__range]))) / sum by (version) ((max_over_time(callcenter_ui_order_duration_milliseconds_count{deployment_environment=\"$env\", staff=~\"$staff\", outcome=~\"sent|cash_out|changes_sent\"}[$__range]) unless callcenter_ui_order_duration_milliseconds_count{deployment_environment=\"$env\", staff=~\"$staff\", outcome=~\"sent|cash_out|changes_sent\"} offset $__range or increase(callcenter_ui_order_duration_milliseconds_count{deployment_environment=\"$env\", staff=~\"$staff\", outcome=~\"sent|cash_out|changes_sent\"}[$__range])))",
+     "refId": "F",
+     "legendFormat": "__auto",
+     "range": false,
+     "instant": true,
+     "format": "table"
+    },
+    {
+     "datasource": {
+      "type": "prometheus",
+      "uid": "prometheus"
+     },
+     "expr": "sum by (version) ((max_over_time(callcenter_ui_order_inputs_total{deployment_environment=\"$env\", staff=~\"$staff\", input=\"search_picks\"}[$__range]) unless callcenter_ui_order_inputs_total{deployment_environment=\"$env\", staff=~\"$staff\", input=\"search_picks\"} offset $__range or increase(callcenter_ui_order_inputs_total{deployment_environment=\"$env\", staff=~\"$staff\", input=\"search_picks\"}[$__range]))) / sum by (version) ((max_over_time(callcenter_ui_order_duration_milliseconds_count{deployment_environment=\"$env\", staff=~\"$staff\", outcome=~\"sent|cash_out|changes_sent\"}[$__range]) unless callcenter_ui_order_duration_milliseconds_count{deployment_environment=\"$env\", staff=~\"$staff\", outcome=~\"sent|cash_out|changes_sent\"} offset $__range or increase(callcenter_ui_order_duration_milliseconds_count{deployment_environment=\"$env\", staff=~\"$staff\", outcome=~\"sent|cash_out|changes_sent\"}[$__range])))",
+     "refId": "G",
+     "legendFormat": "__auto",
+     "range": false,
+     "instant": true,
+     "format": "table"
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "unit": "none",
+     "noValue": "–",
+     "custom": {
+      "align": "auto",
+      "minWidth": 70
+     }
+    },
+    "overrides": [
+     {
+      "matcher": {
+       "id": "byName",
+       "options": "orders"
+      },
+      "properties": [
+       {
+        "id": "decimals",
+        "value": 0
+       }
+      ]
+     },
+     {
+      "matcher": {
+       "id": "byName",
+       "options": "avg order"
+      },
+      "properties": [
+       {
+        "id": "unit",
+        "value": "ms"
+       },
+       {
+        "id": "decimals",
+        "value": 0
+       }
+      ]
+     },
+     {
+      "matcher": {
+       "id": "byName",
+       "options": "keys / order"
+      },
+      "properties": [
+       {
+        "id": "decimals",
+        "value": 1
+       }
+      ]
+     },
+     {
+      "matcher": {
+       "id": "byName",
+       "options": "clicks / order"
+      },
+      "properties": [
+       {
+        "id": "decimals",
+        "value": 1
+       }
+      ]
+     },
+     {
+      "matcher": {
+       "id": "byName",
+       "options": "F-keys / order"
+      },
+      "properties": [
+       {
+        "id": "decimals",
+        "value": 1
+       }
+      ]
+     },
+     {
+      "matcher": {
+       "id": "byName",
+       "options": "undo / order"
+      },
+      "properties": [
+       {
+        "id": "decimals",
+        "value": 1
+       }
+      ]
+     },
+     {
+      "matcher": {
+       "id": "byName",
+       "options": "search picks / order"
+      },
+      "properties": [
+       {
+        "id": "decimals",
+        "value": 1
+       }
+      ]
+     }
+    ]
+   },
+   "options": {
+    "showHeader": true,
+    "cellHeight": "sm",
+    "footer": {
+     "show": false,
+     "reducer": [
+      "sum"
+     ],
+     "fields": ""
+    },
+    "sortBy": [
+     {
+      "displayName": "app version",
+      "desc": true
+     }
+    ]
+   },
+   "transformations": [
+    {
+     "id": "merge",
+     "options": {}
+    },
+    {
+     "id": "organize",
+     "options": {
+      "excludeByName": {
+       "Time": true
+      },
+      "renameByName": {
+       "version": "app version",
+       "Value #A": "orders",
+       "Value #B": "avg order",
+       "Value #C": "keys / order",
+       "Value #D": "clicks / order",
+       "Value #E": "F-keys / order",
+       "Value #F": "undo / order",
+       "Value #G": "search picks / order"
+      }
+     }
+    }
+   ]
+  },
+  {
+   "type": "timeseries",
+   "title": "Time per order by app version (average, 1 h)",
+   "description": "The average time per finished order for each app version, over the last hour. Two versions overlap for a few minutes after a release (pages reload at a quiet moment). Normal: the new version's line at or below the old one's. Not normal: a jump up at a release marker: that release slowed the agents down. (A starting guess: tune it after the first week of real data.)",
+   "datasource": {
+    "type": "prometheus",
+    "uid": "prometheus"
+   },
+   "id": 55,
+   "gridPos": {
+    "x": 0,
+    "y": 143,
+    "w": 8,
+    "h": 8
+   },
+   "targets": [
+    {
+     "datasource": {
+      "type": "prometheus",
+      "uid": "prometheus"
+     },
+     "expr": "sum by (version) ((max_over_time(callcenter_ui_order_duration_milliseconds_sum{deployment_environment=\"$env\", staff=~\"$staff\", outcome=~\"sent|cash_out|changes_sent\"}[1h]) unless callcenter_ui_order_duration_milliseconds_sum{deployment_environment=\"$env\", staff=~\"$staff\", outcome=~\"sent|cash_out|changes_sent\"} offset 1h or increase(callcenter_ui_order_duration_milliseconds_sum{deployment_environment=\"$env\", staff=~\"$staff\", outcome=~\"sent|cash_out|changes_sent\"}[1h]))) / sum by (version) ((max_over_time(callcenter_ui_order_duration_milliseconds_count{deployment_environment=\"$env\", staff=~\"$staff\", outcome=~\"sent|cash_out|changes_sent\"}[1h]) unless callcenter_ui_order_duration_milliseconds_count{deployment_environment=\"$env\", staff=~\"$staff\", outcome=~\"sent|cash_out|changes_sent\"} offset 1h or increase(callcenter_ui_order_duration_milliseconds_count{deployment_environment=\"$env\", staff=~\"$staff\", outcome=~\"sent|cash_out|changes_sent\"}[1h])))",
+     "refId": "A",
+     "legendFormat": "{{version}}",
+     "range": true,
+     "instant": false
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "unit": "ms",
+     "custom": {
+      "drawStyle": "line",
+      "lineWidth": 2,
+      "fillOpacity": 0,
+      "showPoints": "never",
+      "spanNulls": true,
+      "stacking": {
+       "mode": "none",
+       "group": "A"
+      },
+      "thresholdsStyle": {
+       "mode": "line+area"
+      },
+      "axisSoftMin": 0,
+      "axisSoftMax": 360000
+     },
+     "noValue": "no data",
+     "color": {
+      "mode": "palette-classic"
+     },
+     "thresholds": {
+      "mode": "absolute",
+      "steps": [
+       {
+        "color": "green",
+        "value": null
+       },
+       {
+        "color": "orange",
+        "value": 180000
+       },
+       {
+        "color": "red",
+        "value": 300000
+       }
+      ]
+     }
+    },
+    "overrides": []
+   },
+   "options": {
+    "legend": {
+     "displayMode": "table",
+     "placement": "right",
+     "calcs": [
+      "mean",
+      "max"
+     ]
+    },
+    "tooltip": {
+     "mode": "multi",
+     "sort": "desc"
+    }
+   }
+  },
+  {
+   "type": "table",
+   "title": "Keys and chords by app version",
+   "description": "Which named keys and chords were pressed under each app version, over the time range: shows whether a new shortcut is picked up after its release. **Coming with the next release:** shows No data until the release that sends it is live. (`callcenter_ui_keys_total`, per key and version.)",
+   "datasource": {
+    "type": "prometheus",
+    "uid": "prometheus"
+   },
+   "id": 56,
+   "gridPos": {
+    "x": 8,
+    "y": 143,
+    "w": 8,
+    "h": 8
+   },
+   "targets": [
+    {
+     "datasource": {
+      "type": "prometheus",
+      "uid": "prometheus"
+     },
+     "expr": "sort_desc(sum by (version, key) ((max_over_time(callcenter_ui_keys_total{deployment_environment=\"$env\", staff=~\"$staff\"}[$__range]) unless callcenter_ui_keys_total{deployment_environment=\"$env\", staff=~\"$staff\"} offset $__range or increase(callcenter_ui_keys_total{deployment_environment=\"$env\", staff=~\"$staff\"}[$__range]))) > 0)",
+     "refId": "A",
+     "legendFormat": "__auto",
+     "range": false,
+     "instant": true,
+     "format": "table"
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "unit": "none",
+     "noValue": "–",
+     "custom": {
+      "align": "auto",
+      "minWidth": 70
+     }
+    },
+    "overrides": [
+     {
+      "matcher": {
+       "id": "byName",
+       "options": "presses"
+      },
+      "properties": [
+       {
+        "id": "decimals",
+        "value": 0
+       }
+      ]
+     }
+    ]
+   },
+   "options": {
+    "showHeader": true,
+    "cellHeight": "sm",
+    "footer": {
+     "show": false,
+     "reducer": [
+      "sum"
+     ],
+     "fields": ""
+    },
+    "sortBy": [
+     {
+      "displayName": "presses",
+      "desc": true
+     }
+    ]
+   },
+   "transformations": [
+    {
+     "id": "merge",
+     "options": {}
+    },
+    {
+     "id": "organize",
+     "options": {
+      "excludeByName": {
+       "Time": true
+      },
+      "renameByName": {
+       "version": "app version",
+       "Value": "presses",
+       "Value #A": "presses"
+      }
+     }
+    }
+   ]
+  },
+  {
+   "type": "table",
+   "title": "Right-clicks, undo and screen pops by app version",
+   "description": "Right-click menus opened / picked, undo / redo / nothing to undo, and screen pops by what the agent chose (pickup, delivery, dismissed), per app version over the time range. Not normal: undo_empty climbing (agents pressing undo with nothing to undo = confusion), many screen_pop_dismissed (pops for calls they don't take). **Coming with the next release:** shows No data until the release that sends it is live. (`callcenter_ui_actions_total`, per action and version.)",
+   "datasource": {
+    "type": "prometheus",
+    "uid": "prometheus"
+   },
+   "id": 57,
+   "gridPos": {
+    "x": 16,
+    "y": 143,
+    "w": 8,
+    "h": 8
+   },
+   "targets": [
+    {
+     "datasource": {
+      "type": "prometheus",
+      "uid": "prometheus"
+     },
+     "expr": "sort_desc(sum by (version, action) ((max_over_time(callcenter_ui_actions_total{deployment_environment=\"$env\", staff=~\"$staff\"}[$__range]) unless callcenter_ui_actions_total{deployment_environment=\"$env\", staff=~\"$staff\"} offset $__range or increase(callcenter_ui_actions_total{deployment_environment=\"$env\", staff=~\"$staff\"}[$__range]))) > 0)",
+     "refId": "A",
+     "legendFormat": "__auto",
+     "range": false,
+     "instant": true,
+     "format": "table"
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "unit": "none",
+     "noValue": "–",
+     "custom": {
+      "align": "auto",
+      "minWidth": 70
+     }
+    },
+    "overrides": [
+     {
+      "matcher": {
+       "id": "byName",
+       "options": "count"
+      },
+      "properties": [
+       {
+        "id": "decimals",
+        "value": 0
+       }
+      ]
+     }
+    ]
+   },
+   "options": {
+    "showHeader": true,
+    "cellHeight": "sm",
+    "footer": {
+     "show": false,
+     "reducer": [
+      "sum"
+     ],
+     "fields": ""
+    },
+    "sortBy": [
+     {
+      "displayName": "count",
+      "desc": true
+     }
+    ]
+   },
+   "transformations": [
+    {
+     "id": "merge",
+     "options": {}
+    },
+    {
+     "id": "organize",
+     "options": {
+      "excludeByName": {
+       "Time": true
+      },
+      "renameByName": {
+       "version": "app version",
+       "Value": "count",
+       "Value #A": "count"
+      }
+     }
+    }
+   ]
+  },
+  {
+   "type": "row",
+   "title": "Agents",
+   "collapsed": false,
+   "id": 58,
+   "gridPos": {
+    "x": 0,
+    "y": 151,
+    "w": 24,
+    "h": 1
+   },
+   "panels": []
+  },
+  {
+   "type": "table",
+   "title": "One row per agent",
+   "description": "Each agent over the time range: finished orders; average time per order (green under 3 min, amber to 5, red over); card success % (from the log digest's card tries, so the last 7 days at most: green 85 %+, amber 70–85, red under 70); search use % (items found by search or an alias rather than the menu buttons: no colour, higher is usually faster); undo per order (green under 1, amber 1–2, red over 2); last clock offset (green under 5 s, amber to 2 min, red over 2 min); median round trip to Square (green under 1.5 s, amber to 3 s, red over 3 s); and their internet provider(s). Read a red cell with its section above (Cards, Network & clock, Speed). The order and undo limits are starting guesses.",
+   "datasource": {
+    "type": "datasource",
+    "uid": "-- Mixed --"
+   },
+   "id": 59,
+   "gridPos": {
+    "x": 0,
+    "y": 152,
+    "w": 24,
+    "h": 9
+   },
+   "targets": [
+    {
+     "datasource": {
+      "type": "prometheus",
+      "uid": "prometheus"
+     },
+     "expr": "sum by (staff) ((max_over_time(callcenter_ui_order_duration_milliseconds_count{deployment_environment=\"$env\", staff=~\"$staff\", outcome=~\"sent|cash_out|changes_sent\"}[$__range]) unless callcenter_ui_order_duration_milliseconds_count{deployment_environment=\"$env\", staff=~\"$staff\", outcome=~\"sent|cash_out|changes_sent\"} offset $__range or increase(callcenter_ui_order_duration_milliseconds_count{deployment_environment=\"$env\", staff=~\"$staff\", outcome=~\"sent|cash_out|changes_sent\"}[$__range])))",
+     "refId": "A",
+     "legendFormat": "__auto",
+     "range": false,
+     "instant": true,
+     "format": "table"
+    },
+    {
+     "datasource": {
+      "type": "prometheus",
+      "uid": "prometheus"
+     },
+     "expr": "sum by (staff) ((max_over_time(callcenter_ui_order_duration_milliseconds_sum{deployment_environment=\"$env\", staff=~\"$staff\", outcome=~\"sent|cash_out|changes_sent\"}[$__range]) unless callcenter_ui_order_duration_milliseconds_sum{deployment_environment=\"$env\", staff=~\"$staff\", outcome=~\"sent|cash_out|changes_sent\"} offset $__range or increase(callcenter_ui_order_duration_milliseconds_sum{deployment_environment=\"$env\", staff=~\"$staff\", outcome=~\"sent|cash_out|changes_sent\"}[$__range]))) / sum by (staff) ((max_over_time(callcenter_ui_order_duration_milliseconds_count{deployment_environment=\"$env\", staff=~\"$staff\", outcome=~\"sent|cash_out|changes_sent\"}[$__range]) unless callcenter_ui_order_duration_milliseconds_count{deployment_environment=\"$env\", staff=~\"$staff\", outcome=~\"sent|cash_out|changes_sent\"} offset $__range or increase(callcenter_ui_order_duration_milliseconds_count{deployment_environment=\"$env\", staff=~\"$staff\", outcome=~\"sent|cash_out|changes_sent\"}[$__range])))",
+     "refId": "B",
+     "legendFormat": "__auto",
+     "range": false,
+     "instant": true,
+     "format": "table"
+    },
+    {
+     "datasource": {
+      "type": "loki",
+      "uid": "loki"
+     },
+     "expr": "sum by (staff) (count_over_time({service_name=\"quicc-callcenter\", deployment_environment=\"$env\", detail=\"digest\"} | ui_kind=\"card\" | ui_name=\"attempt\" | staff=~\"$staff\" | ui_outcome=\"ok\" [$__range])) / sum by (staff) (count_over_time({service_name=\"quicc-callcenter\", deployment_environment=\"$env\", detail=\"digest\"} | ui_kind=\"card\" | ui_name=\"attempt\" | staff=~\"$staff\" [$__range]))",
+     "refId": "C",
+     "legendFormat": "",
+     "queryType": "instant"
+    },
+    {
+     "datasource": {
+      "type": "prometheus",
+      "uid": "prometheus"
+     },
+     "expr": "sum by (staff) ((max_over_time(callcenter_ui_item_duration_milliseconds_count{deployment_environment=\"$env\", staff=~\"$staff\", via=~\"search|alias\"}[$__range]) unless callcenter_ui_item_duration_milliseconds_count{deployment_environment=\"$env\", staff=~\"$staff\", via=~\"search|alias\"} offset $__range or increase(callcenter_ui_item_duration_milliseconds_count{deployment_environment=\"$env\", staff=~\"$staff\", via=~\"search|alias\"}[$__range]))) / sum by (staff) ((max_over_time(callcenter_ui_item_duration_milliseconds_count{deployment_environment=\"$env\", staff=~\"$staff\"}[$__range]) unless callcenter_ui_item_duration_milliseconds_count{deployment_environment=\"$env\", staff=~\"$staff\"} offset $__range or increase(callcenter_ui_item_duration_milliseconds_count{deployment_environment=\"$env\", staff=~\"$staff\"}[$__range])))",
+     "refId": "D",
+     "legendFormat": "__auto",
+     "range": false,
+     "instant": true,
+     "format": "table"
+    },
+    {
+     "datasource": {
+      "type": "prometheus",
+      "uid": "prometheus"
+     },
+     "expr": "sum by (staff) ((max_over_time(callcenter_ui_order_inputs_total{deployment_environment=\"$env\", staff=~\"$staff\", input=\"undos\"}[$__range]) unless callcenter_ui_order_inputs_total{deployment_environment=\"$env\", staff=~\"$staff\", input=\"undos\"} offset $__range or increase(callcenter_ui_order_inputs_total{deployment_environment=\"$env\", staff=~\"$staff\", input=\"undos\"}[$__range]))) / sum by (staff) ((max_over_time(callcenter_ui_order_duration_milliseconds_count{deployment_environment=\"$env\", staff=~\"$staff\", outcome=~\"sent|cash_out|changes_sent\"}[$__range]) unless callcenter_ui_order_duration_milliseconds_count{deployment_environment=\"$env\", staff=~\"$staff\", outcome=~\"sent|cash_out|changes_sent\"} offset $__range or increase(callcenter_ui_order_duration_milliseconds_count{deployment_environment=\"$env\", staff=~\"$staff\", outcome=~\"sent|cash_out|changes_sent\"}[$__range])))",
+     "refId": "E",
+     "legendFormat": "__auto",
+     "range": false,
+     "instant": true,
+     "format": "table"
+    },
+    {
+     "datasource": {
+      "type": "prometheus",
+      "uid": "prometheus"
+     },
+     "expr": "max by (staff) (abs(last_over_time(callcenter_clock_offset_milliseconds{deployment_environment=\"$env\", staff=~\"$staff\", isp=~\"$isp\"}[$__range])))",
+     "refId": "F",
+     "legendFormat": "__auto",
+     "range": false,
+     "instant": true,
+     "format": "table"
+    },
+    {
+     "datasource": {
+      "type": "prometheus",
+      "uid": "prometheus"
+     },
+     "expr": "histogram_quantile(0.5, sum by (le, staff) ((max_over_time(callcenter_net_rtt_milliseconds_bucket{deployment_environment=\"$env\", staff=~\"$staff\", isp=~\"$isp\", target=~\"square_js|pci\"}[$__range]) unless callcenter_net_rtt_milliseconds_bucket{deployment_environment=\"$env\", staff=~\"$staff\", isp=~\"$isp\", target=~\"square_js|pci\"} offset $__range or increase(callcenter_net_rtt_milliseconds_bucket{deployment_environment=\"$env\", staff=~\"$staff\", isp=~\"$isp\", target=~\"square_js|pci\"}[$__range]))))",
+     "refId": "G",
+     "legendFormat": "__auto",
+     "range": false,
+     "instant": true,
+     "format": "table"
+    },
+    {
+     "datasource": {
+      "type": "prometheus",
+      "uid": "prometheus"
+     },
+     "expr": "count by (staff, isp) ((max_over_time(callcenter_net_rtt_milliseconds_count{deployment_environment=\"$env\", staff=~\"$staff\", isp=~\"$isp\"}[$__range]) unless callcenter_net_rtt_milliseconds_count{deployment_environment=\"$env\", staff=~\"$staff\", isp=~\"$isp\"} offset $__range or increase(callcenter_net_rtt_milliseconds_count{deployment_environment=\"$env\", staff=~\"$staff\", isp=~\"$isp\"}[$__range])) > 0)",
+     "refId": "H",
+     "legendFormat": "__auto",
+     "range": false,
+     "instant": true,
+     "format": "table"
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "unit": "none",
+     "noValue": "–",
+     "custom": {
+      "align": "auto",
+      "minWidth": 70
+     }
+    },
+    "overrides": [
+     {
+      "matcher": {
+       "id": "byName",
+       "options": "orders"
+      },
+      "properties": [
+       {
+        "id": "decimals",
+        "value": 0
+       }
+      ]
+     },
+     {
+      "matcher": {
+       "id": "byName",
+       "options": "avg order"
+      },
+      "properties": [
+       {
+        "id": "unit",
+        "value": "ms"
+       },
+       {
+        "id": "decimals",
+        "value": 0
+       },
+       {
+        "id": "thresholds",
+        "value": {
+         "mode": "absolute",
+         "steps": [
+          {
+           "color": "green",
+           "value": null
+          },
+          {
+           "color": "orange",
+           "value": 180000
+          },
+          {
+           "color": "red",
+           "value": 300000
+          }
+         ]
+        }
+       },
+       {
+        "id": "color",
+        "value": {
+         "mode": "thresholds"
+        }
+       },
+       {
+        "id": "custom.cellOptions",
+        "value": {
+         "type": "color-background",
+         "mode": "basic"
+        }
+       },
+       {
+        "id": "mappings",
+        "value": [
+         {
+          "type": "special",
+          "options": {
+           "match": "null",
+           "result": {
+            "text": "–",
+            "color": "transparent",
+            "index": 0
+           }
+          }
+         }
+        ]
+       }
+      ]
+     },
+     {
+      "matcher": {
+       "id": "byName",
+       "options": "card success"
+      },
+      "properties": [
+       {
+        "id": "unit",
+        "value": "percentunit"
+       },
+       {
+        "id": "decimals",
+        "value": 0
+       },
+       {
+        "id": "thresholds",
+        "value": {
+         "mode": "absolute",
+         "steps": [
+          {
+           "color": "red",
+           "value": null
+          },
+          {
+           "color": "orange",
+           "value": 0.7
+          },
+          {
+           "color": "green",
+           "value": 0.85
+          }
+         ]
+        }
+       },
+       {
+        "id": "color",
+        "value": {
+         "mode": "thresholds"
+        }
+       },
+       {
+        "id": "custom.cellOptions",
+        "value": {
+         "type": "color-background",
+         "mode": "basic"
+        }
+       },
+       {
+        "id": "mappings",
+        "value": [
+         {
+          "type": "special",
+          "options": {
+           "match": "null",
+           "result": {
+            "text": "–",
+            "color": "transparent",
+            "index": 0
+           }
+          }
+         }
+        ]
+       }
+      ]
+     },
+     {
+      "matcher": {
+       "id": "byName",
+       "options": "search use"
+      },
+      "properties": [
+       {
+        "id": "unit",
+        "value": "percentunit"
+       },
+       {
+        "id": "decimals",
+        "value": 0
+       }
+      ]
+     },
+     {
+      "matcher": {
+       "id": "byName",
+       "options": "undo / order"
+      },
+      "properties": [
+       {
+        "id": "decimals",
+        "value": 1
+       },
+       {
+        "id": "thresholds",
+        "value": {
+         "mode": "absolute",
+         "steps": [
+          {
+           "color": "green",
+           "value": null
+          },
+          {
+           "color": "orange",
+           "value": 1
+          },
+          {
+           "color": "red",
+           "value": 2
+          }
+         ]
+        }
+       },
+       {
+        "id": "color",
+        "value": {
+         "mode": "thresholds"
+        }
+       },
+       {
+        "id": "custom.cellOptions",
+        "value": {
+         "type": "color-background",
+         "mode": "basic"
+        }
+       },
+       {
+        "id": "mappings",
+        "value": [
+         {
+          "type": "special",
+          "options": {
+           "match": "null",
+           "result": {
+            "text": "–",
+            "color": "transparent",
+            "index": 0
+           }
+          }
+         }
+        ]
+       }
+      ]
+     },
+     {
+      "matcher": {
+       "id": "byName",
+       "options": "clock offset"
+      },
+      "properties": [
+       {
+        "id": "unit",
+        "value": "ms"
+       },
+       {
+        "id": "decimals",
+        "value": 0
+       },
+       {
+        "id": "thresholds",
+        "value": {
+         "mode": "absolute",
+         "steps": [
+          {
+           "color": "green",
+           "value": null
+          },
+          {
+           "color": "orange",
+           "value": 5000
+          },
+          {
+           "color": "red",
+           "value": 120000
+          }
+         ]
+        }
+       },
+       {
+        "id": "color",
+        "value": {
+         "mode": "thresholds"
+        }
+       },
+       {
+        "id": "custom.cellOptions",
+        "value": {
+         "type": "color-background",
+         "mode": "basic"
+        }
+       },
+       {
+        "id": "mappings",
+        "value": [
+         {
+          "type": "special",
+          "options": {
+           "match": "null",
+           "result": {
+            "text": "–",
+            "color": "transparent",
+            "index": 0
+           }
+          }
+         }
+        ]
+       }
+      ]
+     },
+     {
+      "matcher": {
+       "id": "byName",
+       "options": "Square median"
+      },
+      "properties": [
+       {
+        "id": "unit",
+        "value": "ms"
+       },
+       {
+        "id": "decimals",
+        "value": 0
+       },
+       {
+        "id": "thresholds",
+        "value": {
+         "mode": "absolute",
+         "steps": [
+          {
+           "color": "green",
+           "value": null
+          },
+          {
+           "color": "orange",
+           "value": 1500
+          },
+          {
+           "color": "red",
+           "value": 3000
+          }
+         ]
+        }
+       },
+       {
+        "id": "color",
+        "value": {
+         "mode": "thresholds"
+        }
+       },
+       {
+        "id": "custom.cellOptions",
+        "value": {
+         "type": "color-background",
+         "mode": "basic"
+        }
+       },
+       {
+        "id": "mappings",
+        "value": [
+         {
+          "type": "special",
+          "options": {
+           "match": "null",
+           "result": {
+            "text": "–",
+            "color": "transparent",
+            "index": 0
+           }
+          }
+         }
+        ]
+       }
+      ]
+     }
+    ]
+   },
+   "options": {
+    "showHeader": true,
+    "cellHeight": "sm",
+    "footer": {
+     "show": false,
+     "reducer": [
+      "sum"
+     ],
+     "fields": ""
+    },
+    "sortBy": [
+     {
+      "displayName": "orders",
+      "desc": true
+     }
+    ]
+   },
+   "transformations": [
+    {
+     "id": "merge",
+     "options": {}
+    },
+    {
+     "id": "organize",
+     "options": {
+      "excludeByName": {
+       "Time": true,
+       "Value #H": true
+      },
+      "renameByName": {
+       "staff": "agent",
+       "Value #A": "orders",
+       "Value #B": "avg order",
+       "Value #C": "card success",
+       "Value #D": "search use",
+       "Value #E": "undo / order",
+       "Value #F": "clock offset",
+       "Value #G": "Square median",
+       "isp": "provider"
+      },
+      "indexByName": {
+       "staff": 0,
+       "Value #A": 1,
+       "Value #B": 2,
+       "Value #C": 3,
+       "Value #D": 4,
+       "Value #E": 5,
+       "Value #F": 6,
+       "Value #G": 7,
+       "isp": 8
+      }
+     }
+    }
+   ]
+  },
+  {
+   "type": "row",
+   "title": "Errors and problem log",
+   "collapsed": false,
+   "id": 60,
+   "gridPos": {
+    "x": 0,
+    "y": 161,
+    "w": 24,
+    "h": 1
+   },
+   "panels": []
+  },
+  {
+   "type": "timeseries",
+   "title": "Problems per 15 min (log digest)",
+   "description": "Per 15 minutes, from the 7-day log digest: card tries that failed, page errors in the agents' browsers, bad clock / network samples, and connection checks that weren't ok. Normal: a few card failures, nothing else. Not normal: a block of clock / net problems (one agent's computer or line) or page errors after a release (purple marker): read the log below.",
+   "datasource": {
+    "type": "loki",
+    "uid": "loki"
+   },
+   "id": 61,
+   "gridPos": {
+    "x": 0,
+    "y": 162,
+    "w": 24,
+    "h": 6
+   },
+   "targets": [
+    {
+     "datasource": {
+      "type": "loki",
+      "uid": "loki"
+     },
+     "expr": "sum by (ui_kind) (count_over_time({service_name=\"quicc-callcenter\", deployment_environment=\"$env\", detail=\"digest\"} | staff=~\"$staff\" | (ui_kind=\"card\" and ui_outcome!=\"ok\") or ui_kind=\"error\" or ui_bad=\"true\" or (ui_kind=\"net\" and ui_name=\"check\" and ui_verdict!=\"ok\") [$__interval]))",
+     "refId": "A",
+     "legendFormat": "{{ui_kind}}",
+     "queryType": "range"
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "unit": "none",
+     "custom": {
+      "drawStyle": "bars",
+      "lineWidth": 1,
+      "fillOpacity": 80,
+      "showPoints": "never",
+      "spanNulls": false,
+      "stacking": {
+       "mode": "normal",
+       "group": "A"
+      },
+      "thresholdsStyle": {
+       "mode": "off"
+      }
+     },
+     "noValue": "no data",
+     "color": {
+      "mode": "palette-classic"
+     },
+     "decimals": 0
+    },
+    "overrides": []
+   },
+   "options": {
+    "legend": {
+     "displayMode": "table",
+     "placement": "right",
+     "calcs": [
+      "sum"
+     ]
+    },
+    "tooltip": {
+     "mode": "multi",
+     "sort": "desc"
+    }
+   },
+   "interval": "15m"
+  },
+  {
+   "type": "logs",
+   "title": "Problem log (7-day digest, newest first)",
+   "description": "Each problem as a line, newest first: card.attempt with outcome / Square's code / the clock and network just before it; error.page; clock.sample / net.sample marked bad with the reason; net.check that wasn't ok. Click a line for every field (agent, computer, provider, the /24 of the address, the app version). Kept 7 days; the full detail (every key and click) is kept 1 day on the Call center dashboard.",
+   "datasource": {
+    "type": "loki",
+    "uid": "loki"
+   },
+   "id": 62,
+   "gridPos": {
+    "x": 0,
+    "y": 168,
+    "w": 24,
+    "h": 12
+   },
+   "targets": [
+    {
+     "datasource": {
+      "type": "loki",
+      "uid": "loki"
+     },
+     "expr": "{service_name=\"quicc-callcenter\", deployment_environment=\"$env\", detail=\"digest\"} | staff=~\"$staff\" | (ui_kind=\"card\" and ui_outcome!=\"ok\") or ui_kind=\"error\" or ui_bad=\"true\" or (ui_kind=\"net\" and ui_name=\"check\" and ui_verdict!=\"ok\") | line_format `{{.ui_kind}}.{{.ui_name}} · {{.staff}} @ {{.device}}{{if .ui_outcome}} · {{.ui_stage}} {{.ui_outcome}}{{end}}{{if .ui_code}} ({{.ui_code}}){{end}}{{if .ui_reason}} · {{.ui_reason}}{{end}}{{if .ui_verdict}} · verdict {{.ui_verdict}}{{end}}{{if .ui_offset_ms}} · clock {{.ui_offset_ms}} ms{{end}}{{if .ui_tz}} {{.ui_tz}}{{end}}{{if .ui_us_med}} · us {{.ui_us_med}} ms{{end}}{{if .ui_sq_js_ms}} · square {{.ui_sq_js_ms}} ms{{end}}{{if .ui_js}} · js errors {{.ui_js}}{{end}} · {{.net_isp}} · v{{.client_version}}`",
+     "refId": "A",
+     "legendFormat": "",
+     "queryType": "range"
+    }
+   ],
+   "options": {
+    "showTime": true,
+    "showLabels": false,
+    "showCommonLabels": false,
+    "wrapLogMessage": true,
+    "prettifyLogMessage": false,
+    "enableLogDetails": true,
+    "dedupStrategy": "none",
+    "sortOrder": "Descending"
+   }
+  }
+ ]
+}
