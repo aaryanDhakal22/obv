@@ -319,7 +319,7 @@
       "type": "prometheus",
       "uid": "prometheus"
      },
-     "expr": "count(count by (staff) (callcenter_clock_offset_milliseconds{deployment_environment=\"$env\", staff=~\"$staff\", isp=~\"$isp\"})) or count(count by (staff) (increase(callcenter_ui_events_total{deployment_environment=\"$env\", staff=~\"$staff\", staff!=\"nobody\"}[15m]) > 0)) or vector(0)",
+     "expr": "count(count by (staff) (callcenter_clock_offset_milliseconds{deployment_environment=\"$env\", staff=~\"$staff\", isp=~\"$isp\"})) or count(count by (staff) (((max_over_time(callcenter_ui_events_total{deployment_environment=\"$env\", staff=~\"$staff\", staff!=\"nobody\"}[15m]) unless callcenter_ui_events_total{deployment_environment=\"$env\", staff=~\"$staff\", staff!=\"nobody\"} offset 15m) or increase(callcenter_ui_events_total{deployment_environment=\"$env\", staff=~\"$staff\", staff!=\"nobody\"}[15m])) > 0)) or vector(0)",
      "refId": "A",
      "legendFormat": "__auto",
      "range": false,

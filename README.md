@@ -142,6 +142,18 @@ center sends at most 20,000 records ≈ 6 MB in one, normally a few hundred).
 Check on the server: `curl -s localhost:3100/loki/api/v1/label/detail/values` (→ `full`, `digest` once the apps run the
 new builds), and `du -sh` of the `loki_data` volume over a week.
 
+### Tests (the gate's `observability` step, 2026-11-18)
+
+`tests/test_observability.py`, from the quicc-ops root: `uv run --with pytest --with pyyaml pytest observability/tests -q`
+(the stack's own images in throwaway containers; without Docker only the pure checks run). It checks: every PromQL
+query of every dashboard parses (promtool); every count on Call center, Call center at a glance and Efficiency over
+time keeps a series born inside its window (`max_over_time(x[r]) unless x offset r or increase(x[r])`; the few plain
+ones are listed with why); the dashboards' own queries read 1 for a single event, never 0, and a 200 s order's median
+reads 3½ minutes with the call center's bucket bounds (`callcenter/src/lib/server/metrics.ts`); the 1-year rules and
+the Efficiency dashboard over them the same; `loki -verify-config`, the retention streams (`{detail="full"}` 24h,
+`{detail="digest"}` 168h, `detail` an index label) and a live Loki finding a log of each stream by those selectors;
+Grafana 11.4 loading every dashboard file under its uid.
+
 ### Deploying the retention change (the lead applies it on the home server)
 
 Nothing else changes: the Collector config is the same, Prometheus and Grafana's data are untouched. On the home
@@ -207,7 +219,8 @@ live 30 days in the main Prometheus; their hourly roll-ups live **1 year** in a 
   histograms, `callcenter.ui.keys`, `callcenter.ui.actions`, the Pi's per-staff / per-version labels): nothing next to
   its 8 GB.
 - **Checks before deploy:** `promtool check config`, `promtool check rules` and `promtool test rules
-  prometheus-longterm/efficiency.test.yaml` (synthetic series: the first hour kept, an idle hour not), run in
+  prometheus-longterm/efficiency.test.yaml` (synthetic series: the first hour kept, an idle hour not, a single event
+  in a series born within the hour = 1), run in
   `prom/prometheus:v3.0.1`; a live test (a 5-second rule through remote read against a second Prometheus) stored its
   result. The roll-ups start when the long-term Prometheus starts (no backfill; the main Prometheus's 30 days could be
   backfilled with `promtool tsdb create-blocks-from rules` if wanted).
