@@ -1,0 +1,1662 @@
+{
+  "uid": "efficiency",
+  "title": "Efficiency over time",
+  "description": "The agents' and cashiers' efficiency per app version, kept 1 year (the owner 2026-11-18): hourly roll-ups in the long-term Prometheus (README \"Long-term efficiency\").",
+  "tags": [
+    "quicc",
+    "efficiency"
+  ],
+  "timezone": "browser",
+  "schemaVersion": 39,
+  "editable": true,
+  "graphTooltip": 1,
+  "time": {
+    "from": "now-90d",
+    "to": "now"
+  },
+  "templating": {
+    "list": [
+      {
+        "name": "app",
+        "label": "App",
+        "type": "custom",
+        "query": "callcenter,terminal",
+        "current": {
+          "selected": true,
+          "text": "callcenter",
+          "value": "callcenter"
+        },
+        "options": [
+          {
+            "selected": true,
+            "text": "callcenter",
+            "value": "callcenter"
+          },
+          {
+            "selected": false,
+            "text": "terminal",
+            "value": "terminal"
+          }
+        ],
+        "hide": 0,
+        "multi": false,
+        "includeAll": false,
+        "description": "callcenter = the call center's agents; terminal = Centurion's cashiers (through the Pi)"
+      },
+      {
+        "name": "env",
+        "label": "Environment",
+        "type": "custom",
+        "query": "prod,staging,dev",
+        "current": {
+          "selected": true,
+          "text": "prod",
+          "value": "prod"
+        },
+        "options": [
+          {
+            "selected": true,
+            "text": "prod",
+            "value": "prod"
+          },
+          {
+            "selected": false,
+            "text": "staging",
+            "value": "staging"
+          },
+          {
+            "selected": false,
+            "text": "dev",
+            "value": "dev"
+          }
+        ],
+        "hide": 0,
+        "multi": false,
+        "includeAll": false
+      },
+      {
+        "name": "staff",
+        "label": "Agent",
+        "type": "query",
+        "datasource": {
+          "type": "prometheus",
+          "uid": "prometheus-longterm"
+        },
+        "definition": "label_values(eff:${app}_ui_order_inputs:increase1h{deployment_environment=\"$env\"}, staff)",
+        "query": {
+          "query": "label_values(eff:${app}_ui_order_inputs:increase1h{deployment_environment=\"$env\"}, staff)",
+          "refId": "staff"
+        },
+        "refresh": 2,
+        "options": [],
+        "hide": 0,
+        "includeAll": true,
+        "multi": true,
+        "allValue": ".*",
+        "current": {
+          "selected": true,
+          "text": [
+            "All"
+          ],
+          "value": [
+            "$__all"
+          ]
+        },
+        "sort": 1
+      },
+      {
+        "name": "before",
+        "label": "Before",
+        "type": "query",
+        "datasource": {
+          "type": "prometheus",
+          "uid": "prometheus-longterm"
+        },
+        "definition": "label_values(eff:${app}_ui_order_inputs:increase1h{deployment_environment=\"$env\"}, version)",
+        "query": {
+          "query": "label_values(eff:${app}_ui_order_inputs:increase1h{deployment_environment=\"$env\"}, version)",
+          "refId": "before"
+        },
+        "refresh": 2,
+        "options": [],
+        "hide": 0,
+        "includeAll": false,
+        "multi": false,
+        "sort": 3
+      },
+      {
+        "name": "after",
+        "label": "After",
+        "type": "query",
+        "datasource": {
+          "type": "prometheus",
+          "uid": "prometheus-longterm"
+        },
+        "definition": "label_values(eff:${app}_ui_order_inputs:increase1h{deployment_environment=\"$env\"}, version)",
+        "query": {
+          "query": "label_values(eff:${app}_ui_order_inputs:increase1h{deployment_environment=\"$env\"}, version)",
+          "refId": "after"
+        },
+        "refresh": 2,
+        "options": [],
+        "hide": 0,
+        "includeAll": false,
+        "multi": false,
+        "sort": 4
+      }
+    ]
+  },
+  "annotations": {
+    "list": []
+  },
+  "panels": [
+    {
+      "type": "row",
+      "title": "Before → after (pick the two versions above; the time range is what is compared)",
+      "collapsed": false,
+      "panels": [],
+      "id": 1,
+      "gridPos": {
+        "x": 0,
+        "y": 0,
+        "w": 24,
+        "h": 1
+      }
+    },
+    {
+      "type": "stat",
+      "title": "Orders taken",
+      "description": "$before (first) and $after (second) over the time range, from the 1-year roll-ups.",
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus-longterm"
+          },
+          "expr": "sum(sum_over_time(eff:${app}_ui_order_duration_count:increase1h{deployment_environment=\"$env\", staff=~\"$staff\", version=\"$before\", outcome=~\"sent|cash_out|changes_sent\"}[$__range]))",
+          "refId": "A",
+          "legendFormat": "$before",
+          "instant": true,
+          "range": false,
+          "format": "time_series"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus-longterm"
+          },
+          "expr": "sum(sum_over_time(eff:${app}_ui_order_duration_count:increase1h{deployment_environment=\"$env\", staff=~\"$staff\", version=\"$after\", outcome=~\"sent|cash_out|changes_sent\"}[$__range]))",
+          "refId": "B",
+          "legendFormat": "$after",
+          "instant": true,
+          "range": false,
+          "format": "time_series"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "noValue": "–",
+          "color": {
+            "mode": "palette-classic"
+          },
+          "decimals": 1
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "value",
+        "graphMode": "none",
+        "textMode": "value_and_name",
+        "orientation": "vertical"
+      },
+      "id": 2,
+      "gridPos": {
+        "x": 0,
+        "y": 1,
+        "w": 4,
+        "h": 4
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus-longterm"
+      }
+    },
+    {
+      "type": "stat",
+      "title": "Time per order (median)",
+      "description": "$before (first) and $after (second) over the time range, from the 1-year roll-ups.",
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus-longterm"
+          },
+          "expr": "histogram_quantile(0.5, sum by (le) (sum_over_time(eff:${app}_ui_order_duration_bucket:increase1h{deployment_environment=\"$env\", staff=~\"$staff\", version=\"$before\", outcome=~\"sent|cash_out|changes_sent\"}[$__range])))",
+          "refId": "A",
+          "legendFormat": "$before",
+          "instant": true,
+          "range": false,
+          "format": "time_series"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus-longterm"
+          },
+          "expr": "histogram_quantile(0.5, sum by (le) (sum_over_time(eff:${app}_ui_order_duration_bucket:increase1h{deployment_environment=\"$env\", staff=~\"$staff\", version=\"$after\", outcome=~\"sent|cash_out|changes_sent\"}[$__range])))",
+          "refId": "B",
+          "legendFormat": "$after",
+          "instant": true,
+          "range": false,
+          "format": "time_series"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ms",
+          "noValue": "–",
+          "color": {
+            "mode": "palette-classic"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "value",
+        "graphMode": "none",
+        "textMode": "value_and_name",
+        "orientation": "vertical"
+      },
+      "id": 3,
+      "gridPos": {
+        "x": 4,
+        "y": 1,
+        "w": 4,
+        "h": 4
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus-longterm"
+      }
+    },
+    {
+      "type": "stat",
+      "title": "Keys per order",
+      "description": "$before (first) and $after (second) over the time range, from the 1-year roll-ups.",
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus-longterm"
+          },
+          "expr": "sum(sum_over_time(eff:${app}_ui_order_inputs:increase1h{deployment_environment=\"$env\", staff=~\"$staff\", version=\"$before\", input=\"keys\"}[$__range])) / sum(sum_over_time(eff:${app}_ui_order_duration_count:increase1h{deployment_environment=\"$env\", staff=~\"$staff\", version=\"$before\", outcome=~\"sent|cash_out|changes_sent\"}[$__range]))",
+          "refId": "A",
+          "legendFormat": "$before",
+          "instant": true,
+          "range": false,
+          "format": "time_series"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus-longterm"
+          },
+          "expr": "sum(sum_over_time(eff:${app}_ui_order_inputs:increase1h{deployment_environment=\"$env\", staff=~\"$staff\", version=\"$after\", input=\"keys\"}[$__range])) / sum(sum_over_time(eff:${app}_ui_order_duration_count:increase1h{deployment_environment=\"$env\", staff=~\"$staff\", version=\"$after\", outcome=~\"sent|cash_out|changes_sent\"}[$__range]))",
+          "refId": "B",
+          "legendFormat": "$after",
+          "instant": true,
+          "range": false,
+          "format": "time_series"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "noValue": "–",
+          "color": {
+            "mode": "palette-classic"
+          },
+          "decimals": 1
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "value",
+        "graphMode": "none",
+        "textMode": "value_and_name",
+        "orientation": "vertical"
+      },
+      "id": 4,
+      "gridPos": {
+        "x": 8,
+        "y": 1,
+        "w": 4,
+        "h": 4
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus-longterm"
+      }
+    },
+    {
+      "type": "stat",
+      "title": "Clicks / taps per order",
+      "description": "$before (first) and $after (second) over the time range, from the 1-year roll-ups.",
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus-longterm"
+          },
+          "expr": "sum(sum_over_time(eff:${app}_ui_order_inputs:increase1h{deployment_environment=\"$env\", staff=~\"$staff\", version=\"$before\", input=\"clicks\"}[$__range])) / sum(sum_over_time(eff:${app}_ui_order_duration_count:increase1h{deployment_environment=\"$env\", staff=~\"$staff\", version=\"$before\", outcome=~\"sent|cash_out|changes_sent\"}[$__range]))",
+          "refId": "A",
+          "legendFormat": "$before",
+          "instant": true,
+          "range": false,
+          "format": "time_series"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus-longterm"
+          },
+          "expr": "sum(sum_over_time(eff:${app}_ui_order_inputs:increase1h{deployment_environment=\"$env\", staff=~\"$staff\", version=\"$after\", input=\"clicks\"}[$__range])) / sum(sum_over_time(eff:${app}_ui_order_duration_count:increase1h{deployment_environment=\"$env\", staff=~\"$staff\", version=\"$after\", outcome=~\"sent|cash_out|changes_sent\"}[$__range]))",
+          "refId": "B",
+          "legendFormat": "$after",
+          "instant": true,
+          "range": false,
+          "format": "time_series"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "noValue": "–",
+          "color": {
+            "mode": "palette-classic"
+          },
+          "decimals": 1
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "value",
+        "graphMode": "none",
+        "textMode": "value_and_name",
+        "orientation": "vertical"
+      },
+      "id": 5,
+      "gridPos": {
+        "x": 12,
+        "y": 1,
+        "w": 4,
+        "h": 4
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus-longterm"
+      }
+    },
+    {
+      "type": "stat",
+      "title": "Searches per order",
+      "description": "$before (first) and $after (second) over the time range, from the 1-year roll-ups.",
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus-longterm"
+          },
+          "expr": "sum(sum_over_time(eff:${app}_ui_order_inputs:increase1h{deployment_environment=\"$env\", staff=~\"$staff\", version=\"$before\", input=\"searches\"}[$__range])) / sum(sum_over_time(eff:${app}_ui_order_duration_count:increase1h{deployment_environment=\"$env\", staff=~\"$staff\", version=\"$before\", outcome=~\"sent|cash_out|changes_sent\"}[$__range]))",
+          "refId": "A",
+          "legendFormat": "$before",
+          "instant": true,
+          "range": false,
+          "format": "time_series"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus-longterm"
+          },
+          "expr": "sum(sum_over_time(eff:${app}_ui_order_inputs:increase1h{deployment_environment=\"$env\", staff=~\"$staff\", version=\"$after\", input=\"searches\"}[$__range])) / sum(sum_over_time(eff:${app}_ui_order_duration_count:increase1h{deployment_environment=\"$env\", staff=~\"$staff\", version=\"$after\", outcome=~\"sent|cash_out|changes_sent\"}[$__range]))",
+          "refId": "B",
+          "legendFormat": "$after",
+          "instant": true,
+          "range": false,
+          "format": "time_series"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "noValue": "–",
+          "color": {
+            "mode": "palette-classic"
+          },
+          "decimals": 1
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "value",
+        "graphMode": "none",
+        "textMode": "value_and_name",
+        "orientation": "vertical"
+      },
+      "id": 6,
+      "gridPos": {
+        "x": 16,
+        "y": 1,
+        "w": 4,
+        "h": 4
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus-longterm"
+      }
+    },
+    {
+      "type": "stat",
+      "title": "Chords + F-keys per order",
+      "description": "$before (first) and $after (second) over the time range, from the 1-year roll-ups.",
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus-longterm"
+          },
+          "expr": "sum(sum_over_time(eff:${app}_ui_keys:increase1h{deployment_environment=\"$env\", staff=~\"$staff\", version=\"$before\", key=~\"F[0-9]+|ctrl.*\"}[$__range])) / sum(sum_over_time(eff:${app}_ui_order_duration_count:increase1h{deployment_environment=\"$env\", staff=~\"$staff\", version=\"$before\", outcome=~\"sent|cash_out|changes_sent\"}[$__range]))",
+          "refId": "A",
+          "legendFormat": "$before",
+          "instant": true,
+          "range": false,
+          "format": "time_series"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus-longterm"
+          },
+          "expr": "sum(sum_over_time(eff:${app}_ui_keys:increase1h{deployment_environment=\"$env\", staff=~\"$staff\", version=\"$after\", key=~\"F[0-9]+|ctrl.*\"}[$__range])) / sum(sum_over_time(eff:${app}_ui_order_duration_count:increase1h{deployment_environment=\"$env\", staff=~\"$staff\", version=\"$after\", outcome=~\"sent|cash_out|changes_sent\"}[$__range]))",
+          "refId": "B",
+          "legendFormat": "$after",
+          "instant": true,
+          "range": false,
+          "format": "time_series"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "noValue": "–",
+          "color": {
+            "mode": "palette-classic"
+          },
+          "decimals": 1
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "value",
+        "graphMode": "none",
+        "textMode": "value_and_name",
+        "orientation": "vertical"
+      },
+      "id": 7,
+      "gridPos": {
+        "x": 20,
+        "y": 1,
+        "w": 4,
+        "h": 4
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus-longterm"
+      }
+    },
+    {
+      "type": "stat",
+      "title": "Undo per order",
+      "description": "$before (first) and $after (second) over the time range, from the 1-year roll-ups.",
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus-longterm"
+          },
+          "expr": "sum(sum_over_time(eff:${app}_ui_order_inputs:increase1h{deployment_environment=\"$env\", staff=~\"$staff\", version=\"$before\", input=\"undos\"}[$__range])) / sum(sum_over_time(eff:${app}_ui_order_duration_count:increase1h{deployment_environment=\"$env\", staff=~\"$staff\", version=\"$before\", outcome=~\"sent|cash_out|changes_sent\"}[$__range]))",
+          "refId": "A",
+          "legendFormat": "$before",
+          "instant": true,
+          "range": false,
+          "format": "time_series"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus-longterm"
+          },
+          "expr": "sum(sum_over_time(eff:${app}_ui_order_inputs:increase1h{deployment_environment=\"$env\", staff=~\"$staff\", version=\"$after\", input=\"undos\"}[$__range])) / sum(sum_over_time(eff:${app}_ui_order_duration_count:increase1h{deployment_environment=\"$env\", staff=~\"$staff\", version=\"$after\", outcome=~\"sent|cash_out|changes_sent\"}[$__range]))",
+          "refId": "B",
+          "legendFormat": "$after",
+          "instant": true,
+          "range": false,
+          "format": "time_series"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "noValue": "–",
+          "color": {
+            "mode": "palette-classic"
+          },
+          "decimals": 1
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "value",
+        "graphMode": "none",
+        "textMode": "value_and_name",
+        "orientation": "vertical"
+      },
+      "id": 8,
+      "gridPos": {
+        "x": 0,
+        "y": 5,
+        "w": 4,
+        "h": 4
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus-longterm"
+      }
+    },
+    {
+      "type": "stat",
+      "title": "Right-clicks per order",
+      "description": "$before (first) and $after (second) over the time range, from the 1-year roll-ups.",
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus-longterm"
+          },
+          "expr": "sum(sum_over_time(eff:${app}_ui_order_inputs:increase1h{deployment_environment=\"$env\", staff=~\"$staff\", version=\"$before\", input=\"right_clicks\"}[$__range])) / sum(sum_over_time(eff:${app}_ui_order_duration_count:increase1h{deployment_environment=\"$env\", staff=~\"$staff\", version=\"$before\", outcome=~\"sent|cash_out|changes_sent\"}[$__range]))",
+          "refId": "A",
+          "legendFormat": "$before",
+          "instant": true,
+          "range": false,
+          "format": "time_series"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus-longterm"
+          },
+          "expr": "sum(sum_over_time(eff:${app}_ui_order_inputs:increase1h{deployment_environment=\"$env\", staff=~\"$staff\", version=\"$after\", input=\"right_clicks\"}[$__range])) / sum(sum_over_time(eff:${app}_ui_order_duration_count:increase1h{deployment_environment=\"$env\", staff=~\"$staff\", version=\"$after\", outcome=~\"sent|cash_out|changes_sent\"}[$__range]))",
+          "refId": "B",
+          "legendFormat": "$after",
+          "instant": true,
+          "range": false,
+          "format": "time_series"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "noValue": "–",
+          "color": {
+            "mode": "palette-classic"
+          },
+          "decimals": 1
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "value",
+        "graphMode": "none",
+        "textMode": "value_and_name",
+        "orientation": "vertical"
+      },
+      "id": 9,
+      "gridPos": {
+        "x": 4,
+        "y": 5,
+        "w": 4,
+        "h": 4
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus-longterm"
+      }
+    },
+    {
+      "type": "stat",
+      "title": "Searches that found it",
+      "description": "$before (first) and $after (second) over the time range, from the 1-year roll-ups.",
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus-longterm"
+          },
+          "expr": "sum(sum_over_time(eff:${app}_ui_search_duration_count:increase1h{deployment_environment=\"$env\", staff=~\"$staff\", version=\"$before\", outcome=\"pick\"}[$__range])) / sum(sum_over_time(eff:${app}_ui_search_duration_count:increase1h{deployment_environment=\"$env\", staff=~\"$staff\", version=\"$before\"}[$__range]))",
+          "refId": "A",
+          "legendFormat": "$before",
+          "instant": true,
+          "range": false,
+          "format": "time_series"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus-longterm"
+          },
+          "expr": "sum(sum_over_time(eff:${app}_ui_search_duration_count:increase1h{deployment_environment=\"$env\", staff=~\"$staff\", version=\"$after\", outcome=\"pick\"}[$__range])) / sum(sum_over_time(eff:${app}_ui_search_duration_count:increase1h{deployment_environment=\"$env\", staff=~\"$staff\", version=\"$after\"}[$__range]))",
+          "refId": "B",
+          "legendFormat": "$after",
+          "instant": true,
+          "range": false,
+          "format": "time_series"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit",
+          "noValue": "–",
+          "color": {
+            "mode": "palette-classic"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "value",
+        "graphMode": "none",
+        "textMode": "value_and_name",
+        "orientation": "vertical"
+      },
+      "id": 10,
+      "gridPos": {
+        "x": 8,
+        "y": 5,
+        "w": 4,
+        "h": 4
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus-longterm"
+      }
+    },
+    {
+      "type": "stat",
+      "title": "Items found by search / alias",
+      "description": "$before (first) and $after (second) over the time range, from the 1-year roll-ups.",
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus-longterm"
+          },
+          "expr": "sum(sum_over_time(eff:${app}_ui_item_duration_count:increase1h{deployment_environment=\"$env\", staff=~\"$staff\", version=\"$before\", via=~\"search|alias\"}[$__range])) / sum(sum_over_time(eff:${app}_ui_item_duration_count:increase1h{deployment_environment=\"$env\", staff=~\"$staff\", version=\"$before\"}[$__range]))",
+          "refId": "A",
+          "legendFormat": "$before",
+          "instant": true,
+          "range": false,
+          "format": "time_series"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus-longterm"
+          },
+          "expr": "sum(sum_over_time(eff:${app}_ui_item_duration_count:increase1h{deployment_environment=\"$env\", staff=~\"$staff\", version=\"$after\", via=~\"search|alias\"}[$__range])) / sum(sum_over_time(eff:${app}_ui_item_duration_count:increase1h{deployment_environment=\"$env\", staff=~\"$staff\", version=\"$after\"}[$__range]))",
+          "refId": "B",
+          "legendFormat": "$after",
+          "instant": true,
+          "range": false,
+          "format": "time_series"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit",
+          "noValue": "–",
+          "color": {
+            "mode": "palette-classic"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "value",
+        "graphMode": "none",
+        "textMode": "value_and_name",
+        "orientation": "vertical"
+      },
+      "id": 11,
+      "gridPos": {
+        "x": 12,
+        "y": 5,
+        "w": 4,
+        "h": 4
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus-longterm"
+      }
+    },
+    {
+      "type": "stat",
+      "title": "Search: time to pick (median)",
+      "description": "$before (first) and $after (second) over the time range, from the 1-year roll-ups.",
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus-longterm"
+          },
+          "expr": "histogram_quantile(0.5, sum by (le) (sum_over_time(eff:${app}_ui_search_duration_bucket:increase1h{deployment_environment=\"$env\", staff=~\"$staff\", version=\"$before\", outcome=\"pick\"}[$__range])))",
+          "refId": "A",
+          "legendFormat": "$before",
+          "instant": true,
+          "range": false,
+          "format": "time_series"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus-longterm"
+          },
+          "expr": "histogram_quantile(0.5, sum by (le) (sum_over_time(eff:${app}_ui_search_duration_bucket:increase1h{deployment_environment=\"$env\", staff=~\"$staff\", version=\"$after\", outcome=\"pick\"}[$__range])))",
+          "refId": "B",
+          "legendFormat": "$after",
+          "instant": true,
+          "range": false,
+          "format": "time_series"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ms",
+          "noValue": "–",
+          "color": {
+            "mode": "palette-classic"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "value",
+        "graphMode": "none",
+        "textMode": "value_and_name",
+        "orientation": "vertical"
+      },
+      "id": 12,
+      "gridPos": {
+        "x": 16,
+        "y": 5,
+        "w": 4,
+        "h": 4
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus-longterm"
+      }
+    },
+    {
+      "type": "stat",
+      "title": "Item: add to done (median)",
+      "description": "$before (first) and $after (second) over the time range, from the 1-year roll-ups.",
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus-longterm"
+          },
+          "expr": "histogram_quantile(0.5, sum by (le) (sum_over_time(eff:${app}_ui_item_duration_bucket:increase1h{deployment_environment=\"$env\", staff=~\"$staff\", version=\"$before\"}[$__range])))",
+          "refId": "A",
+          "legendFormat": "$before",
+          "instant": true,
+          "range": false,
+          "format": "time_series"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus-longterm"
+          },
+          "expr": "histogram_quantile(0.5, sum by (le) (sum_over_time(eff:${app}_ui_item_duration_bucket:increase1h{deployment_environment=\"$env\", staff=~\"$staff\", version=\"$after\"}[$__range])))",
+          "refId": "B",
+          "legendFormat": "$after",
+          "instant": true,
+          "range": false,
+          "format": "time_series"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ms",
+          "noValue": "–",
+          "color": {
+            "mode": "palette-classic"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "value",
+        "graphMode": "none",
+        "textMode": "value_and_name",
+        "orientation": "vertical"
+      },
+      "id": 13,
+      "gridPos": {
+        "x": 20,
+        "y": 5,
+        "w": 4,
+        "h": 4
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus-longterm"
+      }
+    },
+    {
+      "type": "row",
+      "title": "Every version side by side (the time range)",
+      "collapsed": false,
+      "panels": [],
+      "id": 14,
+      "gridPos": {
+        "x": 0,
+        "y": 9,
+        "w": 24,
+        "h": 1
+      }
+    },
+    {
+      "type": "table",
+      "title": "Per version: orders, time, inputs per order",
+      "description": "Each app version over the time range: finished orders, the median time per order, and keys / clicks / searches / undo / right-clicks per order.",
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus-longterm"
+          },
+          "expr": "sum by (version) (sum_over_time(eff:${app}_ui_order_duration_count:increase1h{deployment_environment=\"$env\", staff=~\"$staff\", outcome=~\"sent|cash_out|changes_sent\"}[$__range]))",
+          "refId": "A",
+          "legendFormat": "",
+          "instant": true,
+          "range": false,
+          "format": "table"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus-longterm"
+          },
+          "expr": "histogram_quantile(0.5, sum by (le, version) (sum_over_time(eff:${app}_ui_order_duration_bucket:increase1h{deployment_environment=\"$env\", staff=~\"$staff\", outcome=~\"sent|cash_out|changes_sent\"}[$__range])))",
+          "refId": "B",
+          "legendFormat": "",
+          "instant": true,
+          "range": false,
+          "format": "table"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus-longterm"
+          },
+          "expr": "sum by (version) (sum_over_time(eff:${app}_ui_order_inputs:increase1h{deployment_environment=\"$env\", staff=~\"$staff\", input=\"keys\"}[$__range])) / sum by (version) (sum_over_time(eff:${app}_ui_order_duration_count:increase1h{deployment_environment=\"$env\", staff=~\"$staff\", outcome=~\"sent|cash_out|changes_sent\"}[$__range]))",
+          "refId": "C",
+          "legendFormat": "",
+          "instant": true,
+          "range": false,
+          "format": "table"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus-longterm"
+          },
+          "expr": "sum by (version) (sum_over_time(eff:${app}_ui_order_inputs:increase1h{deployment_environment=\"$env\", staff=~\"$staff\", input=\"clicks\"}[$__range])) / sum by (version) (sum_over_time(eff:${app}_ui_order_duration_count:increase1h{deployment_environment=\"$env\", staff=~\"$staff\", outcome=~\"sent|cash_out|changes_sent\"}[$__range]))",
+          "refId": "D",
+          "legendFormat": "",
+          "instant": true,
+          "range": false,
+          "format": "table"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus-longterm"
+          },
+          "expr": "sum by (version) (sum_over_time(eff:${app}_ui_order_inputs:increase1h{deployment_environment=\"$env\", staff=~\"$staff\", input=\"searches\"}[$__range])) / sum by (version) (sum_over_time(eff:${app}_ui_order_duration_count:increase1h{deployment_environment=\"$env\", staff=~\"$staff\", outcome=~\"sent|cash_out|changes_sent\"}[$__range]))",
+          "refId": "E",
+          "legendFormat": "",
+          "instant": true,
+          "range": false,
+          "format": "table"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus-longterm"
+          },
+          "expr": "sum by (version) (sum_over_time(eff:${app}_ui_order_inputs:increase1h{deployment_environment=\"$env\", staff=~\"$staff\", input=\"undos\"}[$__range])) / sum by (version) (sum_over_time(eff:${app}_ui_order_duration_count:increase1h{deployment_environment=\"$env\", staff=~\"$staff\", outcome=~\"sent|cash_out|changes_sent\"}[$__range]))",
+          "refId": "F",
+          "legendFormat": "",
+          "instant": true,
+          "range": false,
+          "format": "table"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus-longterm"
+          },
+          "expr": "sum by (version) (sum_over_time(eff:${app}_ui_order_inputs:increase1h{deployment_environment=\"$env\", staff=~\"$staff\", input=\"right_clicks\"}[$__range])) / sum by (version) (sum_over_time(eff:${app}_ui_order_duration_count:increase1h{deployment_environment=\"$env\", staff=~\"$staff\", outcome=~\"sent|cash_out|changes_sent\"}[$__range]))",
+          "refId": "G",
+          "legendFormat": "",
+          "instant": true,
+          "range": false,
+          "format": "table"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "decimals": 1,
+          "noValue": "none yet"
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "median order"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "ms"
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "showHeader": true
+      },
+      "transformations": [
+        {
+          "id": "merge",
+          "options": {}
+        },
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {
+              "Time": true
+            },
+            "renameByName": {
+              "Value #A": "orders",
+              "Value #B": "median order",
+              "Value #C": "keys / order",
+              "Value #D": "clicks / order",
+              "Value #E": "searches / order",
+              "Value #F": "undo / order",
+              "Value #G": "right-clicks / order"
+            }
+          }
+        }
+      ],
+      "id": 15,
+      "gridPos": {
+        "x": 0,
+        "y": 10,
+        "w": 24,
+        "h": 7
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus-longterm"
+      }
+    },
+    {
+      "type": "table",
+      "title": "Keys, chords and F-keys by version",
+      "description": "How often each named key / chord was used per version (F2, ctrl+z, Escape, /, ?…; other = anything else).",
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus-longterm"
+          },
+          "expr": "sort_desc(sum by (key, version) (sum_over_time(eff:${app}_ui_keys:increase1h{deployment_environment=\"$env\", staff=~\"$staff\"}[$__range])))",
+          "refId": "A",
+          "legendFormat": "",
+          "instant": true,
+          "range": false,
+          "format": "table"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "decimals": 1,
+          "noValue": "none yet"
+        },
+        "overrides": []
+      },
+      "options": {
+        "showHeader": true
+      },
+      "transformations": [
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {
+              "Time": true
+            }
+          }
+        }
+      ],
+      "id": 16,
+      "gridPos": {
+        "x": 0,
+        "y": 17,
+        "w": 8,
+        "h": 9
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus-longterm"
+      }
+    },
+    {
+      "type": "table",
+      "title": "Searches by kind and outcome, by version",
+      "description": "Searches by what was picked (item, alias, choice = a mod, size, customer, order) or how they were abandoned (esc, blur, cleared), per version.",
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus-longterm"
+          },
+          "expr": "sort_desc(sum by (kind, outcome, version) (sum_over_time(eff:${app}_ui_search_duration_count:increase1h{deployment_environment=\"$env\", staff=~\"$staff\"}[$__range])))",
+          "refId": "A",
+          "legendFormat": "",
+          "instant": true,
+          "range": false,
+          "format": "table"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "decimals": 1,
+          "noValue": "none yet"
+        },
+        "overrides": []
+      },
+      "options": {
+        "showHeader": true
+      },
+      "transformations": [
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {
+              "Time": true
+            }
+          }
+        }
+      ],
+      "id": 17,
+      "gridPos": {
+        "x": 8,
+        "y": 17,
+        "w": 8,
+        "h": 9
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus-longterm"
+      }
+    },
+    {
+      "type": "table",
+      "title": "Right-click, menus, undo, screen pops by version",
+      "description": "right_click, context_open / context_pick (the right-click menu), undo / redo / undo_empty, screen_pop_<delivery|takeout|dismissed>, per version.",
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus-longterm"
+          },
+          "expr": "sort_desc(sum by (action, version) (sum_over_time(eff:${app}_ui_actions:increase1h{deployment_environment=\"$env\", staff=~\"$staff\"}[$__range])))",
+          "refId": "A",
+          "legendFormat": "",
+          "instant": true,
+          "range": false,
+          "format": "table"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "decimals": 1,
+          "noValue": "none yet"
+        },
+        "overrides": []
+      },
+      "options": {
+        "showHeader": true
+      },
+      "transformations": [
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {
+              "Time": true
+            }
+          }
+        }
+      ],
+      "id": 18,
+      "gridPos": {
+        "x": 16,
+        "y": 17,
+        "w": 8,
+        "h": 9
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus-longterm"
+      }
+    },
+    {
+      "type": "table",
+      "title": "Items by how they were found, by version",
+      "description": "Items added from the menu buttons, a search or a store alias, per version.",
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus-longterm"
+          },
+          "expr": "sort_desc(sum by (via, version) (sum_over_time(eff:${app}_ui_item_duration_count:increase1h{deployment_environment=\"$env\", staff=~\"$staff\"}[$__range])))",
+          "refId": "A",
+          "legendFormat": "",
+          "instant": true,
+          "range": false,
+          "format": "table"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "decimals": 1,
+          "noValue": "none yet"
+        },
+        "overrides": []
+      },
+      "options": {
+        "showHeader": true
+      },
+      "transformations": [
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {
+              "Time": true
+            }
+          }
+        }
+      ],
+      "id": 19,
+      "gridPos": {
+        "x": 0,
+        "y": 26,
+        "w": 8,
+        "h": 8
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus-longterm"
+      }
+    },
+    {
+      "type": "table",
+      "title": "Time on each step (median) by version",
+      "description": "phone, account, customer_form, menu, cash_out: the median per version.",
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus-longterm"
+          },
+          "expr": "histogram_quantile(0.5, sum by (le, step, version) (sum_over_time(eff:${app}_ui_step_duration_bucket:increase1h{deployment_environment=\"$env\", staff=~\"$staff\"}[$__range])))",
+          "refId": "A",
+          "legendFormat": "",
+          "instant": true,
+          "range": false,
+          "format": "table"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ms",
+          "decimals": 1,
+          "noValue": "none yet"
+        },
+        "overrides": []
+      },
+      "options": {
+        "showHeader": true
+      },
+      "transformations": [
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {
+              "Time": true
+            }
+          }
+        }
+      ],
+      "id": 20,
+      "gridPos": {
+        "x": 8,
+        "y": 26,
+        "w": 8,
+        "h": 8
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus-longterm"
+      }
+    },
+    {
+      "type": "table",
+      "title": "Per agent and version: median time per order",
+      "description": "Each agent's median time per order per version: compare an agent with themselves.",
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus-longterm"
+          },
+          "expr": "histogram_quantile(0.5, sum by (le, staff, version) (sum_over_time(eff:${app}_ui_order_duration_bucket:increase1h{deployment_environment=\"$env\", staff=~\"$staff\", outcome=~\"sent|cash_out|changes_sent\"}[$__range])))",
+          "refId": "A",
+          "legendFormat": "",
+          "instant": true,
+          "range": false,
+          "format": "table"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ms",
+          "decimals": 1,
+          "noValue": "none yet"
+        },
+        "overrides": []
+      },
+      "options": {
+        "showHeader": true
+      },
+      "transformations": [
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {
+              "Time": true
+            }
+          }
+        }
+      ],
+      "id": 21,
+      "gridPos": {
+        "x": 16,
+        "y": 26,
+        "w": 8,
+        "h": 8
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus-longterm"
+      }
+    },
+    {
+      "type": "row",
+      "title": "Over time (a point per day)",
+      "collapsed": false,
+      "panels": [],
+      "id": 22,
+      "gridPos": {
+        "x": 0,
+        "y": 34,
+        "w": 24,
+        "h": 1
+      }
+    },
+    {
+      "type": "timeseries",
+      "title": "Time per order (median per day) by version",
+      "description": "The median order of each day, per app version: a new version's line should sit lower.",
+      "interval": "1d",
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus-longterm"
+          },
+          "expr": "histogram_quantile(0.5, sum by (le, version) (sum_over_time(eff:${app}_ui_order_duration_bucket:increase1h{deployment_environment=\"$env\", staff=~\"$staff\", outcome=~\"sent|cash_out|changes_sent\"}[1d])))",
+          "refId": "A",
+          "legendFormat": "{{version}}",
+          "range": true
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ms",
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 2,
+            "fillOpacity": 10,
+            "showPoints": "always",
+            "spanNulls": false
+          },
+          "noValue": "no data"
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "right",
+          "calcs": [
+            "mean",
+            "last"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "id": 23,
+      "gridPos": {
+        "x": 0,
+        "y": 35,
+        "w": 12,
+        "h": 8
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus-longterm"
+      }
+    },
+    {
+      "type": "timeseries",
+      "title": "Keys per order (per day) by version",
+      "description": "Keys spent per finished order each day, per version.",
+      "interval": "1d",
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus-longterm"
+          },
+          "expr": "sum by (version) (sum_over_time(eff:${app}_ui_order_inputs:increase1h{deployment_environment=\"$env\", staff=~\"$staff\", input=\"keys\"}[1d])) / sum by (version) (sum_over_time(eff:${app}_ui_order_duration_count:increase1h{deployment_environment=\"$env\", staff=~\"$staff\", outcome=~\"sent|cash_out|changes_sent\"}[1d]))",
+          "refId": "A",
+          "legendFormat": "{{version}}",
+          "range": true
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 2,
+            "fillOpacity": 10,
+            "showPoints": "always",
+            "spanNulls": false
+          },
+          "noValue": "no data"
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "right",
+          "calcs": [
+            "mean",
+            "last"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "id": 24,
+      "gridPos": {
+        "x": 12,
+        "y": 35,
+        "w": 12,
+        "h": 8
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus-longterm"
+      }
+    },
+    {
+      "type": "timeseries",
+      "title": "Chords + F-keys per day by key",
+      "description": "How the shortcuts catch on.",
+      "interval": "1d",
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus-longterm"
+          },
+          "expr": "sum by (key) (sum_over_time(eff:${app}_ui_keys:increase1h{deployment_environment=\"$env\", staff=~\"$staff\", key=~\"F[0-9]+|ctrl.*\"}[1d]))",
+          "refId": "A",
+          "legendFormat": "{{key}}",
+          "range": true
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 2,
+            "fillOpacity": 10,
+            "showPoints": "always",
+            "spanNulls": false
+          },
+          "noValue": "no data"
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "right",
+          "calcs": [
+            "mean",
+            "last"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "id": 25,
+      "gridPos": {
+        "x": 0,
+        "y": 43,
+        "w": 12,
+        "h": 8
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus-longterm"
+      }
+    },
+    {
+      "type": "timeseries",
+      "title": "Searches per day by what was picked",
+      "description": "item, alias, choice (mods), size, customer, order.",
+      "interval": "1d",
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus-longterm"
+          },
+          "expr": "sum by (kind) (sum_over_time(eff:${app}_ui_search_duration_count:increase1h{deployment_environment=\"$env\", staff=~\"$staff\", outcome=\"pick\"}[1d]))",
+          "refId": "A",
+          "legendFormat": "{{kind}}",
+          "range": true
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 2,
+            "fillOpacity": 10,
+            "showPoints": "always",
+            "spanNulls": false
+          },
+          "noValue": "no data"
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "right",
+          "calcs": [
+            "mean",
+            "last"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "id": 26,
+      "gridPos": {
+        "x": 12,
+        "y": 43,
+        "w": 12,
+        "h": 8
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus-longterm"
+      }
+    }
+  ]
+}

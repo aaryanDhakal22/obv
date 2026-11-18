@@ -77,3 +77,12 @@ datasources:
       exemplarTraceIdDestinations:
         - name: trace_id
           datasourceUid: tempo
+
+  # The efficiency roll-ups kept 1 year (eff:* series only; README "Long-term efficiency").
+  - name: Prometheus (1 year)
+    type: prometheus
+    uid: prometheus-longterm
+    access: proxy
+    url: http://prometheus-longterm:9090
+    jsonData:
+      timeInterval: 1h

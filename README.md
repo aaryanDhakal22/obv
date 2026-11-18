@@ -14,6 +14,7 @@ It's **deployable on its own** (nothing here depends on the rest of the Quicc re
 | `quicc-tempo` | Trace storage (7-day retention, local filesystem). | `3200` HTTP API |
 | `quicc-loki` | Log storage with OTLP ingest enabled (30 days; the UI telemetry 1 day detailed / 7 days digest, see Retention). | `3100` |
 | `quicc-prometheus` | Metrics storage. Receives via `remote_write` from the Collector. Exemplars enabled. | `9090` |
+| `quicc-prometheus-longterm` | The efficiency roll-ups kept 1 year (hourly recording rules over the main Prometheus by remote read; nothing raw). Grafana datasource **Prometheus (1 year)**. | `9091` (host) → 9090 |
 | `quicc-grafana` | UI. Datasources and dashboards provisioned. | `3001` (host) → 3000 (container) — 3001 avoids colliding with other local dev UIs on 3000 |
 
 ## Run
@@ -90,6 +91,7 @@ lines were silently dropped before).
 - **Fleet & upgrades** (`fleet`): stores safe / not safe to upgrade, Pis gone quiet, agent, Quibase and Centurion (counter terminal) versions running and the newest seen, main version. **Terminal update state** lists each counter terminal's last reported app-update state (red = failed, amber = waiting for a tap), its Centurion version and whether it is connected. **Upgrade checks per store** gives SAFE / WAIT plus each check's value: no open orders, printers up, disk ≥ 500 MB, temp < 80 °C, no alert conditions, Pi linked, a tablet connected, and whether the agent is behind the newest version; terminals connected and terminal behind are shown beside them, not part of the verdict. "Newest" is the version first seen most recently in prod or staging over 30 days. The Centurion panels read the agent's `floor_terminals_version` / `floor_terminals_connected` / `floor_terminals_update_state` (agent 2.5.5) and show No data until the Pis run it. The dashboard also has Quibase tablets per version, the hub per store, a per-Pi table (version, last seen, agent and Pi uptime, disk, temp, SD errors, last good update, update results, reconnects), rollouts over time (Pis per agent version, tablets per Quibase version, terminals per Centurion version, updates and restarts), Pi hardware and Pi/hub logs.
 - **Store floor & devices** (`store-floor`, today): one store's in-store pieces together. Store hub (the callout box): hub → Pi and Pi → hub up/down, hub version, feed lag. (The SoftTouch tiles and graphs went with SoftTouch, 2026-11-11.) Pi: version, uptime, temperature, disk free, SD card errors, last good update; temperature, disk and update runs over time. Floor: tablets connected, open orders by state, accept p95, sync backlog, driver route messages sent/rejected; accept p95 by source, floor sync p95 by event type. Printing: printers up/down, print failures, print p95, reprints by source, tickets per printer, items routed to a station vs unmatched; tickets per printer, printer write and probe p95 over time.
 - **Counter** (`counter`, today): the store's own counter terminal (TERMINAL-PLAN.md). Right now: Pi ↔ main link, sync backlog, money events main refused, events parked on the Pi, printers down, PIN / password lockouts. Counter orders: stored by main vs placed on the Pi, changes after SEND, voids, pickups handed over, customers saved; counter events stored by main by type. Money: payments, drawer opens / movements / closes and journal batches main stored. Kitchen tickets: printed nowhere, counter orders with no kitchen ticket, reroutes, kitchen resends, print p95, print trouble; failures by reason, printers up. Pi ↔ main sync: backlog, events sent by result, sync delay p95 per counter event type, a type × result table, the refusal log lines. Terminals & staff: lockouts and the Pi's 4xx / 5xx by status. Day close: Z reports stored, Z problems on the Pi, batches closed, auto-close failures, Z refused by main, driver reports failed, the day-close log lines; then every counter log line. Counts come from main's `floor.events.received{type,result}` (exactly once per event), the Pi's floor-sync / printing metrics and the Pi's and main's stable log messages. **Text panels** stand where data doesn't exist yet and name the metric they wait for (CM-0 … CM-14 in the quicc-ops `HARDENING-PLAN.md` R-1a): sales $ and tenders, refunds / voids / comps with who, discounts and price changes over the limit, payment errors, drawer over / short, orders by type and source, terminals connected, wrong PINs per terminal, oldest unsynced money event. The money panels are the one exception to "no business stats": they're there to spot money that didn't arrive, and come from main's applied events, never the database.
+- **Efficiency over time** (`efficiency`, 2026-11-18): the agents' and cashiers' efficiency per app version over a year, from the long-term roll-ups (Long-term efficiency below).
 - **Call center** (`callcenter`, 2026-11-14): the call center's web app (quicc-callcenter 1.0.6+, `service_name="quicc-callcenter"`). Right now: browsers open, browsers on an old version (opened before the last deploy), round trip p95, the call center's own internet p95 (round trip minus main + the store, from the relay's `Server-Timing`), main + store p95, card attempts that failed before reaching the store, cards charged, main's version and reachability. Latency: where the time goes over time, internet per computer, slowest routes on both sides, calls by outcome, live-stream drops / downtime. Cards: attempts by stage (sdk_load, attach, tokenize, charge) × outcome × Square's code × computer, step p95. Versions and the page: browsers by version, server build + main version, page load p95, page errors. Metrics `callcenter_*` come from the app's own OTLP export (no SDK, `callcenter/src/lib/server/metrics.ts`): browsers report once a minute to `/api/telemetry`, the server times every relayed call and probes main every minute. **The agents** (2026-11-17, call center 1.0.13+, round C6: "credible data that the improvements are fruitful and not hurtful"), with an **Agent** picker: orders taken, median time per order, keys / clicks / undo per order, searches that found it; a per-agent table (orders, median order, keys, clicks, search picks, F-keys, right-clicks, undo per order); time per order and inputs per order **by app version** (before vs after a change); time on each step (phone, account, customer_form, menu, cash_out); an item from add to done by how it was found (menu, search, alias); search time to pick; keys and chords used and what they did; clicks by target; right-click menus, undo and screen pops; and every event as a Loki log line (`service_name="quicc-callcenter"`, scope `quicc.ui`, `staff` / `ui_*` fields). Metrics `callcenter_ui_*`; the event list is in the callcenter README "What the agents do". **Network & clock** (2026-11-17, agent N: tell clock vs network vs provider when Square's card box refuses a card with no reason): clocks off now (over 2 min), round trip to us p95, Square from the agents' computers p95, failed round trips, connection checks run, cards tried on a bad network; the clock offset per agent (±2 min lines), round trip to us per agent and internet provider, to Square per provider, failures per agent / provider / target, card outcome vs the clock and network sampled just before (`callcenter_card_net_total`), "Check my connection" runs by verdict; the 7-day digest and the 1-day clock / network / card detail from Loki. Metrics `callcenter_clock_offset_milliseconds` (gauge, last per agent; `staff`, `isp`), `callcenter_clock_bad_total` (`reason` offset / tz), `callcenter_net_rtt_milliseconds` (`target` us / square_js / pci; `staff`, `isp`), `callcenter_net_failures_total`, `callcenter_net_checks_total` (`verdict`, `via`), `callcenter_card_net_total` (`outcome`, `net`, `clock`, `isp`); the provider comes from the call center's offline ASN table (the agents' addresses are never sent anywhere). The Pi exports the same for Centurion as `terminal_clock_offset_milliseconds`, `terminal_net_*` (agent contract §2.10cf).
 
 **Quicc Debug** (`grafana/dashboards/debug/`) — module/stack drill-downs:
@@ -109,6 +111,7 @@ The Postgres reporting datasources from the first version are gone; `datasources
 | UI telemetry, **digest** (`detail="digest"`) | **7 days** | `loki.yaml` `retention_stream` `{detail="digest"}` 168h |
 | Traces | 7 days | `tempo.yaml` |
 | Metrics | 30 days or 8 GB, whichever first | `docker-compose.yml` Prometheus flags (unchanged) |
+| Efficiency roll-ups (`eff:*`, hourly) | **1 year** (400 days or 2 GB) | `prometheus-longterm` (below: Long-term efficiency) |
 
 **The UI telemetry (2026-11-17, agent N; the owner: "save all detailed logs for the day and maybe only save some or
 condense it by removing fluff and save it for a week. we can always cycle a week to maintain storage").** The call
@@ -164,6 +167,70 @@ Loki restarts in a few seconds; OTLP senders retry, so nothing is lost. The `det
 center (the next release after 1.0.12) and the Pi (the agent release with the digest) send it; until then the old
 `quicc.ui` lines keep the 30 days. To undo: `git revert` the commit and run step 2 again (lines already written with
 `detail` then simply keep the 30 days).
+
+## Long-term efficiency (1 year)
+
+The owner (2026-11-18): **"I thought we were keeping efficiency metrics too, so we can test new features and how their
+efficiency changes, like how often they use chords, how often they search mods, search items, etc."** The raw metrics
+live 30 days in the main Prometheus; their hourly roll-ups live **1 year** in a second, small Prometheus.
+
+- **What is kept**, per agent (`staff`), app `version` and environment (+ `store` for the call center, `tenant` for
+  Centurion through the Pi), for `app` = `callcenter` (the call center's server, `callcenter.ui.*`) and `terminal`
+  (Centurion through the Pi, `terminal.ui.*`, agent contract §2.10cf):
+  - named keys, chords and F-keys by name (`ui_keys`: F2, ctrl+z, Escape, /, ?…; anything else = `other`);
+  - searches by kind (item / alias / choice = a mod / size / customer / order) and outcome (pick / abandon), with the
+    time to pick (`ui_search_duration`);
+  - right-clicks, the right-click menu, undo / redo / nothing to undo, screen pops by choice (`ui_actions`);
+  - items by how they were found (menu / search / alias) and their add-to-done time (`ui_item_duration`);
+  - time per step and per order (`ui_step_duration`, `ui_order_duration`);
+  - keys, clicks, right-clicks, F-keys, searches, picks and undo per order (`ui_order_inputs`).
+- **How:** `prometheus-longterm/efficiency.rules.yaml` = 30 recording rules, group interval **1 h**, each the last hour's
+  `increase(…[1h])` summed by those labels (`eff:<app>_<metric>:increase1h`; histograms as `_count`, `_sum`, `_bucket`).
+  The long-term Prometheus evaluates them over the main one's series through **remote read**
+  (`prometheus-longterm/prometheus-longterm.yaml`, `read_recent: true`) and stores only the results; nothing scrapes into
+  it. Counters keep only hours with something (`> 0`); a histogram's whole bucket set is kept for the hours its count
+  moved (a missing low bucket would skew a quantile). Totals over a range = `sum_over_time(eff:…[range])`; a median =
+  `histogram_quantile(0.5, sum by (le, …) (sum_over_time(eff:…_bucket:increase1h[range])))`.
+- **Dashboard: Efficiency over time** (`efficiency`, linked from Call center): App (callcenter / terminal), Environment,
+  Agent, **Before** and **After** versions. Before → after stats over the time range (orders, median order, keys /
+  clicks / searches / chords + F-keys / undo / right-clicks per order, searches that found it, items found by search or
+  alias, time to pick, item add-to-done); every version side by side (a per-version table; keys and chords, searches by
+  kind and outcome, right-click / menus / undo / screen pops, items by how found, step medians, each agent's median
+  order, all by version); a point per day over time (median order and keys per order by version, chords per day by key,
+  searches per day by kind).
+- **Size:** about 550 series per agent and version, written only for the hours the agent worked: 8 agents + 3 cashiers,
+  8 h a day → ~1.6 million samples a month, **~3–5 MB a month** with the index (~50 MB a year). Capped at 2 GB / 400
+  days anyway. The main Prometheus gains a few hundred series from the new labels (`version` on the step / search
+  histograms, `callcenter.ui.keys`, `callcenter.ui.actions`, the Pi's per-staff / per-version labels): nothing next to
+  its 8 GB.
+- **Checks before deploy:** `promtool check config`, `promtool check rules` and `promtool test rules
+  prometheus-longterm/efficiency.test.yaml` (synthetic series: the first hour kept, an idle hour not), run in
+  `prom/prometheus:v3.0.1`; a live test (a 5-second rule through remote read against a second Prometheus) stored its
+  result. The roll-ups start when the long-term Prometheus starts (no backfill; the main Prometheus's 30 days could be
+  backfilled with `promtool tsdb create-blocks-from rules` if wanted).
+
+### Deploying the long-term efficiency store (the lead applies it after ship prd)
+
+The `callcenter.ui.keys` / `callcenter.ui.actions` metrics come with the call center release after 1.0.12 and the
+Pi's per-staff / per-version labels with the agent release after it; the store can go up before or after them.
+
+```bash
+cd ~/observability && git pull
+IMG=prom/prometheus:v3.0.1
+docker run --rm --entrypoint promtool -v "$PWD/prometheus-longterm:/w" -w /w $IMG check config prometheus-longterm.yaml
+docker run --rm --entrypoint promtool -v "$PWD/prometheus-longterm:/w" -w /w $IMG check rules efficiency.rules.yaml
+docker run --rm --entrypoint promtool -v "$PWD/prometheus-longterm:/w" -w /w $IMG test rules efficiency.test.yaml
+# start it (new volume prometheus_longterm_data) and let Grafana see the new datasource + dashboard
+DOPPLER_TOKEN=$(cat .doppler-obv-token) doppler run -- docker compose up -d prometheus-longterm grafana
+# checks
+curl -s localhost:9091/-/ready                                              # "Prometheus Server is Ready."
+curl -s localhost:9091/api/v1/rules | grep -o '"health":"[a-z]*"' | sort | uniq -c   # 30, "unknown" until the first hour, then "ok"
+# after an hour with orders taken:
+curl -s 'localhost:9091/api/v1/query?query=count(%7B__name__%3D~%22eff:.*%22%7D)'
+```
+
+Grafana: Quicc › **Efficiency over time** (datasource "Prometheus (1 year)"). To undo: `docker compose stop
+prometheus-longterm` (its volume keeps the roll-ups).
 
 ## Alerting — "an order failed on some module" → Pushover
 

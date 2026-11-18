@@ -1,0 +1,44 @@
+# promtool test rules prometheus-longterm/efficiency.test.yaml (README "Long-term efficiency": the check before deploy).
+rule_files:
+  - efficiency.rules.yaml
+evaluation_interval: 1h
+tests:
+  - interval: 15m
+    input_series:
+      - series: 'callcenter_ui_keys_total{deployment_environment="prod", store="S", staff="Dana C.", version="1.0.13", key="F2", service_instance_id="a"}'
+        values: '0 2 4 6 8 8 8 8 8'
+      - series: 'callcenter_ui_order_duration_milliseconds_count{deployment_environment="prod", store="S", staff="Dana C.", version="1.0.13", outcome="sent", type="delivery", pop="no"}'
+        values: '0 1 2 3 4 4 4 4 4'
+      - series: 'callcenter_ui_order_duration_milliseconds_bucket{deployment_environment="prod", store="S", staff="Dana C.", version="1.0.13", outcome="sent", type="delivery", pop="no", le="30000"}'
+        values: '0 0 0 0 0 0 0 0 0'
+      - series: 'callcenter_ui_order_duration_milliseconds_bucket{deployment_environment="prod", store="S", staff="Dana C.", version="1.0.13", outcome="sent", type="delivery", pop="no", le="+Inf"}'
+        values: '0 1 2 3 4 4 4 4 4'
+      - series: 'terminal_ui_actions_total{deployment_environment="prod", tenant="lombardis", staff="Ana", version="1.0.9", action="undo"}'
+        values: '0 0 1 1 1 1 1 1 1'
+    alert_rule_test: []
+    promql_expr_test:
+      # The first hour: 8 F2 keys, 4 orders, the whole bucket set (the empty 30 s bucket kept).
+      - expr: eff:callcenter_ui_keys:increase1h
+        eval_time: 1h
+        exp_samples:
+          - labels: 'eff:callcenter_ui_keys:increase1h{deployment_environment="prod", store="S", staff="Dana C.", version="1.0.13", key="F2"}'
+            value: 8
+      - expr: eff:callcenter_ui_order_duration_bucket:increase1h
+        eval_time: 1h
+        exp_samples:
+          - labels: 'eff:callcenter_ui_order_duration_bucket:increase1h{deployment_environment="prod", store="S", staff="Dana C.", version="1.0.13", outcome="sent", type="delivery", le="30000"}'
+            value: 0
+          - labels: 'eff:callcenter_ui_order_duration_bucket:increase1h{deployment_environment="prod", store="S", staff="Dana C.", version="1.0.13", outcome="sent", type="delivery", le="+Inf"}'
+            value: 4
+      - expr: eff:terminal_ui_actions:increase1h
+        eval_time: 1h
+        exp_samples:
+          - labels: 'eff:terminal_ui_actions:increase1h{deployment_environment="prod", tenant="lombardis", staff="Ana", version="1.0.9", action="undo"}'
+            value: 1
+      # The second hour: nothing happened, nothing is kept.
+      - expr: eff:callcenter_ui_keys:increase1h
+        eval_time: 2h
+        exp_samples: []
+      - expr: eff:callcenter_ui_order_duration_bucket:increase1h
+        eval_time: 2h
+        exp_samples: []

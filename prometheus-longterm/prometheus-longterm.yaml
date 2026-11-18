@@ -1,0 +1,13 @@
+# The long-term Prometheus (2026-11-18): only the efficiency roll-ups, kept 1 year (README "Long-term efficiency").
+# It stores nothing raw: its rules read the main Prometheus's series through remote read (read_recent: the last hour
+# is exactly what they need) and keep their own hourly results. Nothing scrapes into it.
+global:
+  evaluation_interval: 1h
+
+remote_read:
+  - url: http://prometheus:9090/api/v1/read
+    name: main
+    read_recent: true
+
+rule_files:
+  - /etc/prometheus/rules/*.rules.yaml

@@ -1,0 +1,76 @@
+# The efficiency metrics, kept 1 year (the owner 2026-11-18: "I thought we were keeping efficiency metrics too, so we
+# can test new features and how their efficiency changes, like how often they use chords, how often they search mods,
+# search items, etc."). Evaluated by the long-term Prometheus (prometheus-longterm.yaml) once an hour over the main
+# Prometheus's raw series (remote read): each rule is the last hour's increase, per agent (staff) and app version,
+# stored here only. Totals over any range: sum_over_time(eff:…[range]); a median over a range:
+# histogram_quantile(0.5, sum by (le, …) (sum_over_time(eff:…_bucket:increase1h[range]))).
+# Counters keep only hours with something (> 0); a histogram's buckets are kept for the hours its count moved, as a
+# whole set (a missing low bucket would skew the quantile). README "Long-term efficiency" has the sizing;
+# the names mirror callcenter.ui.* (the call center's server) and terminal.ui.* (the Pi, Centurion).
+groups:
+  - name: efficiency-callcenter
+    interval: 1h
+    rules:
+      - record: eff:callcenter_ui_keys:increase1h
+        expr: sum by (deployment_environment, store, staff, version, key) (increase(callcenter_ui_keys_total[1h])) > 0
+      - record: eff:callcenter_ui_actions:increase1h
+        expr: sum by (deployment_environment, store, staff, version, action) (increase(callcenter_ui_actions_total[1h])) > 0
+      - record: eff:callcenter_ui_order_inputs:increase1h
+        expr: sum by (deployment_environment, store, staff, version, input, type) (increase(callcenter_ui_order_inputs_total[1h])) > 0
+      - record: eff:callcenter_ui_order_duration_count:increase1h
+        expr: sum by (deployment_environment, store, staff, version, outcome, type) (increase(callcenter_ui_order_duration_milliseconds_count[1h])) > 0
+      - record: eff:callcenter_ui_order_duration_sum:increase1h
+        expr: sum by (deployment_environment, store, staff, version, outcome, type) (increase(callcenter_ui_order_duration_milliseconds_sum[1h])) and on (deployment_environment, store, staff, version, outcome, type) (sum by (deployment_environment, store, staff, version, outcome, type) (increase(callcenter_ui_order_duration_milliseconds_count[1h])) > 0)
+      - record: eff:callcenter_ui_order_duration_bucket:increase1h
+        expr: sum by (le, deployment_environment, store, staff, version, outcome, type) (increase(callcenter_ui_order_duration_milliseconds_bucket[1h])) and on (deployment_environment, store, staff, version, outcome, type) (sum by (deployment_environment, store, staff, version, outcome, type) (increase(callcenter_ui_order_duration_milliseconds_count[1h])) > 0)
+      - record: eff:callcenter_ui_step_duration_count:increase1h
+        expr: sum by (deployment_environment, store, staff, version, step, type) (increase(callcenter_ui_step_duration_milliseconds_count[1h])) > 0
+      - record: eff:callcenter_ui_step_duration_sum:increase1h
+        expr: sum by (deployment_environment, store, staff, version, step, type) (increase(callcenter_ui_step_duration_milliseconds_sum[1h])) and on (deployment_environment, store, staff, version, step, type) (sum by (deployment_environment, store, staff, version, step, type) (increase(callcenter_ui_step_duration_milliseconds_count[1h])) > 0)
+      - record: eff:callcenter_ui_step_duration_bucket:increase1h
+        expr: sum by (le, deployment_environment, store, staff, version, step, type) (increase(callcenter_ui_step_duration_milliseconds_bucket[1h])) and on (deployment_environment, store, staff, version, step, type) (sum by (deployment_environment, store, staff, version, step, type) (increase(callcenter_ui_step_duration_milliseconds_count[1h])) > 0)
+      - record: eff:callcenter_ui_search_duration_count:increase1h
+        expr: sum by (deployment_environment, store, staff, version, outcome, kind) (increase(callcenter_ui_search_duration_milliseconds_count[1h])) > 0
+      - record: eff:callcenter_ui_search_duration_sum:increase1h
+        expr: sum by (deployment_environment, store, staff, version, outcome, kind) (increase(callcenter_ui_search_duration_milliseconds_sum[1h])) and on (deployment_environment, store, staff, version, outcome, kind) (sum by (deployment_environment, store, staff, version, outcome, kind) (increase(callcenter_ui_search_duration_milliseconds_count[1h])) > 0)
+      - record: eff:callcenter_ui_search_duration_bucket:increase1h
+        expr: sum by (le, deployment_environment, store, staff, version, outcome, kind) (increase(callcenter_ui_search_duration_milliseconds_bucket[1h])) and on (deployment_environment, store, staff, version, outcome, kind) (sum by (deployment_environment, store, staff, version, outcome, kind) (increase(callcenter_ui_search_duration_milliseconds_count[1h])) > 0)
+      - record: eff:callcenter_ui_item_duration_count:increase1h
+        expr: sum by (deployment_environment, store, staff, version, via) (increase(callcenter_ui_item_duration_milliseconds_count[1h])) > 0
+      - record: eff:callcenter_ui_item_duration_sum:increase1h
+        expr: sum by (deployment_environment, store, staff, version, via) (increase(callcenter_ui_item_duration_milliseconds_sum[1h])) and on (deployment_environment, store, staff, version, via) (sum by (deployment_environment, store, staff, version, via) (increase(callcenter_ui_item_duration_milliseconds_count[1h])) > 0)
+      - record: eff:callcenter_ui_item_duration_bucket:increase1h
+        expr: sum by (le, deployment_environment, store, staff, version, via) (increase(callcenter_ui_item_duration_milliseconds_bucket[1h])) and on (deployment_environment, store, staff, version, via) (sum by (deployment_environment, store, staff, version, via) (increase(callcenter_ui_item_duration_milliseconds_count[1h])) > 0)
+  - name: efficiency-terminal
+    interval: 1h
+    rules:
+      - record: eff:terminal_ui_keys:increase1h
+        expr: sum by (deployment_environment, tenant, staff, version, key) (increase(terminal_ui_keys_total[1h])) > 0
+      - record: eff:terminal_ui_actions:increase1h
+        expr: sum by (deployment_environment, tenant, staff, version, action) (increase(terminal_ui_actions_total[1h])) > 0
+      - record: eff:terminal_ui_order_inputs:increase1h
+        expr: sum by (deployment_environment, tenant, staff, version, input, type) (increase(terminal_ui_order_inputs_total[1h])) > 0
+      - record: eff:terminal_ui_order_duration_count:increase1h
+        expr: sum by (deployment_environment, tenant, staff, version, outcome, type) (increase(terminal_ui_order_duration_milliseconds_count[1h])) > 0
+      - record: eff:terminal_ui_order_duration_sum:increase1h
+        expr: sum by (deployment_environment, tenant, staff, version, outcome, type) (increase(terminal_ui_order_duration_milliseconds_sum[1h])) and on (deployment_environment, tenant, staff, version, outcome, type) (sum by (deployment_environment, tenant, staff, version, outcome, type) (increase(terminal_ui_order_duration_milliseconds_count[1h])) > 0)
+      - record: eff:terminal_ui_order_duration_bucket:increase1h
+        expr: sum by (le, deployment_environment, tenant, staff, version, outcome, type) (increase(terminal_ui_order_duration_milliseconds_bucket[1h])) and on (deployment_environment, tenant, staff, version, outcome, type) (sum by (deployment_environment, tenant, staff, version, outcome, type) (increase(terminal_ui_order_duration_milliseconds_count[1h])) > 0)
+      - record: eff:terminal_ui_step_duration_count:increase1h
+        expr: sum by (deployment_environment, tenant, staff, version, step, type) (increase(terminal_ui_step_duration_milliseconds_count[1h])) > 0
+      - record: eff:terminal_ui_step_duration_sum:increase1h
+        expr: sum by (deployment_environment, tenant, staff, version, step, type) (increase(terminal_ui_step_duration_milliseconds_sum[1h])) and on (deployment_environment, tenant, staff, version, step, type) (sum by (deployment_environment, tenant, staff, version, step, type) (increase(terminal_ui_step_duration_milliseconds_count[1h])) > 0)
+      - record: eff:terminal_ui_step_duration_bucket:increase1h
+        expr: sum by (le, deployment_environment, tenant, staff, version, step, type) (increase(terminal_ui_step_duration_milliseconds_bucket[1h])) and on (deployment_environment, tenant, staff, version, step, type) (sum by (deployment_environment, tenant, staff, version, step, type) (increase(terminal_ui_step_duration_milliseconds_count[1h])) > 0)
+      - record: eff:terminal_ui_search_duration_count:increase1h
+        expr: sum by (deployment_environment, tenant, staff, version, outcome, kind) (increase(terminal_ui_search_duration_milliseconds_count[1h])) > 0
+      - record: eff:terminal_ui_search_duration_sum:increase1h
+        expr: sum by (deployment_environment, tenant, staff, version, outcome, kind) (increase(terminal_ui_search_duration_milliseconds_sum[1h])) and on (deployment_environment, tenant, staff, version, outcome, kind) (sum by (deployment_environment, tenant, staff, version, outcome, kind) (increase(terminal_ui_search_duration_milliseconds_count[1h])) > 0)
+      - record: eff:terminal_ui_search_duration_bucket:increase1h
+        expr: sum by (le, deployment_environment, tenant, staff, version, outcome, kind) (increase(terminal_ui_search_duration_milliseconds_bucket[1h])) and on (deployment_environment, tenant, staff, version, outcome, kind) (sum by (deployment_environment, tenant, staff, version, outcome, kind) (increase(terminal_ui_search_duration_milliseconds_count[1h])) > 0)
+      - record: eff:terminal_ui_item_duration_count:increase1h
+        expr: sum by (deployment_environment, tenant, staff, version, via) (increase(terminal_ui_item_duration_milliseconds_count[1h])) > 0
+      - record: eff:terminal_ui_item_duration_sum:increase1h
+        expr: sum by (deployment_environment, tenant, staff, version, via) (increase(terminal_ui_item_duration_milliseconds_sum[1h])) and on (deployment_environment, tenant, staff, version, via) (sum by (deployment_environment, tenant, staff, version, via) (increase(terminal_ui_item_duration_milliseconds_count[1h])) > 0)
+      - record: eff:terminal_ui_item_duration_bucket:increase1h
+        expr: sum by (le, deployment_environment, tenant, staff, version, via) (increase(terminal_ui_item_duration_milliseconds_bucket[1h])) and on (deployment_environment, tenant, staff, version, via) (sum by (deployment_environment, tenant, staff, version, via) (increase(terminal_ui_item_duration_milliseconds_count[1h])) > 0)

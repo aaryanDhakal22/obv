@@ -91,6 +91,26 @@ services:
     ports:
       - "${BIND_ADDR:-127.0.0.1}:9090:9090"
 
+  # The efficiency roll-ups, kept 1 year (2026-11-18, README "Long-term efficiency"): hourly recording rules read the
+  # main Prometheus by remote read and are stored here only. Small: a few MB a month, capped at 2 GB anyway.
+  prometheus-longterm:
+    image: prom/prometheus:v3.0.1
+    container_name: quicc-prometheus-longterm
+    restart: unless-stopped
+    command:
+      - "--config.file=/etc/prometheus/prometheus-longterm.yaml"
+      - "--storage.tsdb.path=/prometheus"
+      - "--storage.tsdb.retention.time=400d"
+      - "--storage.tsdb.retention.size=2GB"
+    volumes:
+      - ./prometheus-longterm/prometheus-longterm.yaml:/etc/prometheus/prometheus-longterm.yaml:ro
+      - ./prometheus-longterm:/etc/prometheus/rules:ro
+      - prometheus_longterm_data:/prometheus
+    ports:
+      - "${BIND_ADDR:-127.0.0.1}:9091:9090"
+    depends_on:
+      - prometheus
+
   grafana:
     image: grafana/grafana:11.4.0
     container_name: quicc-grafana
@@ -121,6 +141,7 @@ services:
       - tempo
       - loki
       - prometheus
+      - prometheus-longterm
     networks:
       - default
       - proxy
@@ -143,4 +164,5 @@ volumes:
   tempo_data:
   loki_data:
   prometheus_data:
+  prometheus_longterm_data:
   grafana_data:

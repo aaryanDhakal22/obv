@@ -109,6 +109,14 @@
       "icon": "external link",
       "targetBlank": false,
       "tooltip": ""
+    },
+    {
+      "title": "Efficiency over time (1 year, per version)",
+      "type": "link",
+      "url": "/d/efficiency",
+      "icon": "dashboard",
+      "targetBlank": false,
+      "tooltip": "Keys, chords, searches, undo, right-click, items by how found, time per step and order, per agent and app version, kept 1 year"
     }
   ],
   "templating": {
