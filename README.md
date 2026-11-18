@@ -12,7 +12,7 @@ It's **deployable on its own** (nothing here depends on the rest of the Quicc re
 |---|---|---|
 | `quicc-otel-collector` | OTLP ingress for apps. Fans out to Tempo (traces), Loki (logs), Prometheus (metrics). | `4317` gRPC, `4318` HTTP |
 | `quicc-tempo` | Trace storage (7-day retention, local filesystem). | `3200` HTTP API |
-| `quicc-loki` | Log storage with OTLP ingest enabled. | `3100` |
+| `quicc-loki` | Log storage with OTLP ingest enabled (30 days; the UI telemetry 1 day detailed / 7 days digest, see Retention). | `3100` |
 | `quicc-prometheus` | Metrics storage. Receives via `remote_write` from the Collector. Exemplars enabled. | `9090` |
 | `quicc-grafana` | UI. Datasources and dashboards provisioned. | `3001` (host) → 3000 (container) — 3001 avoids colliding with other local dev UIs on 3000 |
 
@@ -90,7 +90,7 @@ lines were silently dropped before).
 - **Fleet & upgrades** (`fleet`): stores safe / not safe to upgrade, Pis gone quiet, agent, Quibase and Centurion (counter terminal) versions running and the newest seen, main version. **Terminal update state** lists each counter terminal's last reported app-update state (red = failed, amber = waiting for a tap), its Centurion version and whether it is connected. **Upgrade checks per store** gives SAFE / WAIT plus each check's value: no open orders, printers up, disk ≥ 500 MB, temp < 80 °C, no alert conditions, Pi linked, a tablet connected, and whether the agent is behind the newest version; terminals connected and terminal behind are shown beside them, not part of the verdict. "Newest" is the version first seen most recently in prod or staging over 30 days. The Centurion panels read the agent's `floor_terminals_version` / `floor_terminals_connected` / `floor_terminals_update_state` (agent 2.5.5) and show No data until the Pis run it. The dashboard also has Quibase tablets per version, the hub per store, a per-Pi table (version, last seen, agent and Pi uptime, disk, temp, SD errors, last good update, update results, reconnects), rollouts over time (Pis per agent version, tablets per Quibase version, terminals per Centurion version, updates and restarts), Pi hardware and Pi/hub logs.
 - **Store floor & devices** (`store-floor`, today): one store's in-store pieces together. Store hub (the callout box): hub → Pi and Pi → hub up/down, hub version, feed lag. (The SoftTouch tiles and graphs went with SoftTouch, 2026-11-11.) Pi: version, uptime, temperature, disk free, SD card errors, last good update; temperature, disk and update runs over time. Floor: tablets connected, open orders by state, accept p95, sync backlog, driver route messages sent/rejected; accept p95 by source, floor sync p95 by event type. Printing: printers up/down, print failures, print p95, reprints by source, tickets per printer, items routed to a station vs unmatched; tickets per printer, printer write and probe p95 over time.
 - **Counter** (`counter`, today): the store's own counter terminal (TERMINAL-PLAN.md). Right now: Pi ↔ main link, sync backlog, money events main refused, events parked on the Pi, printers down, PIN / password lockouts. Counter orders: stored by main vs placed on the Pi, changes after SEND, voids, pickups handed over, customers saved; counter events stored by main by type. Money: payments, drawer opens / movements / closes and journal batches main stored. Kitchen tickets: printed nowhere, counter orders with no kitchen ticket, reroutes, kitchen resends, print p95, print trouble; failures by reason, printers up. Pi ↔ main sync: backlog, events sent by result, sync delay p95 per counter event type, a type × result table, the refusal log lines. Terminals & staff: lockouts and the Pi's 4xx / 5xx by status. Day close: Z reports stored, Z problems on the Pi, batches closed, auto-close failures, Z refused by main, driver reports failed, the day-close log lines; then every counter log line. Counts come from main's `floor.events.received{type,result}` (exactly once per event), the Pi's floor-sync / printing metrics and the Pi's and main's stable log messages. **Text panels** stand where data doesn't exist yet and name the metric they wait for (CM-0 … CM-14 in the quicc-ops `HARDENING-PLAN.md` R-1a): sales $ and tenders, refunds / voids / comps with who, discounts and price changes over the limit, payment errors, drawer over / short, orders by type and source, terminals connected, wrong PINs per terminal, oldest unsynced money event. The money panels are the one exception to "no business stats": they're there to spot money that didn't arrive, and come from main's applied events, never the database.
-- **Call center** (`callcenter`, 2026-11-14): the call center's web app (quicc-callcenter 1.0.6+, `service_name="quicc-callcenter"`). Right now: browsers open, browsers on an old version (opened before the last deploy), round trip p95, the call center's own internet p95 (round trip minus main + the store, from the relay's `Server-Timing`), main + store p95, card attempts that failed before reaching the store, cards charged, main's version and reachability. Latency: where the time goes over time, internet per computer, slowest routes on both sides, calls by outcome, live-stream drops / downtime. Cards: attempts by stage (sdk_load, attach, tokenize, charge) × outcome × Square's code × computer, step p95. Versions and the page: browsers by version, server build + main version, page load p95, page errors. Metrics `callcenter_*` come from the app's own OTLP export (no SDK, `callcenter/src/lib/server/metrics.ts`): browsers report once a minute to `/api/telemetry`, the server times every relayed call and probes main every minute. **The agents** (2026-11-17, call center 1.0.13+, round C6: "credible data that the improvements are fruitful and not hurtful"), with an **Agent** picker: orders taken, median time per order, keys / clicks / undo per order, searches that found it; a per-agent table (orders, median order, keys, clicks, search picks, F-keys, right-clicks, undo per order); time per order and inputs per order **by app version** (before vs after a change); time on each step (phone, account, customer_form, menu, cash_out); an item from add to done by how it was found (menu, search, alias); search time to pick; keys and chords used and what they did; clicks by target; right-click menus, undo and screen pops; and every event as a Loki log line (`service_name="quicc-callcenter"`, scope `quicc.ui`, `staff` / `ui_*` fields). Metrics `callcenter_ui_*`; the event list is in the callcenter README "What the agents do".
+- **Call center** (`callcenter`, 2026-11-14): the call center's web app (quicc-callcenter 1.0.6+, `service_name="quicc-callcenter"`). Right now: browsers open, browsers on an old version (opened before the last deploy), round trip p95, the call center's own internet p95 (round trip minus main + the store, from the relay's `Server-Timing`), main + store p95, card attempts that failed before reaching the store, cards charged, main's version and reachability. Latency: where the time goes over time, internet per computer, slowest routes on both sides, calls by outcome, live-stream drops / downtime. Cards: attempts by stage (sdk_load, attach, tokenize, charge) × outcome × Square's code × computer, step p95. Versions and the page: browsers by version, server build + main version, page load p95, page errors. Metrics `callcenter_*` come from the app's own OTLP export (no SDK, `callcenter/src/lib/server/metrics.ts`): browsers report once a minute to `/api/telemetry`, the server times every relayed call and probes main every minute. **The agents** (2026-11-17, call center 1.0.13+, round C6: "credible data that the improvements are fruitful and not hurtful"), with an **Agent** picker: orders taken, median time per order, keys / clicks / undo per order, searches that found it; a per-agent table (orders, median order, keys, clicks, search picks, F-keys, right-clicks, undo per order); time per order and inputs per order **by app version** (before vs after a change); time on each step (phone, account, customer_form, menu, cash_out); an item from add to done by how it was found (menu, search, alias); search time to pick; keys and chords used and what they did; clicks by target; right-click menus, undo and screen pops; and every event as a Loki log line (`service_name="quicc-callcenter"`, scope `quicc.ui`, `staff` / `ui_*` fields). Metrics `callcenter_ui_*`; the event list is in the callcenter README "What the agents do". **Network & clock** (2026-11-17, agent N: tell clock vs network vs provider when Square's card box refuses a card with no reason): clocks off now (over 2 min), round trip to us p95, Square from the agents' computers p95, failed round trips, connection checks run, cards tried on a bad network; the clock offset per agent (±2 min lines), round trip to us per agent and internet provider, to Square per provider, failures per agent / provider / target, card outcome vs the clock and network sampled just before (`callcenter_card_net_total`), "Check my connection" runs by verdict; the 7-day digest and the 1-day clock / network / card detail from Loki. Metrics `callcenter_clock_offset_milliseconds` (gauge, last per agent; `staff`, `isp`), `callcenter_clock_bad_total` (`reason` offset / tz), `callcenter_net_rtt_milliseconds` (`target` us / square_js / pci; `staff`, `isp`), `callcenter_net_failures_total`, `callcenter_net_checks_total` (`verdict`, `via`), `callcenter_card_net_total` (`outcome`, `net`, `clock`, `isp`); the provider comes from the call center's offline ASN table (the agents' addresses are never sent anywhere). The Pi exports the same for Centurion as `terminal_clock_offset_milliseconds`, `terminal_net_*` (agent contract §2.10cf).
 
 **Quicc Debug** (`grafana/dashboards/debug/`) — module/stack drill-downs:
 Collector & stack health, Logs explorer, Online relay health, Duplex RPC,
@@ -99,6 +99,71 @@ Admin & catalog.
 Dashboards are bound-mounted **read-only** from `./grafana/dashboards/` — the JSON files are the source of truth. UI edits are ephemeral (allowed for experimentation via `allowUiUpdates: true`, but lost on container restart); make lasting changes in the JSON. Keep the provider paths disjoint: a file provider walks its path recursively, so one on the dashboards root would load `debug/` twice and duplicate UIDs block both providers.
 
 The Postgres reporting datasources from the first version are gone; `datasources.yaml` lists `pg-prod` / `pg-staging` under `deleteDatasources` so a Grafana that provisioned them drops them.
+
+## Retention
+
+| Signal | Kept | Where it is set |
+|---|---|---|
+| Logs (everything else) | 30 days | `loki.yaml` `limits_config.retention_period: 720h` (compactor `retention_enabled`) |
+| UI telemetry, **detailed** (`detail="full"`) | **1 day** | `loki.yaml` `retention_stream` `{detail="full"}` 24h |
+| UI telemetry, **digest** (`detail="digest"`) | **7 days** | `loki.yaml` `retention_stream` `{detail="digest"}` 168h |
+| Traces | 7 days | `tempo.yaml` |
+| Metrics | 30 days or 8 GB, whichever first | `docker-compose.yml` Prometheus flags (unchanged) |
+
+**The UI telemetry (2026-11-17, agent N; the owner: "save all detailed logs for the day and maybe only save some or
+condense it by removing fluff and save it for a week. we can always cycle a week to maintain storage").** The call
+center's server (`callcenter/src/lib/server/metrics.ts` + `digest.ts`) and the Pi (`agent/internal/application/terminal/telemetry.go`,
+Centurion) write every `quicc.ui` event twice-ish at ingest, no job of their own: as an OTLP resource with
+`detail=full` (every event: keys, clicks, searches, samples, cards…; the call center's carry the agent's address
+`net_ip`), and the condensed subset with `detail=digest`: every card attempt (outcome, code, timings, the clock offset,
+the network sample, the provider), every connection check, every order summary, every error, every clock / network
+sample that is bad (offset over 2 min, any failed round trip, a round trip over 1.5 s, Square over 3 s) or was taken
+around a card, plus the first good sample per agent per hour, and one `rollup.hour` per agent per hour (keys, clicks,
+searches, orders, undos, items and median times). Single keystrokes, typing counts, plain clicks and navigation are
+left out of the digest (only counted in the roll-up). The digest carries the address only as its /24 (`net_ip_prefix`),
+never the address. `detail` is a Loki index label (`otlp_config` above), so `retention_stream` can match it; logs
+without it keep the 30 days. Loki's compactor deletes by whole chunk (`retention_delete_delay: 2h`, the index is daily),
+so the 1-day stream lives a little over a day on disk.
+
+**Volume (estimate, 2026-11-17).** A `quicc.ui` record is about 250–350 bytes before compression (the body + ~20
+structured-metadata fields). The call center: ~65 events per order, 6 agents × 10 h × 15 orders an hour ≈ 60,000 records
+a day (+ 2 samples every 5 minutes per agent) ≈ **18 MB/day raw**; Centurion: 3 terminals × 12 h × 20 orders × 40 events
+≈ 30,000 records ≈ **9 MB/day raw**. Loki's chunks compress this 4–6× (the same keys on every line): the detailed stream
+holds **~5–10 MB on disk** at any time (one day). The digest is ~5 % of the records (orders, cards, a few samples, one
+roll-up per agent-hour): ~2,500 records ≈ **1 MB/day raw**, **~2 MB on disk for the week**. Ten times the traffic is
+still under 100 MB for the detail and 20 MB for the week of digest, next to Prometheus's 8 GB cap: the week cycles
+without filling the disk. Ingest limits (`ingestion_rate_mb: 8`, burst 16) sit well above a 30-second batch (the call
+center sends at most 20,000 records ≈ 6 MB in one, normally a few hundred).
+
+Check on the server: `curl -s localhost:3100/loki/api/v1/label/detail/values` (→ `full`, `digest` once the apps run the
+new builds), and `du -sh` of the `loki_data` volume over a week.
+
+### Deploying the retention change (the lead applies it on the home server)
+
+Nothing else changes: the Collector config is the same, Prometheus and Grafana's data are untouched. On the home
+server, in this repo's checkout (`git pull` on `feature/terminal`, or the commit that adds this section):
+
+```bash
+cd ~/observability                               # wherever this repo is checked out on the home server
+git pull
+# 1. check the new Loki config before restarting (prints "config is valid")
+docker run --rm -v "$PWD/loki.yaml:/etc/loki/loki.yaml:ro" grafana/loki:3.3.2 -config.file=/etc/loki/loki.yaml -verify-config
+# 2. recreate Loki (new limits + the detail label) and the Collector (its config is unchanged; recreated so the
+#    pipeline reconnects cleanly to the new Loki); secrets from obv as `task up` does
+DOPPLER_TOKEN=$(cat .doppler-obv-token) doppler run -- docker compose up -d loki otel-collector
+#    Grafana reads the dashboard file by itself (file provisioning); a restart only makes it immediate
+docker compose restart grafana
+# 3. checks
+docker logs --since 2m quicc-loki 2>&1 | grep -iE "error|retention" | head     # no config errors
+curl -s localhost:3100/ready                                                    # "ready"
+curl -s localhost:3100/loki/api/v1/label/detail/values                          # full, digest (after the apps send)
+docker logs --since 2m quicc-otel-collector 2>&1 | grep -i error | head         # nothing new
+```
+
+Loki restarts in a few seconds; OTLP senders retry, so nothing is lost. The `detail` label shows only once the call
+center (the next release after 1.0.12) and the Pi (the agent release with the digest) send it; until then the old
+`quicc.ui` lines keep the 30 days. To undo: `git revert` the commit and run step 2 again (lines already written with
+`detail` then simply keep the 30 days).
 
 ## Alerting — "an order failed on some module" → Pushover
 

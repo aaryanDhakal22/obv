@@ -2666,8 +2666,8 @@
     },
     {
       "type": "logs",
-      "title": "Every agent event (Loki, scope quicc.ui)",
-      "description": "One line per event with all its details (ui_* fields, staff, device, client_version). Never a customer's details: the browser sends none.",
+      "title": "Every agent event (Loki, scope quicc.ui, kept 1 day)",
+      "description": "One line per event with all its details (ui_* fields, staff, device, client_version, net_*). The detailed stream (detail=\"full\") is kept 1 day; older ranges: the 7-day digest below. Never a customer's details: the browser sends none.",
       "datasource": {
         "type": "loki",
         "uid": "loki"
@@ -2678,7 +2678,7 @@
             "type": "loki",
             "uid": "loki"
           },
-          "expr": "{service_name=\"quicc-callcenter\", deployment_environment=\"$env\"} | staff=~\"$staff\"",
+          "expr": "{service_name=\"quicc-callcenter\", deployment_environment=\"$env\", detail!=\"digest\"} | staff=~\"$staff\"",
           "refId": "A"
         }
       ],
@@ -2694,6 +2694,843 @@
       "gridPos": {
         "x": 0,
         "y": 92,
+        "w": 24,
+        "h": 10
+      }
+    },
+    {
+      "type": "stat",
+      "title": "Network & clock · clocks off now",
+      "description": "Agents whose computer clock was over 2 minutes off our server's at their last sample (the last 15 minutes). Fix: Windows › Time & language › Set time automatically + Set time zone automatically (Manila).",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "count(abs(callcenter_clock_offset_milliseconds{deployment_environment=\"$env\", staff=~\"$staff\"}) > 120000) or vector(0)",
+          "legendFormat": "",
+          "refId": "A",
+          "range": false,
+          "instant": true
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "noValue": "0",
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 1
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "value",
+        "graphMode": "none",
+        "textMode": "auto"
+      },
+      "id": 201,
+      "gridPos": {
+        "x": 0,
+        "y": 102,
+        "w": 4,
+        "h": 4
+      }
+    },
+    {
+      "type": "stat",
+      "title": "Round trip to us (p95)",
+      "description": "Each sample's median of 5 round trips to our server (/healthz) from the agents' computers, p95 over the range. Over 1.5 s = bad.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "histogram_quantile(0.95, sum by (le) (increase(callcenter_net_rtt_milliseconds_bucket{deployment_environment=\"$env\", staff=~\"$staff\", target=\"us\"}[$__range])))",
+          "legendFormat": "",
+          "refId": "A",
+          "range": false,
+          "instant": true
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ms",
+          "noValue": "0",
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "orange",
+                "value": 800
+              },
+              {
+                "color": "red",
+                "value": 1500
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "value",
+        "graphMode": "none",
+        "textMode": "auto"
+      },
+      "id": 202,
+      "gridPos": {
+        "x": 4,
+        "y": 102,
+        "w": 4,
+        "h": 4
+      }
+    },
+    {
+      "type": "stat",
+      "title": "Square from their computers (p95)",
+      "description": "Square's script (square_js) and card server (pci-connect /payments/hydrate, never card data) from the agents' browsers, p95 over the range. Over 3 s = bad.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "histogram_quantile(0.95, sum by (le) (increase(callcenter_net_rtt_milliseconds_bucket{deployment_environment=\"$env\", staff=~\"$staff\", target=~\"square_js|pci\"}[$__range])))",
+          "legendFormat": "",
+          "refId": "A",
+          "range": false,
+          "instant": true
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ms",
+          "noValue": "0",
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "orange",
+                "value": 1500
+              },
+              {
+                "color": "red",
+                "value": 3000
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "value",
+        "graphMode": "none",
+        "textMode": "auto"
+      },
+      "id": 203,
+      "gridPos": {
+        "x": 8,
+        "y": 102,
+        "w": 4,
+        "h": 4
+      }
+    },
+    {
+      "type": "stat",
+      "title": "Failed round trips",
+      "description": "Round trips from the agents' computers that got no answer (to us, Square's script, Square's card server) over the range.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "sum(increase(callcenter_net_failures_total{deployment_environment=\"$env\", staff=~\"$staff\"}[$__range])) or vector(0)",
+          "legendFormat": "",
+          "refId": "A",
+          "range": false,
+          "instant": true
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "noValue": "0",
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "orange",
+                "value": 1
+              },
+              {
+                "color": "red",
+                "value": 10
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "value",
+        "graphMode": "none",
+        "textMode": "auto"
+      },
+      "id": 204,
+      "gridPos": {
+        "x": 12,
+        "y": 102,
+        "w": 4,
+        "h": 4
+      }
+    },
+    {
+      "type": "stat",
+      "title": "Connection checks run",
+      "description": "\"Check my connection\" presses (the ? sheet, the card dialog after a refusal) over the range.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "sum(increase(callcenter_net_checks_total{deployment_environment=\"$env\", staff=~\"$staff\"}[$__range])) or vector(0)",
+          "legendFormat": "",
+          "refId": "A",
+          "range": false,
+          "instant": true
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "noValue": "0",
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "value",
+        "graphMode": "none",
+        "textMode": "auto"
+      },
+      "id": 205,
+      "gridPos": {
+        "x": 16,
+        "y": 102,
+        "w": 4,
+        "h": 4
+      }
+    },
+    {
+      "type": "stat",
+      "title": "Cards tried on a bad network",
+      "description": "Card attempts whose network sample just before was bad (a failure, over 1.5 s to us, over 3 s to Square), of all card attempts with a sample.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "sum(increase(callcenter_card_net_total{deployment_environment=\"$env\", net=\"bad\"}[$__range])) / sum(increase(callcenter_card_net_total{deployment_environment=\"$env\", net!=\"none\"}[$__range]))",
+          "legendFormat": "",
+          "refId": "A",
+          "range": false,
+          "instant": true
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit",
+          "noValue": "0",
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "orange",
+                "value": 0.1
+              },
+              {
+                "color": "red",
+                "value": 0.3
+              }
+            ]
+          },
+          "decimals": 0
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "value",
+        "graphMode": "none",
+        "textMode": "auto"
+      },
+      "id": 206,
+      "gridPos": {
+        "x": 20,
+        "y": 102,
+        "w": 4,
+        "h": 4
+      }
+    },
+    {
+      "type": "timeseries",
+      "title": "Clock offset per agent",
+      "description": "The agent's computer clock minus our server's (round-trip corrected, + = ahead), at each sample (every 5 minutes, around each card). Outside ±2 min the agent sees a red banner with the fix; Square's card box can refuse cards.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "callcenter_clock_offset_milliseconds{deployment_environment=\"$env\", staff=~\"$staff\"}",
+          "legendFormat": "{{staff}} · {{isp}}",
+          "refId": "A",
+          "range": true
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ms",
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 2,
+            "fillOpacity": 10,
+            "showPoints": "never",
+            "spanNulls": true,
+            "stacking": {
+              "mode": "none",
+              "group": "A"
+            },
+            "thresholdsStyle": {
+              "mode": "line"
+            }
+          },
+          "noValue": "no data",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "transparent",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 120000
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "right",
+          "calcs": [
+            "mean",
+            "max"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "id": 207,
+      "gridPos": {
+        "x": 0,
+        "y": 106,
+        "w": 12,
+        "h": 8
+      }
+    },
+    {
+      "type": "timeseries",
+      "title": "Round trip to us per agent and provider (p95, 15 m)",
+      "description": "Each sample's median round trip to our server (/healthz), per agent and internet provider (PLDT, Globe, Converge…, from the offline ASN table). One agent high = that computer; one provider high = that provider.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "histogram_quantile(0.95, sum by (le, staff, isp) (increase(callcenter_net_rtt_milliseconds_bucket{deployment_environment=\"$env\", staff=~\"$staff\", target=\"us\"}[15m])))",
+          "legendFormat": "{{staff}} · {{isp}}",
+          "refId": "A",
+          "range": true
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ms",
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 2,
+            "fillOpacity": 10,
+            "showPoints": "never",
+            "spanNulls": true,
+            "stacking": {
+              "mode": "none",
+              "group": "A"
+            }
+          },
+          "noValue": "no data"
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "right",
+          "calcs": [
+            "mean",
+            "max"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "id": 208,
+      "gridPos": {
+        "x": 12,
+        "y": 106,
+        "w": 12,
+        "h": 8
+      }
+    },
+    {
+      "type": "timeseries",
+      "title": "Round trip to Square per provider (p95, 15 m)",
+      "description": "Square's script (square_js) and card server (pci) from the agents' browsers, per provider. High here while our server is fine = the route to Square (the provider or Square).",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "histogram_quantile(0.95, sum by (le, isp, target) (increase(callcenter_net_rtt_milliseconds_bucket{deployment_environment=\"$env\", staff=~\"$staff\", target=~\"square_js|pci\"}[15m])))",
+          "legendFormat": "{{isp}} · {{target}}",
+          "refId": "A",
+          "range": true
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ms",
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 2,
+            "fillOpacity": 10,
+            "showPoints": "never",
+            "spanNulls": true,
+            "stacking": {
+              "mode": "none",
+              "group": "A"
+            }
+          },
+          "noValue": "no data"
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "right",
+          "calcs": [
+            "mean",
+            "max"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "id": 209,
+      "gridPos": {
+        "x": 0,
+        "y": 114,
+        "w": 12,
+        "h": 8
+      }
+    },
+    {
+      "type": "timeseries",
+      "title": "Failed round trips per agent and provider (15 m)",
+      "description": "No answer in time, per target (us, square_js, pci), agent and provider. Early-morning clusters on one provider = the provider.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "sum by (staff, isp, target) (increase(callcenter_net_failures_total{deployment_environment=\"$env\", staff=~\"$staff\"}[15m]))",
+          "legendFormat": "{{staff}} · {{isp}} · {{target}}",
+          "refId": "A",
+          "range": true
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "custom": {
+            "drawStyle": "bars",
+            "lineWidth": 2,
+            "fillOpacity": 60,
+            "showPoints": "never",
+            "spanNulls": true,
+            "stacking": {
+              "mode": "normal",
+              "group": "A"
+            }
+          },
+          "noValue": "no data"
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "right",
+          "calcs": [
+            "mean",
+            "max"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "id": 210,
+      "gridPos": {
+        "x": 12,
+        "y": 114,
+        "w": 12,
+        "h": 8
+      }
+    },
+    {
+      "type": "table",
+      "title": "Card outcome vs the network at that moment",
+      "description": "Every card attempt by its outcome (ok, refused, declined, invalid, error, unreachable…) beside the clock (ok / off over 2 min / none) and the network (good / bad / none) sampled just before it, per provider. Refusals with a good network and a good clock = Square or the bank refused the card.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "sort_desc(sum by (outcome, net, clock, isp) (increase(callcenter_card_net_total{deployment_environment=\"$env\"}[$__range])) > 0)",
+          "legendFormat": "",
+          "refId": "A",
+          "range": false,
+          "instant": true,
+          "format": "table"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "noValue": "none yet"
+        },
+        "overrides": []
+      },
+      "options": {
+        "showHeader": true,
+        "sortBy": [
+          {
+            "displayName": "Value",
+            "desc": true
+          }
+        ]
+      },
+      "transformations": [
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {
+              "Time": true
+            },
+            "renameByName": {
+              "Value": "attempts"
+            }
+          }
+        }
+      ],
+      "id": 211,
+      "gridPos": {
+        "x": 0,
+        "y": 122,
+        "w": 12,
+        "h": 8
+      }
+    },
+    {
+      "type": "table",
+      "title": "Connection checks run",
+      "description": "\"Check my connection\" by agent, provider, verdict (ok, clock, tz, offline, us_loss, square_loss, square_down, us_slow, square_slow) and where it was pressed (button, card_dialog). Each is also a connection.check row in the store's journal.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "sort_desc(sum by (staff, isp, verdict, via) (increase(callcenter_net_checks_total{deployment_environment=\"$env\", staff=~\"$staff\"}[$__range])) > 0)",
+          "legendFormat": "",
+          "refId": "A",
+          "range": false,
+          "instant": true,
+          "format": "table"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "noValue": "none yet"
+        },
+        "overrides": []
+      },
+      "options": {
+        "showHeader": true,
+        "sortBy": [
+          {
+            "displayName": "Value",
+            "desc": true
+          }
+        ]
+      },
+      "transformations": [
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {
+              "Time": true
+            },
+            "renameByName": {
+              "Value": "checks"
+            }
+          }
+        }
+      ],
+      "id": 212,
+      "gridPos": {
+        "x": 12,
+        "y": 122,
+        "w": 12,
+        "h": 8
+      }
+    },
+    {
+      "type": "logs",
+      "title": "The 7-day digest (Loki, detail=\"digest\")",
+      "description": "What is kept for a week: every card attempt (card.attempt with the clock and network beside it), connection check (net.check), order summary (order.*), error (error.page), bad clock / net samples (+ the first good one per agent per hour) and one rollup.hour per agent (keys, clicks, searches, orders, undos, median times). The address only as its /24 (net_ip_prefix); the provider as net_isp / net_asn.",
+      "datasource": {
+        "type": "loki",
+        "uid": "loki"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "loki",
+            "uid": "loki"
+          },
+          "expr": "{service_name=\"quicc-callcenter\", deployment_environment=\"$env\", detail=\"digest\"} | staff=~\"$staff\"",
+          "refId": "A"
+        }
+      ],
+      "options": {
+        "showTime": true,
+        "wrapLogMessage": true,
+        "sortOrder": "Descending",
+        "enableLogDetails": true,
+        "dedupStrategy": "none",
+        "prettifyLogMessage": false
+      },
+      "id": 213,
+      "gridPos": {
+        "x": 0,
+        "y": 130,
+        "w": 24,
+        "h": 10
+      }
+    },
+    {
+      "type": "logs",
+      "title": "Clock, network and card events (Loki, the 1-day detail)",
+      "description": "Every clock / net sample, check and card attempt in full (with net_ip, the agent's address, kept 1 day only). ui_bad / ui_reason = the server's verdict (offset, tz, failed, slow_us, slow_square).",
+      "datasource": {
+        "type": "loki",
+        "uid": "loki"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "loki",
+            "uid": "loki"
+          },
+          "expr": "{service_name=\"quicc-callcenter\", deployment_environment=\"$env\", detail=\"full\"} | ui_kind=~\"clock|net|card\" | staff=~\"$staff\"",
+          "refId": "A"
+        }
+      ],
+      "options": {
+        "showTime": true,
+        "wrapLogMessage": true,
+        "sortOrder": "Descending",
+        "enableLogDetails": true,
+        "dedupStrategy": "none",
+        "prettifyLogMessage": false
+      },
+      "id": 214,
+      "gridPos": {
+        "x": 0,
+        "y": 140,
         "w": 24,
         "h": 10
       }
