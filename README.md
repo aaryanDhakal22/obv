@@ -189,7 +189,9 @@ live 30 days in the main Prometheus; their hourly roll-ups live **1 year** in a 
   `increase(…[1h])` summed by those labels (`eff:<app>_<metric>:increase1h`; histograms as `_count`, `_sum`, `_bucket`).
   The long-term Prometheus evaluates them over the main one's series through **remote read**
   (`prometheus-longterm/prometheus-longterm.yaml`, `read_recent: true`) and stores only the results; nothing scrapes into
-  it. Counters keep only hours with something (`> 0`); a histogram's whole bucket set is kept for the hours its count
+  it. A series that first appears within the hour (a new agent, version or key, or after a deploy) counts its whole
+  value: `(max_over_time(x[1h]) unless x offset 1h) or increase(x[1h])` (`increase()` alone drops that first event; the
+  Call center dashboard's counts use the same pattern since 2026-11-18). Counters keep only hours with something (`> 0`); a histogram's whole bucket set is kept for the hours its count
   moved (a missing low bucket would skew a quantile). Totals over a range = `sum_over_time(eff:…[range])`; a median =
   `histogram_quantile(0.5, sum by (le, …) (sum_over_time(eff:…_bucket:increase1h[range])))`.
 - **Dashboard: Efficiency over time** (`efficiency`, linked from Call center): App (callcenter / terminal), Environment,

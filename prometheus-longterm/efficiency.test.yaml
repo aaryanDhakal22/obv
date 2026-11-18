@@ -15,6 +15,9 @@ tests:
         values: '0 1 2 3 4 4 4 4 4'
       - series: 'terminal_ui_actions_total{deployment_environment="prod", tenant="lombardis", staff="Ana", version="1.0.9", action="undo"}'
         values: '0 0 1 1 1 1 1 1 1'
+      # A series that first appears within the hour (a new agent / version, or after a deploy): its first events count.
+      - series: 'callcenter_ui_actions_total{deployment_environment="prod", store="S", staff="Ana", version="1.0.14", action="right_click"}'
+        values: '_ _ 2 2 2 2 2 2 2'
     alert_rule_test: []
     promql_expr_test:
       # The first hour: 8 F2 keys, 4 orders, the whole bucket set (the empty 30 s bucket kept).
@@ -35,10 +38,18 @@ tests:
         exp_samples:
           - labels: 'eff:terminal_ui_actions:increase1h{deployment_environment="prod", tenant="lombardis", staff="Ana", version="1.0.9", action="undo"}'
             value: 1
+      - expr: eff:callcenter_ui_actions:increase1h
+        eval_time: 1h
+        exp_samples:
+          - labels: 'eff:callcenter_ui_actions:increase1h{deployment_environment="prod", store="S", staff="Ana", version="1.0.14", action="right_click"}'
+            value: 2
       # The second hour: nothing happened, nothing is kept.
       - expr: eff:callcenter_ui_keys:increase1h
         eval_time: 2h
         exp_samples: []
       - expr: eff:callcenter_ui_order_duration_bucket:increase1h
+        eval_time: 2h
+        exp_samples: []
+      - expr: eff:callcenter_ui_actions:increase1h
         eval_time: 2h
         exp_samples: []

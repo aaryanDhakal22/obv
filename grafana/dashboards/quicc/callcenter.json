@@ -348,7 +348,7 @@
             "type": "prometheus",
             "uid": "prometheus"
           },
-          "expr": "histogram_quantile(0.95, sum by (le) (increase(callcenter_client_request_duration_milliseconds_bucket{deployment_environment=\"$env\", route!~\".* events\"}[$__range])))",
+          "expr": "histogram_quantile(0.95, sum by (le) (((max_over_time(callcenter_client_request_duration_milliseconds_bucket{deployment_environment=\"$env\", route!~\".* events\"}[$__range]) unless callcenter_client_request_duration_milliseconds_bucket{deployment_environment=\"$env\", route!~\".* events\"} offset $__range) or increase(callcenter_client_request_duration_milliseconds_bucket{deployment_environment=\"$env\", route!~\".* events\"}[$__range]))))",
           "legendFormat": "",
           "range": false,
           "instant": true,
@@ -421,7 +421,7 @@
             "type": "prometheus",
             "uid": "prometheus"
           },
-          "expr": "histogram_quantile(0.95, sum by (le) (increase(callcenter_client_network_duration_milliseconds_bucket{deployment_environment=\"$env\"}[$__range])))",
+          "expr": "histogram_quantile(0.95, sum by (le) (((max_over_time(callcenter_client_network_duration_milliseconds_bucket{deployment_environment=\"$env\"}[$__range]) unless callcenter_client_network_duration_milliseconds_bucket{deployment_environment=\"$env\"} offset $__range) or increase(callcenter_client_network_duration_milliseconds_bucket{deployment_environment=\"$env\"}[$__range]))))",
           "legendFormat": "",
           "range": false,
           "instant": true,
@@ -494,7 +494,7 @@
             "type": "prometheus",
             "uid": "prometheus"
           },
-          "expr": "histogram_quantile(0.95, sum by (le) (increase(callcenter_upstream_duration_milliseconds_bucket{deployment_environment=\"$env\"}[$__range])))",
+          "expr": "histogram_quantile(0.95, sum by (le) (((max_over_time(callcenter_upstream_duration_milliseconds_bucket{deployment_environment=\"$env\"}[$__range]) unless callcenter_upstream_duration_milliseconds_bucket{deployment_environment=\"$env\"} offset $__range) or increase(callcenter_upstream_duration_milliseconds_bucket{deployment_environment=\"$env\"}[$__range]))))",
           "legendFormat": "",
           "range": false,
           "instant": true,
@@ -567,7 +567,7 @@
             "type": "prometheus",
             "uid": "prometheus"
           },
-          "expr": "sum(increase(callcenter_card_attempts_total{deployment_environment=\"$env\", stage=~\"sdk_load|attach|tokenize\", outcome!=\"ok\"}[$__range])) or vector(0)",
+          "expr": "sum(((max_over_time(callcenter_card_attempts_total{deployment_environment=\"$env\", stage=~\"sdk_load|attach|tokenize\", outcome!=\"ok\"}[$__range]) unless callcenter_card_attempts_total{deployment_environment=\"$env\", stage=~\"sdk_load|attach|tokenize\", outcome!=\"ok\"} offset $__range) or increase(callcenter_card_attempts_total{deployment_environment=\"$env\", stage=~\"sdk_load|attach|tokenize\", outcome!=\"ok\"}[$__range]))) or vector(0)",
           "legendFormat": "",
           "range": false,
           "instant": true,
@@ -640,7 +640,7 @@
             "type": "prometheus",
             "uid": "prometheus"
           },
-          "expr": "sum(increase(callcenter_card_attempts_total{deployment_environment=\"$env\", stage=\"charge\", outcome=\"ok\"}[$__range])) or vector(0)",
+          "expr": "sum(((max_over_time(callcenter_card_attempts_total{deployment_environment=\"$env\", stage=\"charge\", outcome=\"ok\"}[$__range]) unless callcenter_card_attempts_total{deployment_environment=\"$env\", stage=\"charge\", outcome=\"ok\"} offset $__range) or increase(callcenter_card_attempts_total{deployment_environment=\"$env\", stage=\"charge\", outcome=\"ok\"}[$__range]))) or vector(0)",
           "legendFormat": "",
           "range": false,
           "instant": true,
@@ -787,7 +787,7 @@
             "type": "prometheus",
             "uid": "prometheus"
           },
-          "expr": "histogram_quantile(0.95, sum by (le) (increase(callcenter_client_request_duration_milliseconds_bucket{deployment_environment=\"$env\", route!~\".* events\"}[5m])))",
+          "expr": "histogram_quantile(0.95, sum by (le) (((max_over_time(callcenter_client_request_duration_milliseconds_bucket{deployment_environment=\"$env\", route!~\".* events\"}[5m]) unless callcenter_client_request_duration_milliseconds_bucket{deployment_environment=\"$env\", route!~\".* events\"} offset 5m) or increase(callcenter_client_request_duration_milliseconds_bucket{deployment_environment=\"$env\", route!~\".* events\"}[5m]))))",
           "legendFormat": "round trip",
           "range": true,
           "refId": "A"
@@ -797,7 +797,7 @@
             "type": "prometheus",
             "uid": "prometheus"
           },
-          "expr": "histogram_quantile(0.95, sum by (le) (increase(callcenter_client_network_duration_milliseconds_bucket{deployment_environment=\"$env\"}[5m])))",
+          "expr": "histogram_quantile(0.95, sum by (le) (((max_over_time(callcenter_client_network_duration_milliseconds_bucket{deployment_environment=\"$env\"}[5m]) unless callcenter_client_network_duration_milliseconds_bucket{deployment_environment=\"$env\"} offset 5m) or increase(callcenter_client_network_duration_milliseconds_bucket{deployment_environment=\"$env\"}[5m]))))",
           "legendFormat": "their internet",
           "range": true,
           "refId": "B"
@@ -807,7 +807,7 @@
             "type": "prometheus",
             "uid": "prometheus"
           },
-          "expr": "histogram_quantile(0.95, sum by (le) (increase(callcenter_upstream_duration_milliseconds_bucket{deployment_environment=\"$env\"}[5m])))",
+          "expr": "histogram_quantile(0.95, sum by (le) (((max_over_time(callcenter_upstream_duration_milliseconds_bucket{deployment_environment=\"$env\"}[5m]) unless callcenter_upstream_duration_milliseconds_bucket{deployment_environment=\"$env\"} offset 5m) or increase(callcenter_upstream_duration_milliseconds_bucket{deployment_environment=\"$env\"}[5m]))))",
           "legendFormat": "main + store",
           "range": true,
           "refId": "C"
@@ -867,7 +867,7 @@
             "type": "prometheus",
             "uid": "prometheus"
           },
-          "expr": "histogram_quantile(0.95, sum by (le, device) (increase(callcenter_client_network_duration_milliseconds_bucket{deployment_environment=\"$env\"}[5m])))",
+          "expr": "histogram_quantile(0.95, sum by (le, device) (((max_over_time(callcenter_client_network_duration_milliseconds_bucket{deployment_environment=\"$env\"}[5m]) unless callcenter_client_network_duration_milliseconds_bucket{deployment_environment=\"$env\"} offset 5m) or increase(callcenter_client_network_duration_milliseconds_bucket{deployment_environment=\"$env\"}[5m]))))",
           "legendFormat": "{{device}}",
           "range": true,
           "refId": "A"
@@ -927,7 +927,7 @@
             "type": "prometheus",
             "uid": "prometheus"
           },
-          "expr": "topk(8, histogram_quantile(0.95, sum by (le, route) (increase(callcenter_client_request_duration_milliseconds_bucket{deployment_environment=\"$env\", route!~\".* events\"}[10m]))))",
+          "expr": "topk(8, histogram_quantile(0.95, sum by (le, route) (((max_over_time(callcenter_client_request_duration_milliseconds_bucket{deployment_environment=\"$env\", route!~\".* events\"}[10m]) unless callcenter_client_request_duration_milliseconds_bucket{deployment_environment=\"$env\", route!~\".* events\"} offset 10m) or increase(callcenter_client_request_duration_milliseconds_bucket{deployment_environment=\"$env\", route!~\".* events\"}[10m])))))",
           "legendFormat": "{{route}}",
           "range": true,
           "refId": "A"
@@ -987,7 +987,7 @@
             "type": "prometheus",
             "uid": "prometheus"
           },
-          "expr": "topk(8, histogram_quantile(0.95, sum by (le, route) (increase(callcenter_upstream_duration_milliseconds_bucket{deployment_environment=\"$env\"}[10m]))))",
+          "expr": "topk(8, histogram_quantile(0.95, sum by (le, route) (((max_over_time(callcenter_upstream_duration_milliseconds_bucket{deployment_environment=\"$env\"}[10m]) unless callcenter_upstream_duration_milliseconds_bucket{deployment_environment=\"$env\"} offset 10m) or increase(callcenter_upstream_duration_milliseconds_bucket{deployment_environment=\"$env\"}[10m])))))",
           "legendFormat": "{{route}}",
           "range": true,
           "refId": "A"
@@ -1107,7 +1107,7 @@
             "type": "prometheus",
             "uid": "prometheus"
           },
-          "expr": "sum by (device) (increase(callcenter_client_sse_events_total{deployment_environment=\"$env\", kind=\"error\"}[5m]))",
+          "expr": "sum by (device) (((max_over_time(callcenter_client_sse_events_total{deployment_environment=\"$env\", kind=\"error\"}[5m]) unless callcenter_client_sse_events_total{deployment_environment=\"$env\", kind=\"error\"} offset 5m) or increase(callcenter_client_sse_events_total{deployment_environment=\"$env\", kind=\"error\"}[5m])))",
           "legendFormat": "drops · {{device}}",
           "range": true,
           "refId": "A"
@@ -1117,7 +1117,7 @@
             "type": "prometheus",
             "uid": "prometheus"
           },
-          "expr": "sum by (device) (increase(callcenter_client_sse_downtime_milliseconds_total{deployment_environment=\"$env\"}[5m])) / 60000",
+          "expr": "sum by (device) (((max_over_time(callcenter_client_sse_downtime_milliseconds_total{deployment_environment=\"$env\"}[5m]) unless callcenter_client_sse_downtime_milliseconds_total{deployment_environment=\"$env\"} offset 5m) or increase(callcenter_client_sse_downtime_milliseconds_total{deployment_environment=\"$env\"}[5m]))) / 60000",
           "legendFormat": "minutes down · {{device}}",
           "range": true,
           "refId": "B"
@@ -1190,7 +1190,7 @@
             "type": "prometheus",
             "uid": "prometheus"
           },
-          "expr": "sort_desc(sum by (stage, outcome, code, device) (increase(callcenter_card_attempts_total{deployment_environment=\"$env\"}[$__range])) > 0)",
+          "expr": "sort_desc(sum by (stage, outcome, code, device) (((max_over_time(callcenter_card_attempts_total{deployment_environment=\"$env\"}[$__range]) unless callcenter_card_attempts_total{deployment_environment=\"$env\"} offset $__range) or increase(callcenter_card_attempts_total{deployment_environment=\"$env\"}[$__range]))) > 0)",
           "format": "table",
           "range": false,
           "instant": true,
@@ -1250,7 +1250,7 @@
             "type": "prometheus",
             "uid": "prometheus"
           },
-          "expr": "histogram_quantile(0.95, sum by (le, stage) (increase(callcenter_card_stage_duration_milliseconds_bucket{deployment_environment=\"$env\"}[15m])))",
+          "expr": "histogram_quantile(0.95, sum by (le, stage) (((max_over_time(callcenter_card_stage_duration_milliseconds_bucket{deployment_environment=\"$env\"}[15m]) unless callcenter_card_stage_duration_milliseconds_bucket{deployment_environment=\"$env\"} offset 15m) or increase(callcenter_card_stage_duration_milliseconds_bucket{deployment_environment=\"$env\"}[15m]))))",
           "legendFormat": "{{stage}}",
           "range": true,
           "refId": "A"
@@ -1441,7 +1441,7 @@
             "type": "prometheus",
             "uid": "prometheus"
           },
-          "expr": "histogram_quantile(0.95, sum by (le, phase) (increase(callcenter_client_page_load_duration_milliseconds_bucket{deployment_environment=\"$env\"}[1h])))",
+          "expr": "histogram_quantile(0.95, sum by (le, phase) (((max_over_time(callcenter_client_page_load_duration_milliseconds_bucket{deployment_environment=\"$env\"}[1h]) unless callcenter_client_page_load_duration_milliseconds_bucket{deployment_environment=\"$env\"} offset 1h) or increase(callcenter_client_page_load_duration_milliseconds_bucket{deployment_environment=\"$env\"}[1h]))))",
           "legendFormat": "load p95 · {{phase}}",
           "range": true,
           "refId": "A"
@@ -1451,7 +1451,7 @@
             "type": "prometheus",
             "uid": "prometheus"
           },
-          "expr": "sum by (kind) (increase(callcenter_client_errors_total{deployment_environment=\"$env\"}[1h]))",
+          "expr": "sum by (kind) (((max_over_time(callcenter_client_errors_total{deployment_environment=\"$env\"}[1h]) unless callcenter_client_errors_total{deployment_environment=\"$env\"} offset 1h) or increase(callcenter_client_errors_total{deployment_environment=\"$env\"}[1h])))",
           "legendFormat": "errors/h · {{kind}}",
           "range": true,
           "refId": "B"
@@ -1524,7 +1524,7 @@
             "type": "prometheus",
             "uid": "prometheus"
           },
-          "expr": "sum(increase(callcenter_ui_order_duration_milliseconds_count{deployment_environment=\"$env\", staff=~\"$staff\", outcome=~\"sent|cash_out|changes_sent\"}[$__range]))",
+          "expr": "sum(((max_over_time(callcenter_ui_order_duration_milliseconds_count{deployment_environment=\"$env\", staff=~\"$staff\", outcome=~\"sent|cash_out|changes_sent\"}[$__range]) unless callcenter_ui_order_duration_milliseconds_count{deployment_environment=\"$env\", staff=~\"$staff\", outcome=~\"sent|cash_out|changes_sent\"} offset $__range) or increase(callcenter_ui_order_duration_milliseconds_count{deployment_environment=\"$env\", staff=~\"$staff\", outcome=~\"sent|cash_out|changes_sent\"}[$__range])))",
           "legendFormat": "",
           "refId": "A",
           "range": false,
@@ -1589,7 +1589,7 @@
             "type": "prometheus",
             "uid": "prometheus"
           },
-          "expr": "histogram_quantile(0.5, sum by (le) (increase(callcenter_ui_order_duration_milliseconds_bucket{deployment_environment=\"$env\", staff=~\"$staff\", outcome=~\"sent|cash_out|changes_sent\"}[$__range])))",
+          "expr": "histogram_quantile(0.5, sum by (le) (((max_over_time(callcenter_ui_order_duration_milliseconds_bucket{deployment_environment=\"$env\", staff=~\"$staff\", outcome=~\"sent|cash_out|changes_sent\"}[$__range]) unless callcenter_ui_order_duration_milliseconds_bucket{deployment_environment=\"$env\", staff=~\"$staff\", outcome=~\"sent|cash_out|changes_sent\"} offset $__range) or increase(callcenter_ui_order_duration_milliseconds_bucket{deployment_environment=\"$env\", staff=~\"$staff\", outcome=~\"sent|cash_out|changes_sent\"}[$__range]))))",
           "legendFormat": "",
           "refId": "A",
           "range": false,
@@ -1662,7 +1662,7 @@
             "type": "prometheus",
             "uid": "prometheus"
           },
-          "expr": "sum(increase(callcenter_ui_order_inputs_total{deployment_environment=\"$env\", staff=~\"$staff\", input=\"keys\"}[$__range])) / sum(increase(callcenter_ui_order_duration_milliseconds_count{deployment_environment=\"$env\", staff=~\"$staff\", outcome=~\"sent|cash_out|changes_sent\"}[$__range]))",
+          "expr": "sum(((max_over_time(callcenter_ui_order_inputs_total{deployment_environment=\"$env\", staff=~\"$staff\", input=\"keys\"}[$__range]) unless callcenter_ui_order_inputs_total{deployment_environment=\"$env\", staff=~\"$staff\", input=\"keys\"} offset $__range) or increase(callcenter_ui_order_inputs_total{deployment_environment=\"$env\", staff=~\"$staff\", input=\"keys\"}[$__range]))) / sum(((max_over_time(callcenter_ui_order_duration_milliseconds_count{deployment_environment=\"$env\", staff=~\"$staff\", outcome=~\"sent|cash_out|changes_sent\"}[$__range]) unless callcenter_ui_order_duration_milliseconds_count{deployment_environment=\"$env\", staff=~\"$staff\", outcome=~\"sent|cash_out|changes_sent\"} offset $__range) or increase(callcenter_ui_order_duration_milliseconds_count{deployment_environment=\"$env\", staff=~\"$staff\", outcome=~\"sent|cash_out|changes_sent\"}[$__range])))",
           "legendFormat": "",
           "refId": "A",
           "range": false,
@@ -1727,7 +1727,7 @@
             "type": "prometheus",
             "uid": "prometheus"
           },
-          "expr": "sum(increase(callcenter_ui_order_inputs_total{deployment_environment=\"$env\", staff=~\"$staff\", input=\"clicks\"}[$__range])) / sum(increase(callcenter_ui_order_duration_milliseconds_count{deployment_environment=\"$env\", staff=~\"$staff\", outcome=~\"sent|cash_out|changes_sent\"}[$__range]))",
+          "expr": "sum(((max_over_time(callcenter_ui_order_inputs_total{deployment_environment=\"$env\", staff=~\"$staff\", input=\"clicks\"}[$__range]) unless callcenter_ui_order_inputs_total{deployment_environment=\"$env\", staff=~\"$staff\", input=\"clicks\"} offset $__range) or increase(callcenter_ui_order_inputs_total{deployment_environment=\"$env\", staff=~\"$staff\", input=\"clicks\"}[$__range]))) / sum(((max_over_time(callcenter_ui_order_duration_milliseconds_count{deployment_environment=\"$env\", staff=~\"$staff\", outcome=~\"sent|cash_out|changes_sent\"}[$__range]) unless callcenter_ui_order_duration_milliseconds_count{deployment_environment=\"$env\", staff=~\"$staff\", outcome=~\"sent|cash_out|changes_sent\"} offset $__range) or increase(callcenter_ui_order_duration_milliseconds_count{deployment_environment=\"$env\", staff=~\"$staff\", outcome=~\"sent|cash_out|changes_sent\"}[$__range])))",
           "legendFormat": "",
           "refId": "A",
           "range": false,
@@ -1792,7 +1792,7 @@
             "type": "prometheus",
             "uid": "prometheus"
           },
-          "expr": "sum(increase(callcenter_ui_search_duration_milliseconds_count{deployment_environment=\"$env\", staff=~\"$staff\", outcome=\"pick\"}[$__range])) / sum(increase(callcenter_ui_search_duration_milliseconds_count{deployment_environment=\"$env\", staff=~\"$staff\"}[$__range]))",
+          "expr": "sum(((max_over_time(callcenter_ui_search_duration_milliseconds_count{deployment_environment=\"$env\", staff=~\"$staff\", outcome=\"pick\"}[$__range]) unless callcenter_ui_search_duration_milliseconds_count{deployment_environment=\"$env\", staff=~\"$staff\", outcome=\"pick\"} offset $__range) or increase(callcenter_ui_search_duration_milliseconds_count{deployment_environment=\"$env\", staff=~\"$staff\", outcome=\"pick\"}[$__range]))) / sum(((max_over_time(callcenter_ui_search_duration_milliseconds_count{deployment_environment=\"$env\", staff=~\"$staff\"}[$__range]) unless callcenter_ui_search_duration_milliseconds_count{deployment_environment=\"$env\", staff=~\"$staff\"} offset $__range) or increase(callcenter_ui_search_duration_milliseconds_count{deployment_environment=\"$env\", staff=~\"$staff\"}[$__range])))",
           "legendFormat": "",
           "refId": "A",
           "range": false,
@@ -1865,7 +1865,7 @@
             "type": "prometheus",
             "uid": "prometheus"
           },
-          "expr": "sum(increase(callcenter_ui_order_inputs_total{deployment_environment=\"$env\", staff=~\"$staff\", input=\"undos\"}[$__range])) / sum(increase(callcenter_ui_order_duration_milliseconds_count{deployment_environment=\"$env\", staff=~\"$staff\", outcome=~\"sent|cash_out|changes_sent\"}[$__range]))",
+          "expr": "sum(((max_over_time(callcenter_ui_order_inputs_total{deployment_environment=\"$env\", staff=~\"$staff\", input=\"undos\"}[$__range]) unless callcenter_ui_order_inputs_total{deployment_environment=\"$env\", staff=~\"$staff\", input=\"undos\"} offset $__range) or increase(callcenter_ui_order_inputs_total{deployment_environment=\"$env\", staff=~\"$staff\", input=\"undos\"}[$__range]))) / sum(((max_over_time(callcenter_ui_order_duration_milliseconds_count{deployment_environment=\"$env\", staff=~\"$staff\", outcome=~\"sent|cash_out|changes_sent\"}[$__range]) unless callcenter_ui_order_duration_milliseconds_count{deployment_environment=\"$env\", staff=~\"$staff\", outcome=~\"sent|cash_out|changes_sent\"} offset $__range) or increase(callcenter_ui_order_duration_milliseconds_count{deployment_environment=\"$env\", staff=~\"$staff\", outcome=~\"sent|cash_out|changes_sent\"}[$__range])))",
           "legendFormat": "",
           "refId": "A",
           "range": false,
@@ -1930,7 +1930,7 @@
             "type": "prometheus",
             "uid": "prometheus"
           },
-          "expr": "sum by (staff) (increase(callcenter_ui_order_duration_milliseconds_count{deployment_environment=\"$env\", staff=~\"$staff\", outcome=~\"sent|cash_out|changes_sent\"}[$__range]))",
+          "expr": "sum by (staff) (((max_over_time(callcenter_ui_order_duration_milliseconds_count{deployment_environment=\"$env\", staff=~\"$staff\", outcome=~\"sent|cash_out|changes_sent\"}[$__range]) unless callcenter_ui_order_duration_milliseconds_count{deployment_environment=\"$env\", staff=~\"$staff\", outcome=~\"sent|cash_out|changes_sent\"} offset $__range) or increase(callcenter_ui_order_duration_milliseconds_count{deployment_environment=\"$env\", staff=~\"$staff\", outcome=~\"sent|cash_out|changes_sent\"}[$__range])))",
           "legendFormat": "",
           "refId": "A",
           "range": false,
@@ -1942,7 +1942,7 @@
             "type": "prometheus",
             "uid": "prometheus"
           },
-          "expr": "histogram_quantile(0.5, sum by (staff, le) (increase(callcenter_ui_order_duration_milliseconds_bucket{deployment_environment=\"$env\", staff=~\"$staff\", outcome=~\"sent|cash_out|changes_sent\"}[$__range])))",
+          "expr": "histogram_quantile(0.5, sum by (staff, le) (((max_over_time(callcenter_ui_order_duration_milliseconds_bucket{deployment_environment=\"$env\", staff=~\"$staff\", outcome=~\"sent|cash_out|changes_sent\"}[$__range]) unless callcenter_ui_order_duration_milliseconds_bucket{deployment_environment=\"$env\", staff=~\"$staff\", outcome=~\"sent|cash_out|changes_sent\"} offset $__range) or increase(callcenter_ui_order_duration_milliseconds_bucket{deployment_environment=\"$env\", staff=~\"$staff\", outcome=~\"sent|cash_out|changes_sent\"}[$__range]))))",
           "legendFormat": "",
           "refId": "B",
           "range": false,
@@ -1954,7 +1954,7 @@
             "type": "prometheus",
             "uid": "prometheus"
           },
-          "expr": "sum by (staff) (increase(callcenter_ui_order_inputs_total{deployment_environment=\"$env\", staff=~\"$staff\", input=\"keys\"}[$__range])) / sum by (staff) (increase(callcenter_ui_order_duration_milliseconds_count{deployment_environment=\"$env\", staff=~\"$staff\", outcome=~\"sent|cash_out|changes_sent\"}[$__range]))",
+          "expr": "sum by (staff) (((max_over_time(callcenter_ui_order_inputs_total{deployment_environment=\"$env\", staff=~\"$staff\", input=\"keys\"}[$__range]) unless callcenter_ui_order_inputs_total{deployment_environment=\"$env\", staff=~\"$staff\", input=\"keys\"} offset $__range) or increase(callcenter_ui_order_inputs_total{deployment_environment=\"$env\", staff=~\"$staff\", input=\"keys\"}[$__range]))) / sum by (staff) (((max_over_time(callcenter_ui_order_duration_milliseconds_count{deployment_environment=\"$env\", staff=~\"$staff\", outcome=~\"sent|cash_out|changes_sent\"}[$__range]) unless callcenter_ui_order_duration_milliseconds_count{deployment_environment=\"$env\", staff=~\"$staff\", outcome=~\"sent|cash_out|changes_sent\"} offset $__range) or increase(callcenter_ui_order_duration_milliseconds_count{deployment_environment=\"$env\", staff=~\"$staff\", outcome=~\"sent|cash_out|changes_sent\"}[$__range])))",
           "legendFormat": "",
           "refId": "C",
           "range": false,
@@ -1966,7 +1966,7 @@
             "type": "prometheus",
             "uid": "prometheus"
           },
-          "expr": "sum by (staff) (increase(callcenter_ui_order_inputs_total{deployment_environment=\"$env\", staff=~\"$staff\", input=\"clicks\"}[$__range])) / sum by (staff) (increase(callcenter_ui_order_duration_milliseconds_count{deployment_environment=\"$env\", staff=~\"$staff\", outcome=~\"sent|cash_out|changes_sent\"}[$__range]))",
+          "expr": "sum by (staff) (((max_over_time(callcenter_ui_order_inputs_total{deployment_environment=\"$env\", staff=~\"$staff\", input=\"clicks\"}[$__range]) unless callcenter_ui_order_inputs_total{deployment_environment=\"$env\", staff=~\"$staff\", input=\"clicks\"} offset $__range) or increase(callcenter_ui_order_inputs_total{deployment_environment=\"$env\", staff=~\"$staff\", input=\"clicks\"}[$__range]))) / sum by (staff) (((max_over_time(callcenter_ui_order_duration_milliseconds_count{deployment_environment=\"$env\", staff=~\"$staff\", outcome=~\"sent|cash_out|changes_sent\"}[$__range]) unless callcenter_ui_order_duration_milliseconds_count{deployment_environment=\"$env\", staff=~\"$staff\", outcome=~\"sent|cash_out|changes_sent\"} offset $__range) or increase(callcenter_ui_order_duration_milliseconds_count{deployment_environment=\"$env\", staff=~\"$staff\", outcome=~\"sent|cash_out|changes_sent\"}[$__range])))",
           "legendFormat": "",
           "refId": "D",
           "range": false,
@@ -1978,7 +1978,7 @@
             "type": "prometheus",
             "uid": "prometheus"
           },
-          "expr": "sum by (staff) (increase(callcenter_ui_order_inputs_total{deployment_environment=\"$env\", staff=~\"$staff\", input=\"search_picks\"}[$__range])) / sum by (staff) (increase(callcenter_ui_order_duration_milliseconds_count{deployment_environment=\"$env\", staff=~\"$staff\", outcome=~\"sent|cash_out|changes_sent\"}[$__range]))",
+          "expr": "sum by (staff) (((max_over_time(callcenter_ui_order_inputs_total{deployment_environment=\"$env\", staff=~\"$staff\", input=\"search_picks\"}[$__range]) unless callcenter_ui_order_inputs_total{deployment_environment=\"$env\", staff=~\"$staff\", input=\"search_picks\"} offset $__range) or increase(callcenter_ui_order_inputs_total{deployment_environment=\"$env\", staff=~\"$staff\", input=\"search_picks\"}[$__range]))) / sum by (staff) (((max_over_time(callcenter_ui_order_duration_milliseconds_count{deployment_environment=\"$env\", staff=~\"$staff\", outcome=~\"sent|cash_out|changes_sent\"}[$__range]) unless callcenter_ui_order_duration_milliseconds_count{deployment_environment=\"$env\", staff=~\"$staff\", outcome=~\"sent|cash_out|changes_sent\"} offset $__range) or increase(callcenter_ui_order_duration_milliseconds_count{deployment_environment=\"$env\", staff=~\"$staff\", outcome=~\"sent|cash_out|changes_sent\"}[$__range])))",
           "legendFormat": "",
           "refId": "E",
           "range": false,
@@ -1990,7 +1990,7 @@
             "type": "prometheus",
             "uid": "prometheus"
           },
-          "expr": "sum by (staff) (increase(callcenter_ui_order_inputs_total{deployment_environment=\"$env\", staff=~\"$staff\", input=\"fkeys\"}[$__range])) / sum by (staff) (increase(callcenter_ui_order_duration_milliseconds_count{deployment_environment=\"$env\", staff=~\"$staff\", outcome=~\"sent|cash_out|changes_sent\"}[$__range]))",
+          "expr": "sum by (staff) (((max_over_time(callcenter_ui_order_inputs_total{deployment_environment=\"$env\", staff=~\"$staff\", input=\"fkeys\"}[$__range]) unless callcenter_ui_order_inputs_total{deployment_environment=\"$env\", staff=~\"$staff\", input=\"fkeys\"} offset $__range) or increase(callcenter_ui_order_inputs_total{deployment_environment=\"$env\", staff=~\"$staff\", input=\"fkeys\"}[$__range]))) / sum by (staff) (((max_over_time(callcenter_ui_order_duration_milliseconds_count{deployment_environment=\"$env\", staff=~\"$staff\", outcome=~\"sent|cash_out|changes_sent\"}[$__range]) unless callcenter_ui_order_duration_milliseconds_count{deployment_environment=\"$env\", staff=~\"$staff\", outcome=~\"sent|cash_out|changes_sent\"} offset $__range) or increase(callcenter_ui_order_duration_milliseconds_count{deployment_environment=\"$env\", staff=~\"$staff\", outcome=~\"sent|cash_out|changes_sent\"}[$__range])))",
           "legendFormat": "",
           "refId": "F",
           "range": false,
@@ -2002,7 +2002,7 @@
             "type": "prometheus",
             "uid": "prometheus"
           },
-          "expr": "sum by (staff) (increase(callcenter_ui_order_inputs_total{deployment_environment=\"$env\", staff=~\"$staff\", input=\"right_clicks\"}[$__range])) / sum by (staff) (increase(callcenter_ui_order_duration_milliseconds_count{deployment_environment=\"$env\", staff=~\"$staff\", outcome=~\"sent|cash_out|changes_sent\"}[$__range]))",
+          "expr": "sum by (staff) (((max_over_time(callcenter_ui_order_inputs_total{deployment_environment=\"$env\", staff=~\"$staff\", input=\"right_clicks\"}[$__range]) unless callcenter_ui_order_inputs_total{deployment_environment=\"$env\", staff=~\"$staff\", input=\"right_clicks\"} offset $__range) or increase(callcenter_ui_order_inputs_total{deployment_environment=\"$env\", staff=~\"$staff\", input=\"right_clicks\"}[$__range]))) / sum by (staff) (((max_over_time(callcenter_ui_order_duration_milliseconds_count{deployment_environment=\"$env\", staff=~\"$staff\", outcome=~\"sent|cash_out|changes_sent\"}[$__range]) unless callcenter_ui_order_duration_milliseconds_count{deployment_environment=\"$env\", staff=~\"$staff\", outcome=~\"sent|cash_out|changes_sent\"} offset $__range) or increase(callcenter_ui_order_duration_milliseconds_count{deployment_environment=\"$env\", staff=~\"$staff\", outcome=~\"sent|cash_out|changes_sent\"}[$__range])))",
           "legendFormat": "",
           "refId": "G",
           "range": false,
@@ -2014,7 +2014,7 @@
             "type": "prometheus",
             "uid": "prometheus"
           },
-          "expr": "sum by (staff) (increase(callcenter_ui_order_inputs_total{deployment_environment=\"$env\", staff=~\"$staff\", input=\"undos\"}[$__range])) / sum by (staff) (increase(callcenter_ui_order_duration_milliseconds_count{deployment_environment=\"$env\", staff=~\"$staff\", outcome=~\"sent|cash_out|changes_sent\"}[$__range]))",
+          "expr": "sum by (staff) (((max_over_time(callcenter_ui_order_inputs_total{deployment_environment=\"$env\", staff=~\"$staff\", input=\"undos\"}[$__range]) unless callcenter_ui_order_inputs_total{deployment_environment=\"$env\", staff=~\"$staff\", input=\"undos\"} offset $__range) or increase(callcenter_ui_order_inputs_total{deployment_environment=\"$env\", staff=~\"$staff\", input=\"undos\"}[$__range]))) / sum by (staff) (((max_over_time(callcenter_ui_order_duration_milliseconds_count{deployment_environment=\"$env\", staff=~\"$staff\", outcome=~\"sent|cash_out|changes_sent\"}[$__range]) unless callcenter_ui_order_duration_milliseconds_count{deployment_environment=\"$env\", staff=~\"$staff\", outcome=~\"sent|cash_out|changes_sent\"} offset $__range) or increase(callcenter_ui_order_duration_milliseconds_count{deployment_environment=\"$env\", staff=~\"$staff\", outcome=~\"sent|cash_out|changes_sent\"}[$__range])))",
           "legendFormat": "",
           "refId": "H",
           "range": false,
@@ -2199,7 +2199,7 @@
             "type": "prometheus",
             "uid": "prometheus"
           },
-          "expr": "histogram_quantile(0.5, sum by (version, le) (increase(callcenter_ui_order_duration_milliseconds_bucket{deployment_environment=\"$env\", staff=~\"$staff\", outcome=~\"sent|cash_out|changes_sent\"}[1h])))",
+          "expr": "histogram_quantile(0.5, sum by (version, le) (((max_over_time(callcenter_ui_order_duration_milliseconds_bucket{deployment_environment=\"$env\", staff=~\"$staff\", outcome=~\"sent|cash_out|changes_sent\"}[1h]) unless callcenter_ui_order_duration_milliseconds_bucket{deployment_environment=\"$env\", staff=~\"$staff\", outcome=~\"sent|cash_out|changes_sent\"} offset 1h) or increase(callcenter_ui_order_duration_milliseconds_bucket{deployment_environment=\"$env\", staff=~\"$staff\", outcome=~\"sent|cash_out|changes_sent\"}[1h]))))",
           "legendFormat": "{{version}}",
           "refId": "A",
           "range": true
@@ -2259,7 +2259,7 @@
             "type": "prometheus",
             "uid": "prometheus"
           },
-          "expr": "sum by (version, input) (increase(callcenter_ui_order_inputs_total{deployment_environment=\"$env\", staff=~\"$staff\", input=~\"keys|clicks\"}[1h])) / ignoring(input) group_left sum by (version) (increase(callcenter_ui_order_duration_milliseconds_count{deployment_environment=\"$env\", staff=~\"$staff\", outcome=~\"sent|cash_out|changes_sent\"}[1h]))",
+          "expr": "sum by (version, input) (((max_over_time(callcenter_ui_order_inputs_total{deployment_environment=\"$env\", staff=~\"$staff\", input=~\"keys|clicks\"}[1h]) unless callcenter_ui_order_inputs_total{deployment_environment=\"$env\", staff=~\"$staff\", input=~\"keys|clicks\"} offset 1h) or increase(callcenter_ui_order_inputs_total{deployment_environment=\"$env\", staff=~\"$staff\", input=~\"keys|clicks\"}[1h]))) / ignoring(input) group_left sum by (version) (((max_over_time(callcenter_ui_order_duration_milliseconds_count{deployment_environment=\"$env\", staff=~\"$staff\", outcome=~\"sent|cash_out|changes_sent\"}[1h]) unless callcenter_ui_order_duration_milliseconds_count{deployment_environment=\"$env\", staff=~\"$staff\", outcome=~\"sent|cash_out|changes_sent\"} offset 1h) or increase(callcenter_ui_order_duration_milliseconds_count{deployment_environment=\"$env\", staff=~\"$staff\", outcome=~\"sent|cash_out|changes_sent\"}[1h])))",
           "legendFormat": "{{version}} {{input}}",
           "refId": "A",
           "range": true
@@ -2319,7 +2319,7 @@
             "type": "prometheus",
             "uid": "prometheus"
           },
-          "expr": "histogram_quantile(0.5, sum by (step, le) (increase(callcenter_ui_step_duration_milliseconds_bucket{deployment_environment=\"$env\", staff=~\"$staff\"}[1h])))",
+          "expr": "histogram_quantile(0.5, sum by (step, le) (((max_over_time(callcenter_ui_step_duration_milliseconds_bucket{deployment_environment=\"$env\", staff=~\"$staff\"}[1h]) unless callcenter_ui_step_duration_milliseconds_bucket{deployment_environment=\"$env\", staff=~\"$staff\"} offset 1h) or increase(callcenter_ui_step_duration_milliseconds_bucket{deployment_environment=\"$env\", staff=~\"$staff\"}[1h]))))",
           "legendFormat": "{{step}}",
           "refId": "A",
           "range": true
@@ -2379,7 +2379,7 @@
             "type": "prometheus",
             "uid": "prometheus"
           },
-          "expr": "histogram_quantile(0.5, sum by (via, le) (increase(callcenter_ui_item_duration_milliseconds_bucket{deployment_environment=\"$env\", staff=~\"$staff\"}[1h])))",
+          "expr": "histogram_quantile(0.5, sum by (via, le) (((max_over_time(callcenter_ui_item_duration_milliseconds_bucket{deployment_environment=\"$env\", staff=~\"$staff\"}[1h]) unless callcenter_ui_item_duration_milliseconds_bucket{deployment_environment=\"$env\", staff=~\"$staff\"} offset 1h) or increase(callcenter_ui_item_duration_milliseconds_bucket{deployment_environment=\"$env\", staff=~\"$staff\"}[1h]))))",
           "legendFormat": "{{via}}",
           "refId": "A",
           "range": true
@@ -2439,7 +2439,7 @@
             "type": "prometheus",
             "uid": "prometheus"
           },
-          "expr": "histogram_quantile(0.5, sum by (outcome, kind, le) (increase(callcenter_ui_search_duration_milliseconds_bucket{deployment_environment=\"$env\", staff=~\"$staff\"}[1h])))",
+          "expr": "histogram_quantile(0.5, sum by (outcome, kind, le) (((max_over_time(callcenter_ui_search_duration_milliseconds_bucket{deployment_environment=\"$env\", staff=~\"$staff\"}[1h]) unless callcenter_ui_search_duration_milliseconds_bucket{deployment_environment=\"$env\", staff=~\"$staff\"} offset 1h) or increase(callcenter_ui_search_duration_milliseconds_bucket{deployment_environment=\"$env\", staff=~\"$staff\"}[1h]))))",
           "legendFormat": "{{outcome}} {{kind}}",
           "refId": "A",
           "range": true
@@ -2499,7 +2499,7 @@
             "type": "prometheus",
             "uid": "prometheus"
           },
-          "expr": "sort_desc(sum by (name, detail) (increase(callcenter_ui_events_total{deployment_environment=\"$env\", staff=~\"$staff\", kind=\"key\"}[$__range])) > 0)",
+          "expr": "sort_desc(sum by (name, detail) (((max_over_time(callcenter_ui_events_total{deployment_environment=\"$env\", staff=~\"$staff\", kind=\"key\"}[$__range]) unless callcenter_ui_events_total{deployment_environment=\"$env\", staff=~\"$staff\", kind=\"key\"} offset $__range) or increase(callcenter_ui_events_total{deployment_environment=\"$env\", staff=~\"$staff\", kind=\"key\"}[$__range]))) > 0)",
           "legendFormat": "",
           "refId": "A",
           "range": false,
@@ -2562,7 +2562,7 @@
             "type": "prometheus",
             "uid": "prometheus"
           },
-          "expr": "topk(30, sum by (name, detail) (increase(callcenter_ui_events_total{deployment_environment=\"$env\", staff=~\"$staff\", kind=\"click\"}[$__range])) > 0)",
+          "expr": "topk(30, sum by (name, detail) (((max_over_time(callcenter_ui_events_total{deployment_environment=\"$env\", staff=~\"$staff\", kind=\"click\"}[$__range]) unless callcenter_ui_events_total{deployment_environment=\"$env\", staff=~\"$staff\", kind=\"click\"} offset $__range) or increase(callcenter_ui_events_total{deployment_environment=\"$env\", staff=~\"$staff\", kind=\"click\"}[$__range]))) > 0)",
           "legendFormat": "",
           "refId": "A",
           "range": false,
@@ -2625,7 +2625,7 @@
             "type": "prometheus",
             "uid": "prometheus"
           },
-          "expr": "sort_desc(sum by (kind, name, detail) (increase(callcenter_ui_events_total{deployment_environment=\"$env\", staff=~\"$staff\", kind=~\"context|undo|nav\"}[$__range])) > 0)",
+          "expr": "sort_desc(sum by (kind, name, detail) (((max_over_time(callcenter_ui_events_total{deployment_environment=\"$env\", staff=~\"$staff\", kind=~\"context|undo|nav\"}[$__range]) unless callcenter_ui_events_total{deployment_environment=\"$env\", staff=~\"$staff\", kind=~\"context|undo|nav\"} offset $__range) or increase(callcenter_ui_events_total{deployment_environment=\"$env\", staff=~\"$staff\", kind=~\"context|undo|nav\"}[$__range]))) > 0)",
           "legendFormat": "",
           "refId": "A",
           "range": false,
@@ -2784,7 +2784,7 @@
             "type": "prometheus",
             "uid": "prometheus"
           },
-          "expr": "histogram_quantile(0.95, sum by (le) (increase(callcenter_net_rtt_milliseconds_bucket{deployment_environment=\"$env\", staff=~\"$staff\", target=\"us\"}[$__range])))",
+          "expr": "histogram_quantile(0.95, sum by (le) (((max_over_time(callcenter_net_rtt_milliseconds_bucket{deployment_environment=\"$env\", staff=~\"$staff\", target=\"us\"}[$__range]) unless callcenter_net_rtt_milliseconds_bucket{deployment_environment=\"$env\", staff=~\"$staff\", target=\"us\"} offset $__range) or increase(callcenter_net_rtt_milliseconds_bucket{deployment_environment=\"$env\", staff=~\"$staff\", target=\"us\"}[$__range]))))",
           "legendFormat": "",
           "refId": "A",
           "range": false,
@@ -2852,7 +2852,7 @@
             "type": "prometheus",
             "uid": "prometheus"
           },
-          "expr": "histogram_quantile(0.95, sum by (le) (increase(callcenter_net_rtt_milliseconds_bucket{deployment_environment=\"$env\", staff=~\"$staff\", target=~\"square_js|pci\"}[$__range])))",
+          "expr": "histogram_quantile(0.95, sum by (le) (((max_over_time(callcenter_net_rtt_milliseconds_bucket{deployment_environment=\"$env\", staff=~\"$staff\", target=~\"square_js|pci\"}[$__range]) unless callcenter_net_rtt_milliseconds_bucket{deployment_environment=\"$env\", staff=~\"$staff\", target=~\"square_js|pci\"} offset $__range) or increase(callcenter_net_rtt_milliseconds_bucket{deployment_environment=\"$env\", staff=~\"$staff\", target=~\"square_js|pci\"}[$__range]))))",
           "legendFormat": "",
           "refId": "A",
           "range": false,
@@ -2920,7 +2920,7 @@
             "type": "prometheus",
             "uid": "prometheus"
           },
-          "expr": "sum(increase(callcenter_net_failures_total{deployment_environment=\"$env\", staff=~\"$staff\"}[$__range])) or vector(0)",
+          "expr": "sum(((max_over_time(callcenter_net_failures_total{deployment_environment=\"$env\", staff=~\"$staff\"}[$__range]) unless callcenter_net_failures_total{deployment_environment=\"$env\", staff=~\"$staff\"} offset $__range) or increase(callcenter_net_failures_total{deployment_environment=\"$env\", staff=~\"$staff\"}[$__range]))) or vector(0)",
           "legendFormat": "",
           "refId": "A",
           "range": false,
@@ -2988,7 +2988,7 @@
             "type": "prometheus",
             "uid": "prometheus"
           },
-          "expr": "sum(increase(callcenter_net_checks_total{deployment_environment=\"$env\", staff=~\"$staff\"}[$__range])) or vector(0)",
+          "expr": "sum(((max_over_time(callcenter_net_checks_total{deployment_environment=\"$env\", staff=~\"$staff\"}[$__range]) unless callcenter_net_checks_total{deployment_environment=\"$env\", staff=~\"$staff\"} offset $__range) or increase(callcenter_net_checks_total{deployment_environment=\"$env\", staff=~\"$staff\"}[$__range]))) or vector(0)",
           "legendFormat": "",
           "refId": "A",
           "range": false,
@@ -3048,7 +3048,7 @@
             "type": "prometheus",
             "uid": "prometheus"
           },
-          "expr": "sum(increase(callcenter_card_net_total{deployment_environment=\"$env\", net=\"bad\"}[$__range])) / sum(increase(callcenter_card_net_total{deployment_environment=\"$env\", net!=\"none\"}[$__range]))",
+          "expr": "sum(((max_over_time(callcenter_card_net_total{deployment_environment=\"$env\", net=\"bad\"}[$__range]) unless callcenter_card_net_total{deployment_environment=\"$env\", net=\"bad\"} offset $__range) or increase(callcenter_card_net_total{deployment_environment=\"$env\", net=\"bad\"}[$__range]))) / sum(((max_over_time(callcenter_card_net_total{deployment_environment=\"$env\", net!=\"none\"}[$__range]) unless callcenter_card_net_total{deployment_environment=\"$env\", net!=\"none\"} offset $__range) or increase(callcenter_card_net_total{deployment_environment=\"$env\", net!=\"none\"}[$__range])))",
           "legendFormat": "",
           "refId": "A",
           "range": false,
@@ -3193,7 +3193,7 @@
             "type": "prometheus",
             "uid": "prometheus"
           },
-          "expr": "histogram_quantile(0.95, sum by (le, staff, isp) (increase(callcenter_net_rtt_milliseconds_bucket{deployment_environment=\"$env\", staff=~\"$staff\", target=\"us\"}[15m])))",
+          "expr": "histogram_quantile(0.95, sum by (le, staff, isp) (((max_over_time(callcenter_net_rtt_milliseconds_bucket{deployment_environment=\"$env\", staff=~\"$staff\", target=\"us\"}[15m]) unless callcenter_net_rtt_milliseconds_bucket{deployment_environment=\"$env\", staff=~\"$staff\", target=\"us\"} offset 15m) or increase(callcenter_net_rtt_milliseconds_bucket{deployment_environment=\"$env\", staff=~\"$staff\", target=\"us\"}[15m]))))",
           "legendFormat": "{{staff}} · {{isp}}",
           "refId": "A",
           "range": true
@@ -3253,7 +3253,7 @@
             "type": "prometheus",
             "uid": "prometheus"
           },
-          "expr": "histogram_quantile(0.95, sum by (le, isp, target) (increase(callcenter_net_rtt_milliseconds_bucket{deployment_environment=\"$env\", staff=~\"$staff\", target=~\"square_js|pci\"}[15m])))",
+          "expr": "histogram_quantile(0.95, sum by (le, isp, target) (((max_over_time(callcenter_net_rtt_milliseconds_bucket{deployment_environment=\"$env\", staff=~\"$staff\", target=~\"square_js|pci\"}[15m]) unless callcenter_net_rtt_milliseconds_bucket{deployment_environment=\"$env\", staff=~\"$staff\", target=~\"square_js|pci\"} offset 15m) or increase(callcenter_net_rtt_milliseconds_bucket{deployment_environment=\"$env\", staff=~\"$staff\", target=~\"square_js|pci\"}[15m]))))",
           "legendFormat": "{{isp}} · {{target}}",
           "refId": "A",
           "range": true
@@ -3313,7 +3313,7 @@
             "type": "prometheus",
             "uid": "prometheus"
           },
-          "expr": "sum by (staff, isp, target) (increase(callcenter_net_failures_total{deployment_environment=\"$env\", staff=~\"$staff\"}[15m]))",
+          "expr": "sum by (staff, isp, target) (((max_over_time(callcenter_net_failures_total{deployment_environment=\"$env\", staff=~\"$staff\"}[15m]) unless callcenter_net_failures_total{deployment_environment=\"$env\", staff=~\"$staff\"} offset 15m) or increase(callcenter_net_failures_total{deployment_environment=\"$env\", staff=~\"$staff\"}[15m])))",
           "legendFormat": "{{staff}} · {{isp}} · {{target}}",
           "refId": "A",
           "range": true
@@ -3373,7 +3373,7 @@
             "type": "prometheus",
             "uid": "prometheus"
           },
-          "expr": "sort_desc(sum by (outcome, net, clock, isp) (increase(callcenter_card_net_total{deployment_environment=\"$env\"}[$__range])) > 0)",
+          "expr": "sort_desc(sum by (outcome, net, clock, isp) (((max_over_time(callcenter_card_net_total{deployment_environment=\"$env\"}[$__range]) unless callcenter_card_net_total{deployment_environment=\"$env\"} offset $__range) or increase(callcenter_card_net_total{deployment_environment=\"$env\"}[$__range]))) > 0)",
           "legendFormat": "",
           "refId": "A",
           "range": false,
@@ -3431,7 +3431,7 @@
             "type": "prometheus",
             "uid": "prometheus"
           },
-          "expr": "sort_desc(sum by (staff, isp, verdict, via) (increase(callcenter_net_checks_total{deployment_environment=\"$env\", staff=~\"$staff\"}[$__range])) > 0)",
+          "expr": "sort_desc(sum by (staff, isp, verdict, via) (((max_over_time(callcenter_net_checks_total{deployment_environment=\"$env\", staff=~\"$staff\"}[$__range]) unless callcenter_net_checks_total{deployment_environment=\"$env\", staff=~\"$staff\"} offset $__range) or increase(callcenter_net_checks_total{deployment_environment=\"$env\", staff=~\"$staff\"}[$__range]))) > 0)",
           "legendFormat": "",
           "refId": "A",
           "range": false,
