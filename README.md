@@ -167,6 +167,9 @@ docker run --rm -v "$PWD/loki.yaml:/etc/loki/loki.yaml:ro" grafana/loki:3.3.2 -c
 # 2. recreate Loki (new limits + the detail label) and the Collector (its config is unchanged; recreated so the
 #    pipeline reconnects cleanly to the new Loki); secrets from obv as `task up` does
 DOPPLER_TOKEN=$(cat .doppler-obv-token) doppler run -- docker compose up -d loki otel-collector
+#    loki.yaml is a mounted file: `up -d` leaves a running Loki as it is when only that file changed (2026-11-18:
+#    "Running", still on the old limits). Restart it so it reads the new file:
+docker compose restart loki otel-collector
 #    Grafana reads the dashboard file by itself (file provisioning); a restart only makes it immediate
 docker compose restart grafana
 # 3. checks
@@ -176,7 +179,7 @@ curl -s localhost:3100/loki/api/v1/label/detail/values                          
 docker logs --since 2m quicc-otel-collector 2>&1 | grep -i error | head         # nothing new
 ```
 
-Loki restarts in a few seconds; OTLP senders retry, so nothing is lost. The `detail` label shows only once the call
+Loki restarts in a few seconds; OTLP senders retry. The Collector restarting at the same time can drop the few log lines it was still retrying (2026-11-18: 31 lines). The `detail` label shows only once the call
 center (the next release after 1.0.12) and the Pi (the agent release with the digest) send it; until then the old
 `quicc.ui` lines keep the 30 days. To undo: `git revert` the commit and run step 2 again (lines already written with
 `detail` then simply keep the 30 days).
