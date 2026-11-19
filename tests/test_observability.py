@@ -5,7 +5,10 @@ center's bounds to the dashboards' median, the 1-year rules count a single event
 retention streams match the labels the call center writes, and Grafana loads every dashboard.
 
 The PromQL / Loki / Grafana checks run the stack's own images (docker-compose.yml) in throwaway containers with their
-own names; without Docker they skip (the pure checks still run).
+own names; without Docker they skip (the pure checks still run). No container joins a Docker bridge network
+(`--network none`, or `host` on free loopback ports for the two we talk to): a bridge container adds and removes a
+network interface on the host, and Chromium in the browser suites the gate runs beside this step then fails its
+requests with ERR_NETWORK_CHANGED (the storefront's first-try failures of 2026-11-19).
 
     uv run --with pytest --with pyyaml pytest observability/tests -q
 """
@@ -15,6 +18,7 @@ import base64
 import json
 import re
 import shutil
+import socket
 import subprocess
 import time
 import urllib.error
@@ -61,7 +65,7 @@ def _name(what: str) -> str:
 def run_promtool(workdir: Path, *args: str) -> subprocess.CompletedProcess:
     workdir.chmod(0o755)   # pytest's tmp dirs are 0700; the image runs as nobody
     return subprocess.run(
-        ["docker", "run", "--rm", "--name", _name("promtool"), "--entrypoint", "promtool",
+        ["docker", "run", "--rm", "--network", "none", "--name", _name("promtool"), "--entrypoint", "promtool",
          "-v", f"{workdir}:/w:ro", "-w", "/w", IMG["prometheus"], *args],
         capture_output=True, text=True, timeout=180)
 
@@ -358,8 +362,9 @@ def test_the_call_center_writes_the_two_streams_loki_keeps():
 @needs_docker
 def test_loki_config_verifies():
     """`loki -verify-config` (README "Retention": the check before a deploy) in the stack's own image."""
-    r = subprocess.run(["docker", "run", "--rm", "--name", _name("loki-verify"), "-v", f"{OBS / 'loki.yaml'}:/etc/loki/loki.yaml:ro",
-                        IMG["loki"], "-config.file=/etc/loki/loki.yaml", "-verify-config"],
+    r = subprocess.run(["docker", "run", "--rm", "--network", "none", "--name", _name("loki-verify"),
+                        "-v", f"{OBS / 'loki.yaml'}:/etc/loki/loki.yaml:ro", IMG["loki"],
+                        "-config.file=/etc/loki/loki.yaml", "-verify-config"],
                        capture_output=True, text=True, timeout=120)
     assert r.returncode == 0, f"{r.stdout}{r.stderr}"
 
@@ -375,17 +380,21 @@ def _http(url: str, data: bytes | None = None, headers: dict | None = None, time
         return 0, b""
 
 
-def _port(name: str, inner: int) -> int:
-    out = subprocess.run(["docker", "port", name, str(inner)], capture_output=True, text=True, check=True).stdout
-    return int(out.strip().splitlines()[0].rsplit(":", 1)[1])
+def _free_port() -> int:
+    """A free loopback port for a `--network host` container (no published port: that needs a bridge network)."""
+    with socket.socket() as s:
+        s.bind(("127.0.0.1", 0))
+        return s.getsockname()[1]
 
 
-def _wait(url: str, secs: float = 90) -> None:
+def _wait(url: str, secs: float = 90, container: str = "") -> None:
     end = time.time() + secs
     while time.time() < end:
         code, _ = _http(url)
         if code == 200:
             return
+        if container and subprocess.run(["docker", "inspect", container], capture_output=True).returncode != 0:
+            raise AssertionError(f"{container} stopped before {url} answered (its port taken on the host?)")
         time.sleep(0.5)
     raise AssertionError(f"{url} never answered 200 in {secs:.0f} s")
 
@@ -395,12 +404,15 @@ def test_loki_indexes_the_detail_label_the_retention_selectors_match(tmp_path):
     """A live Loki with loki.yaml: an OTLP log with detail=full and one with detail=digest (as the call center sends
     them) come back by the retention selectors themselves."""
     name = _name("loki")
-    subprocess.run(["docker", "run", "-d", "--rm", "--name", name, "-p", "127.0.0.1::3100",
-                    "-v", f"{OBS / 'loki.yaml'}:/etc/loki/loki.yaml:ro", IMG["loki"], "-config.file=/etc/loki/loki.yaml"],
+    http, grpc = _free_port(), _free_port()
+    subprocess.run(["docker", "run", "-d", "--rm", "--name", name, "--network", "host",
+                    "-v", f"{OBS / 'loki.yaml'}:/etc/loki/loki.yaml:ro", IMG["loki"], "-config.file=/etc/loki/loki.yaml",
+                    "-server.http-listen-address=127.0.0.1", f"-server.http-listen-port={http}",
+                    "-server.grpc-listen-address=127.0.0.1", f"-server.grpc-listen-port={grpc}"],
                    capture_output=True, text=True, check=True)
     try:
-        base = f"http://127.0.0.1:{_port(name, 3100)}"
-        _wait(f"{base}/ready", 120)
+        base = f"http://127.0.0.1:{http}"
+        _wait(f"{base}/ready", 120, name)
         now = time.time_ns()
 
         def block(stream: str) -> dict:
@@ -441,13 +453,15 @@ def test_grafana_loads_every_dashboard(tmp_path):
     prov = tmp_path / "provisioning"
     for sub in ("datasources", "dashboards"):
         shutil.copytree(OBS / "grafana" / "provisioning" / sub, prov / sub)
-    subprocess.run(["docker", "run", "-d", "--rm", "--name", name, "-p", "127.0.0.1::3000",
+    port = _free_port()
+    subprocess.run(["docker", "run", "-d", "--rm", "--name", name, "--network", "host",
+                    "-e", "GF_SERVER_HTTP_ADDR=127.0.0.1", "-e", f"GF_SERVER_HTTP_PORT={port}",
                     "-e", "GF_SECURITY_ADMIN_USER=admin", "-e", "GF_SECURITY_ADMIN_PASSWORD=tc-test",
                     "-v", f"{prov}:/etc/grafana/provisioning:ro", "-v", f"{DASH}:/var/lib/grafana/dashboards:ro",
                     IMG["grafana"]], capture_output=True, text=True, check=True)
     try:
-        base = f"http://127.0.0.1:{_port(name, 3000)}"
-        _wait(f"{base}/api/health", 120)
+        base = f"http://127.0.0.1:{port}"
+        _wait(f"{base}/api/health", 120, name)
         auth = {"Authorization": "Basic " + base64.b64encode(b"admin:tc-test").decode()}
         want = {json.loads(f.read_text())["uid"]: f for f in DASH.glob("*/*.json")}
         found: dict = {}

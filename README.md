@@ -145,7 +145,9 @@ new builds), and `du -sh` of the `loki_data` volume over a week.
 ### Tests (the gate's `observability` step, 2026-11-18)
 
 `tests/test_observability.py`, from the quicc-ops root: `uv run --with pytest --with pyyaml pytest observability/tests -q`
-(the stack's own images in throwaway containers; without Docker only the pure checks run). It checks: every PromQL
+(the stack's own images in throwaway containers; without Docker only the pure checks run; no container on a Docker
+bridge network, `--network none` or `host` on free loopback ports: a bridge container changes the host's interfaces
+and the gate's browser suites beside this step fail with ERR_NETWORK_CHANGED). It checks: every PromQL
 query of every dashboard parses (promtool); every count on Call center, Call center at a glance and Efficiency over
 time keeps a series born inside its window (`max_over_time(x[r]) unless x offset r or increase(x[r])`; the few plain
 ones are listed with why); the dashboards' own queries read 1 for a single event, never 0, and a 200 s order's median
