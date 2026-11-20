@@ -19,3 +19,7 @@ Thumbs.db
 
 # Logs
 *.log
+
+# Python test caches (the test step writes them beside the tests; a run that left them counted the tree as changed)
+__pycache__/
+.pytest_cache/
