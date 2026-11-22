@@ -3542,6 +3542,1440 @@
         "w": 24,
         "h": 10
       }
+    },
+    {
+      "type": "row",
+      "title": "Items, quantity, search and keys (call center 2026-11-21 events)",
+      "collapsed": false,
+      "id": 301,
+      "gridPos": {
+        "x": 0,
+        "y": 150,
+        "w": 24,
+        "h": 1
+      },
+      "panels": []
+    },
+    {
+      "type": "stat",
+      "title": "Items added",
+      "description": "Items put on an order over the range, every agent (the metric has no agent label: use the 'Every agent event' log for one agent). Event item.added, metric callcenter_ui_item_added_total.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "sum(((max_over_time(callcenter_ui_item_added_total{deployment_environment=\"$env\"}[$__range]) unless callcenter_ui_item_added_total{deployment_environment=\"$env\"} offset $__range) or increase(callcenter_ui_item_added_total{deployment_environment=\"$env\"}[$__range]))) or vector(0)",
+          "refId": "A",
+          "legendFormat": "",
+          "range": false,
+          "instant": true
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "decimals": 0,
+          "noValue": "no data",
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "blue",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "background",
+        "graphMode": "none",
+        "justifyMode": "center",
+        "textMode": "auto",
+        "wideLayout": true,
+        "showPercentChange": false,
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        }
+      },
+      "id": 302,
+      "gridPos": {
+        "x": 0,
+        "y": 151,
+        "w": 4,
+        "h": 4
+      }
+    },
+    {
+      "type": "stat",
+      "title": "Double adds",
+      "description": "Items added twice within 600 ms (same item and size): a double tap or double click. A few are normal, a steady stream means the add button feels unresponsive or a button is hit twice by habit.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "sum(((max_over_time(callcenter_ui_item_added_total{deployment_environment=\"$env\", double=\"yes\"}[$__range]) unless callcenter_ui_item_added_total{deployment_environment=\"$env\", double=\"yes\"} offset $__range) or increase(callcenter_ui_item_added_total{deployment_environment=\"$env\", double=\"yes\"}[$__range]))) or vector(0)",
+          "refId": "A",
+          "legendFormat": "",
+          "range": false,
+          "instant": true
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "decimals": 0,
+          "noValue": "no data",
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 10
+              },
+              {
+                "color": "red",
+                "value": 50
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "background",
+        "graphMode": "none",
+        "justifyMode": "center",
+        "textMode": "auto",
+        "wideLayout": true,
+        "showPercentChange": false,
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        }
+      },
+      "id": 303,
+      "gridPos": {
+        "x": 4,
+        "y": 151,
+        "w": 4,
+        "h": 4
+      }
+    },
+    {
+      "type": "stat",
+      "title": "Double-add share",
+      "description": "Double adds as a share of all items added over the range. Starting guess: under 2 % normal, over 5 % worth a look (marked as a guess).",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "sum(((max_over_time(callcenter_ui_item_added_total{deployment_environment=\"$env\", double=\"yes\"}[$__range]) unless callcenter_ui_item_added_total{deployment_environment=\"$env\", double=\"yes\"} offset $__range) or increase(callcenter_ui_item_added_total{deployment_environment=\"$env\", double=\"yes\"}[$__range]))) / sum(((max_over_time(callcenter_ui_item_added_total{deployment_environment=\"$env\"}[$__range]) unless callcenter_ui_item_added_total{deployment_environment=\"$env\"} offset $__range) or increase(callcenter_ui_item_added_total{deployment_environment=\"$env\"}[$__range])))",
+          "refId": "A",
+          "legendFormat": "",
+          "range": false,
+          "instant": true
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit",
+          "decimals": 1,
+          "noValue": "no data",
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 0.02
+              },
+              {
+                "color": "red",
+                "value": 0.05
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "background",
+        "graphMode": "none",
+        "justifyMode": "center",
+        "textMode": "auto",
+        "wideLayout": true,
+        "showPercentChange": false,
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        }
+      },
+      "id": 304,
+      "gridPos": {
+        "x": 8,
+        "y": 151,
+        "w": 4,
+        "h": 4
+      }
+    },
+    {
+      "type": "stat",
+      "title": "Quantity pad uses",
+      "description": "Times an agent set a line's quantity from the Quantity number pad (item.qty, via pad) over the range, the selected agents. The call center has no quantity prefix to type.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "sum(((max_over_time(callcenter_ui_actions_total{deployment_environment=\"$env\", staff=~\"$staff\", action=\"qty_pad\"}[$__range]) unless callcenter_ui_actions_total{deployment_environment=\"$env\", staff=~\"$staff\", action=\"qty_pad\"} offset $__range) or increase(callcenter_ui_actions_total{deployment_environment=\"$env\", staff=~\"$staff\", action=\"qty_pad\"}[$__range]))) or vector(0)",
+          "refId": "A",
+          "legendFormat": "",
+          "range": false,
+          "instant": true
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "decimals": 0,
+          "noValue": "no data",
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "blue",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "background",
+        "graphMode": "none",
+        "justifyMode": "center",
+        "textMode": "auto",
+        "wideLayout": true,
+        "showPercentChange": false,
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        }
+      },
+      "id": 305,
+      "gridPos": {
+        "x": 12,
+        "y": 151,
+        "w": 4,
+        "h": 4
+      }
+    },
+    {
+      "type": "stat",
+      "title": "Search pick rate",
+      "description": "Picks / (picks + abandons) of every search over the range, the selected agents. Abandon = Esc, clicked away or cleared with no pick. Starting guess: over 80 % good, under 60 % poor.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "sum(((max_over_time(callcenter_ui_events_total{deployment_environment=\"$env\", staff=~\"$staff\", kind=\"search\", name=\"pick\"}[$__range]) unless callcenter_ui_events_total{deployment_environment=\"$env\", staff=~\"$staff\", kind=\"search\", name=\"pick\"} offset $__range) or increase(callcenter_ui_events_total{deployment_environment=\"$env\", staff=~\"$staff\", kind=\"search\", name=\"pick\"}[$__range]))) / (sum(((max_over_time(callcenter_ui_events_total{deployment_environment=\"$env\", staff=~\"$staff\", kind=\"search\", name=\"pick\"}[$__range]) unless callcenter_ui_events_total{deployment_environment=\"$env\", staff=~\"$staff\", kind=\"search\", name=\"pick\"} offset $__range) or increase(callcenter_ui_events_total{deployment_environment=\"$env\", staff=~\"$staff\", kind=\"search\", name=\"pick\"}[$__range]))) + sum(((max_over_time(callcenter_ui_events_total{deployment_environment=\"$env\", staff=~\"$staff\", kind=\"search\", name=\"abandon\"}[$__range]) unless callcenter_ui_events_total{deployment_environment=\"$env\", staff=~\"$staff\", kind=\"search\", name=\"abandon\"} offset $__range) or increase(callcenter_ui_events_total{deployment_environment=\"$env\", staff=~\"$staff\", kind=\"search\", name=\"abandon\"}[$__range]))))",
+          "refId": "A",
+          "legendFormat": "",
+          "range": false,
+          "instant": true
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit",
+          "decimals": 0,
+          "noValue": "no data",
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "red",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 0.6
+              },
+              {
+                "color": "green",
+                "value": 0.8
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "background",
+        "graphMode": "none",
+        "justifyMode": "center",
+        "textMode": "auto",
+        "wideLayout": true,
+        "showPercentChange": false,
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        }
+      },
+      "id": 306,
+      "gridPos": {
+        "x": 16,
+        "y": 151,
+        "w": 4,
+        "h": 4
+      }
+    },
+    {
+      "type": "stat",
+      "title": "Clock wrong samples",
+      "description": "Clock samples where the agent's computer was more than CC_CLOCK_SKEW_SECONDS (default 120 s = 2 min) off our server's, over the range, the selected agents. Each one shows the agent the red clock banner. 0 is normal.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "sum(((max_over_time(callcenter_clock_bad_total{deployment_environment=\"$env\", staff=~\"$staff\"}[$__range]) unless callcenter_clock_bad_total{deployment_environment=\"$env\", staff=~\"$staff\"} offset $__range) or increase(callcenter_clock_bad_total{deployment_environment=\"$env\", staff=~\"$staff\"}[$__range]))) or vector(0)",
+          "refId": "A",
+          "legendFormat": "",
+          "range": false,
+          "instant": true
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "decimals": 0,
+          "noValue": "no data",
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 1
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "background",
+        "graphMode": "none",
+        "justifyMode": "center",
+        "textMode": "auto",
+        "wideLayout": true,
+        "showPercentChange": false,
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        }
+      },
+      "id": 307,
+      "gridPos": {
+        "x": 20,
+        "y": 151,
+        "w": 4,
+        "h": 4
+      }
+    },
+    {
+      "type": "timeseries",
+      "title": "Items added per hour, by how found",
+      "description": "Items put on an order per hour: menu (clicked), search (typed) or alias (a store shortcut). Type to order should grow search and alias against menu. All agents (no agent label on this metric).",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "sum by (via) (((max_over_time(callcenter_ui_item_added_total{deployment_environment=\"$env\"}[1h]) unless callcenter_ui_item_added_total{deployment_environment=\"$env\"} offset 1h) or increase(callcenter_ui_item_added_total{deployment_environment=\"$env\"}[1h])))",
+          "refId": "A",
+          "legendFormat": "{{via}}",
+          "range": true
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "custom": {
+            "drawStyle": "bars",
+            "lineWidth": 1,
+            "fillOpacity": 60,
+            "showPoints": "never",
+            "spanNulls": true,
+            "stacking": {
+              "mode": "normal",
+              "group": "A"
+            }
+          },
+          "noValue": "no data"
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "right",
+          "calcs": [
+            "sum",
+            "max"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "id": 308,
+      "gridPos": {
+        "x": 0,
+        "y": 155,
+        "w": 12,
+        "h": 8
+      }
+    },
+    {
+      "type": "timeseries",
+      "title": "Double adds per hour, by app version",
+      "description": "Items added twice within 600 ms, per hour and app version: did a release make them fewer or more?",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "sum by (version) (((max_over_time(callcenter_ui_item_added_total{deployment_environment=\"$env\", double=\"yes\"}[1h]) unless callcenter_ui_item_added_total{deployment_environment=\"$env\", double=\"yes\"} offset 1h) or increase(callcenter_ui_item_added_total{deployment_environment=\"$env\", double=\"yes\"}[1h])))",
+          "refId": "A",
+          "legendFormat": "{{version}}",
+          "range": true
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "custom": {
+            "drawStyle": "bars",
+            "lineWidth": 1,
+            "fillOpacity": 60,
+            "showPoints": "never",
+            "spanNulls": true,
+            "stacking": {
+              "mode": "normal",
+              "group": "A"
+            }
+          },
+          "noValue": "no data"
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "right",
+          "calcs": [
+            "sum",
+            "max"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "id": 309,
+      "gridPos": {
+        "x": 12,
+        "y": 155,
+        "w": 12,
+        "h": 8
+      }
+    },
+    {
+      "type": "table",
+      "title": "Top items added (menu / search / alias)",
+      "description": "The 30 items added most over the range (the menu's own name), split by how they were found. Helps the store put the busiest items first on the menu tab and give them an alias.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "topk(30, sum by (item, via) (((max_over_time(callcenter_ui_item_added_total{deployment_environment=\"$env\"}[$__range]) unless callcenter_ui_item_added_total{deployment_environment=\"$env\"} offset $__range) or increase(callcenter_ui_item_added_total{deployment_environment=\"$env\"}[$__range]))) > 0)",
+          "refId": "A",
+          "legendFormat": "",
+          "range": false,
+          "instant": true,
+          "format": "table"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "noValue": "no data"
+        },
+        "overrides": []
+      },
+      "options": {
+        "showHeader": true,
+        "cellHeight": "sm",
+        "footer": {
+          "show": false,
+          "reducer": [
+            "sum"
+          ],
+          "fields": ""
+        }
+      },
+      "transformations": [
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {
+              "Time": true
+            },
+            "renameByName": {
+              "item": "item",
+              "via": "found by",
+              "Value": "times added"
+            }
+          }
+        }
+      ],
+      "id": 310,
+      "gridPos": {
+        "x": 0,
+        "y": 163,
+        "w": 12,
+        "h": 8
+      }
+    },
+    {
+      "type": "timeseries",
+      "title": "Quantity pad use per hour, per agent",
+      "description": "Times each agent used the Quantity number pad, per hour (item.qty).",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "sum by (staff) (((max_over_time(callcenter_ui_actions_total{deployment_environment=\"$env\", staff=~\"$staff\", action=\"qty_pad\"}[1h]) unless callcenter_ui_actions_total{deployment_environment=\"$env\", staff=~\"$staff\", action=\"qty_pad\"} offset 1h) or increase(callcenter_ui_actions_total{deployment_environment=\"$env\", staff=~\"$staff\", action=\"qty_pad\"}[1h])))",
+          "refId": "A",
+          "legendFormat": "{{staff}}",
+          "range": true
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "custom": {
+            "drawStyle": "bars",
+            "lineWidth": 1,
+            "fillOpacity": 60,
+            "showPoints": "never",
+            "spanNulls": true,
+            "stacking": {
+              "mode": "normal",
+              "group": "A"
+            }
+          },
+          "noValue": "no data"
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "right",
+          "calcs": [
+            "sum",
+            "max"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "id": 311,
+      "gridPos": {
+        "x": 12,
+        "y": 163,
+        "w": 12,
+        "h": 8
+      }
+    },
+    {
+      "type": "timeseries",
+      "title": "Searches: picked vs given up per hour",
+      "description": "Searches per hour that ended in a pick against ones abandoned (Esc, blur, cleared), the selected agents.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "sum(((max_over_time(callcenter_ui_events_total{deployment_environment=\"$env\", staff=~\"$staff\", kind=\"search\", name=\"pick\"}[1h]) unless callcenter_ui_events_total{deployment_environment=\"$env\", staff=~\"$staff\", kind=\"search\", name=\"pick\"} offset 1h) or increase(callcenter_ui_events_total{deployment_environment=\"$env\", staff=~\"$staff\", kind=\"search\", name=\"pick\"}[1h])))",
+          "refId": "A",
+          "legendFormat": "picked",
+          "range": true
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "sum(((max_over_time(callcenter_ui_events_total{deployment_environment=\"$env\", staff=~\"$staff\", kind=\"search\", name=\"abandon\"}[1h]) unless callcenter_ui_events_total{deployment_environment=\"$env\", staff=~\"$staff\", kind=\"search\", name=\"abandon\"} offset 1h) or increase(callcenter_ui_events_total{deployment_environment=\"$env\", staff=~\"$staff\", kind=\"search\", name=\"abandon\"}[1h])))",
+          "refId": "B",
+          "legendFormat": "abandoned",
+          "range": true
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "custom": {
+            "drawStyle": "bars",
+            "lineWidth": 1,
+            "fillOpacity": 60,
+            "showPoints": "never",
+            "spanNulls": true,
+            "stacking": {
+              "mode": "normal",
+              "group": "A"
+            }
+          },
+          "noValue": "no data"
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "right",
+          "calcs": [
+            "sum",
+            "max"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "id": 312,
+      "gridPos": {
+        "x": 0,
+        "y": 171,
+        "w": 12,
+        "h": 8
+      }
+    },
+    {
+      "type": "timeseries",
+      "title": "Search pick rate per agent (1 h)",
+      "description": "Picks / (picks + abandons) per agent per hour. A low line = that agent's searches often find nothing: look at what they typed in the Every agent event log (menu text only with a pick).",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "sum by (staff) (((max_over_time(callcenter_ui_events_total{deployment_environment=\"$env\", staff=~\"$staff\", kind=\"search\", name=\"pick\"}[1h]) unless callcenter_ui_events_total{deployment_environment=\"$env\", staff=~\"$staff\", kind=\"search\", name=\"pick\"} offset 1h) or increase(callcenter_ui_events_total{deployment_environment=\"$env\", staff=~\"$staff\", kind=\"search\", name=\"pick\"}[1h]))) / (sum by (staff) (((max_over_time(callcenter_ui_events_total{deployment_environment=\"$env\", staff=~\"$staff\", kind=\"search\", name=\"pick\"}[1h]) unless callcenter_ui_events_total{deployment_environment=\"$env\", staff=~\"$staff\", kind=\"search\", name=\"pick\"} offset 1h) or increase(callcenter_ui_events_total{deployment_environment=\"$env\", staff=~\"$staff\", kind=\"search\", name=\"pick\"}[1h]))) + sum by (staff) (((max_over_time(callcenter_ui_events_total{deployment_environment=\"$env\", staff=~\"$staff\", kind=\"search\", name=\"abandon\"}[1h]) unless callcenter_ui_events_total{deployment_environment=\"$env\", staff=~\"$staff\", kind=\"search\", name=\"abandon\"} offset 1h) or increase(callcenter_ui_events_total{deployment_environment=\"$env\", staff=~\"$staff\", kind=\"search\", name=\"abandon\"}[1h]))))",
+          "refId": "A",
+          "legendFormat": "{{staff}}",
+          "range": true
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit",
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 2,
+            "fillOpacity": 10,
+            "showPoints": "never",
+            "spanNulls": true,
+            "stacking": {
+              "mode": "none",
+              "group": "A"
+            }
+          },
+          "noValue": "no data",
+          "min": 0,
+          "max": 1
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "right",
+          "calcs": [
+            "mean",
+            "max"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "id": 313,
+      "gridPos": {
+        "x": 12,
+        "y": 171,
+        "w": 12,
+        "h": 8
+      }
+    },
+    {
+      "type": "table",
+      "title": "Search picks and abandons by what was searched",
+      "description": "Over the range: what a search was for (choice, size, item, alias, customer, order) and how it ended. Menu searches abandoned often = the typed words match nothing (add an alias).",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "sort_desc(sum by (name, detail) (((max_over_time(callcenter_ui_events_total{deployment_environment=\"$env\", staff=~\"$staff\", kind=\"search\", name=~\"pick|abandon\"}[$__range]) unless callcenter_ui_events_total{deployment_environment=\"$env\", staff=~\"$staff\", kind=\"search\", name=~\"pick|abandon\"} offset $__range) or increase(callcenter_ui_events_total{deployment_environment=\"$env\", staff=~\"$staff\", kind=\"search\", name=~\"pick|abandon\"}[$__range]))) > 0)",
+          "refId": "A",
+          "legendFormat": "",
+          "range": false,
+          "instant": true,
+          "format": "table"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "noValue": "no data"
+        },
+        "overrides": []
+      },
+      "options": {
+        "showHeader": true,
+        "cellHeight": "sm",
+        "footer": {
+          "show": false,
+          "reducer": [
+            "sum"
+          ],
+          "fields": ""
+        }
+      },
+      "transformations": [
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {
+              "Time": true
+            },
+            "renameByName": {
+              "name": "ended as",
+              "detail": "search kind",
+              "Value": "count"
+            }
+          }
+        }
+      ],
+      "id": 314,
+      "gridPos": {
+        "x": 0,
+        "y": 179,
+        "w": 12,
+        "h": 8
+      }
+    },
+    {
+      "type": "timeseries",
+      "title": "Keyboard vs mouse per hour",
+      "description": "Keys typed and mouse clicks spent on finished orders per hour (left clicks) the agents spent on finished orders.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "sum by (input) (((max_over_time(callcenter_ui_order_inputs_total{deployment_environment=\"$env\", staff=~\"$staff\", input=~\"keys|clicks\"}[1h]) unless callcenter_ui_order_inputs_total{deployment_environment=\"$env\", staff=~\"$staff\", input=~\"keys|clicks\"} offset 1h) or increase(callcenter_ui_order_inputs_total{deployment_environment=\"$env\", staff=~\"$staff\", input=~\"keys|clicks\"}[1h])))",
+          "refId": "A",
+          "legendFormat": "{{input}}",
+          "range": true
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "custom": {
+            "drawStyle": "bars",
+            "lineWidth": 1,
+            "fillOpacity": 60,
+            "showPoints": "never",
+            "spanNulls": true,
+            "stacking": {
+              "mode": "normal",
+              "group": "A"
+            }
+          },
+          "noValue": "no data"
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "right",
+          "calcs": [
+            "sum",
+            "max"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "id": 315,
+      "gridPos": {
+        "x": 12,
+        "y": 179,
+        "w": 12,
+        "h": 8
+      }
+    },
+    {
+      "type": "timeseries",
+      "title": "Keyboard share per agent (1 h)",
+      "description": "Keys / (keys + clicks) on finished orders, per agent per hour. Higher = more keyboard (faster for the agents who learned the keys).",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "sum by (staff) (((max_over_time(callcenter_ui_order_inputs_total{deployment_environment=\"$env\", staff=~\"$staff\", input=\"keys\"}[1h]) unless callcenter_ui_order_inputs_total{deployment_environment=\"$env\", staff=~\"$staff\", input=\"keys\"} offset 1h) or increase(callcenter_ui_order_inputs_total{deployment_environment=\"$env\", staff=~\"$staff\", input=\"keys\"}[1h]))) / sum by (staff) (((max_over_time(callcenter_ui_order_inputs_total{deployment_environment=\"$env\", staff=~\"$staff\", input=~\"keys|clicks\"}[1h]) unless callcenter_ui_order_inputs_total{deployment_environment=\"$env\", staff=~\"$staff\", input=~\"keys|clicks\"} offset 1h) or increase(callcenter_ui_order_inputs_total{deployment_environment=\"$env\", staff=~\"$staff\", input=~\"keys|clicks\"}[1h])))",
+          "refId": "A",
+          "legendFormat": "{{staff}}",
+          "range": true
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit",
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 2,
+            "fillOpacity": 10,
+            "showPoints": "never",
+            "spanNulls": true,
+            "stacking": {
+              "mode": "none",
+              "group": "A"
+            }
+          },
+          "noValue": "no data",
+          "min": 0,
+          "max": 1
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "right",
+          "calcs": [
+            "mean",
+            "max"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "id": 316,
+      "gridPos": {
+        "x": 0,
+        "y": 187,
+        "w": 12,
+        "h": 8
+      }
+    },
+    {
+      "type": "timeseries",
+      "title": "Double clicks per hour",
+      "description": "Double clicks (click.double) per hour split into double adds (an add that was a double) and all other double clicks, the selected agents. Double clicks on a button that does one thing hint the button feels slow.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "sum by (action) (((max_over_time(callcenter_ui_actions_total{deployment_environment=\"$env\", staff=~\"$staff\", action=~\"double_click|double_add\"}[1h]) unless callcenter_ui_actions_total{deployment_environment=\"$env\", staff=~\"$staff\", action=~\"double_click|double_add\"} offset 1h) or increase(callcenter_ui_actions_total{deployment_environment=\"$env\", staff=~\"$staff\", action=~\"double_click|double_add\"}[1h])))",
+          "refId": "A",
+          "legendFormat": "{{action}}",
+          "range": true
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "custom": {
+            "drawStyle": "bars",
+            "lineWidth": 1,
+            "fillOpacity": 60,
+            "showPoints": "never",
+            "spanNulls": true,
+            "stacking": {
+              "mode": "normal",
+              "group": "A"
+            }
+          },
+          "noValue": "no data"
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "right",
+          "calcs": [
+            "sum",
+            "max"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "id": 317,
+      "gridPos": {
+        "x": 12,
+        "y": 187,
+        "w": 12,
+        "h": 8
+      }
+    },
+    {
+      "type": "row",
+      "title": "Card outcomes and refusals (call center)",
+      "collapsed": false,
+      "id": 318,
+      "gridPos": {
+        "x": 0,
+        "y": 195,
+        "w": 24,
+        "h": 1
+      },
+      "panels": []
+    },
+    {
+      "type": "timeseries",
+      "title": "Card outcomes per hour",
+      "description": "Each card try per hour by result: ok (charged), refused (Square refused the entry, TokenizationError/UNKNOWN), invalid (typed wrong), declined (the bank at the charge), other. Counted at tokenize (not ok) and charge, so one good card counts once. All agents (this metric has no agent label; per agent: the panels beside it).",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "sum by (outcome) (((max_over_time(callcenter_card_attempts_total{deployment_environment=\"$env\", stage=\"charge\"}[1h]) unless callcenter_card_attempts_total{deployment_environment=\"$env\", stage=\"charge\"} offset 1h) or increase(callcenter_card_attempts_total{deployment_environment=\"$env\", stage=\"charge\"}[1h])))",
+          "refId": "A",
+          "legendFormat": "{{outcome}}",
+          "range": true
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "sum by (outcome) (((max_over_time(callcenter_card_attempts_total{deployment_environment=\"$env\", stage=\"tokenize\", outcome!=\"ok\"}[1h]) unless callcenter_card_attempts_total{deployment_environment=\"$env\", stage=\"tokenize\", outcome!=\"ok\"} offset 1h) or increase(callcenter_card_attempts_total{deployment_environment=\"$env\", stage=\"tokenize\", outcome!=\"ok\"}[1h])))",
+          "refId": "B",
+          "legendFormat": "{{outcome}}",
+          "range": true
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "custom": {
+            "drawStyle": "bars",
+            "lineWidth": 1,
+            "fillOpacity": 60,
+            "showPoints": "never",
+            "spanNulls": true,
+            "stacking": {
+              "mode": "normal",
+              "group": "A"
+            }
+          },
+          "noValue": "no data"
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "right",
+          "calcs": [
+            "sum",
+            "max"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "id": 319,
+      "gridPos": {
+        "x": 0,
+        "y": 196,
+        "w": 12,
+        "h": 8
+      }
+    },
+    {
+      "type": "timeseries",
+      "title": "Card refusal rate per hour",
+      "description": "Refused / all tries per hour (7-day digest, Loki): tries = every card attempt event. The refusals from the Philippines (2026-11-22 report) ran about 43 %. Starting guess: over 15 % worth a ticket to Square.",
+      "datasource": {
+        "type": "loki",
+        "uid": "loki"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "loki",
+            "uid": "loki"
+          },
+          "expr": "sum(count_over_time({service_name=\"quicc-callcenter\", deployment_environment=\"$env\", detail=\"digest\"} | ui_kind=\"card\" | ui_name=\"attempt\" | staff=~\"$staff\" | ui_outcome=\"refused\" [1h])) / sum(count_over_time({service_name=\"quicc-callcenter\", deployment_environment=\"$env\", detail=\"digest\"} | ui_kind=\"card\" | ui_name=\"attempt\" | staff=~\"$staff\" [1h]))",
+          "refId": "A",
+          "legendFormat": "refusal rate"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit",
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 2,
+            "fillOpacity": 10,
+            "showPoints": "never",
+            "spanNulls": true,
+            "stacking": {
+              "mode": "none",
+              "group": "A"
+            }
+          },
+          "noValue": "no data",
+          "min": 0,
+          "max": 1
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "right",
+          "calcs": [
+            "mean",
+            "max"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "id": 320,
+      "gridPos": {
+        "x": 12,
+        "y": 196,
+        "w": 12,
+        "h": 8
+      }
+    },
+    {
+      "type": "table",
+      "title": "Refusal rate by agent",
+      "description": "Per agent over the range: tries, refused and the refusal rate (card.attempt events, 7-day digest). A refusal sticks to the card, so a high rate may be the cards, not the agent.",
+      "datasource": {
+        "type": "loki",
+        "uid": "loki"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "loki",
+            "uid": "loki"
+          },
+          "expr": "sum by (staff) (count_over_time({service_name=\"quicc-callcenter\", deployment_environment=\"$env\", detail=\"digest\"} | ui_kind=\"card\" | ui_name=\"attempt\" | staff=~\"$staff\" | ui_outcome=\"refused\" [$__range])) / sum by (staff) (count_over_time({service_name=\"quicc-callcenter\", deployment_environment=\"$env\", detail=\"digest\"} | ui_kind=\"card\" | ui_name=\"attempt\" | staff=~\"$staff\" [$__range]))",
+          "refId": "A",
+          "queryType": "instant",
+          "legendFormat": ""
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit",
+          "noValue": "no data"
+        },
+        "overrides": []
+      },
+      "options": {
+        "showHeader": true,
+        "cellHeight": "sm",
+        "footer": {
+          "show": false,
+          "reducer": [
+            "sum"
+          ],
+          "fields": ""
+        }
+      },
+      "transformations": [
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {
+              "Time": true
+            },
+            "renameByName": {
+              "staff": "agent",
+              "Value": "refusal rate"
+            }
+          }
+        }
+      ],
+      "id": 321,
+      "gridPos": {
+        "x": 0,
+        "y": 204,
+        "w": 12,
+        "h": 8
+      }
+    },
+    {
+      "type": "table",
+      "title": "Refusal rate by attempt number",
+      "description": "Refused / tries by how many times the dialog had tried (ui_attempt 1, 2, 3...). 2026-11-22: 34 % on try 1, 81 % on try 2, 100 % on 3 and 4: a retry of a refused card almost never works.",
+      "datasource": {
+        "type": "loki",
+        "uid": "loki"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "loki",
+            "uid": "loki"
+          },
+          "expr": "sum by (ui_attempt) (count_over_time({service_name=\"quicc-callcenter\", deployment_environment=\"$env\", detail=\"digest\"} | ui_kind=\"card\" | ui_name=\"attempt\" | staff=~\"$staff\" | ui_outcome=\"refused\" [$__range])) / sum by (ui_attempt) (count_over_time({service_name=\"quicc-callcenter\", deployment_environment=\"$env\", detail=\"digest\"} | ui_kind=\"card\" | ui_name=\"attempt\" | staff=~\"$staff\" [$__range]))",
+          "refId": "A",
+          "queryType": "instant",
+          "legendFormat": ""
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit",
+          "noValue": "no data"
+        },
+        "overrides": []
+      },
+      "options": {
+        "showHeader": true,
+        "cellHeight": "sm",
+        "footer": {
+          "show": false,
+          "reducer": [
+            "sum"
+          ],
+          "fields": ""
+        }
+      },
+      "transformations": [
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {
+              "Time": true
+            },
+            "renameByName": {
+              "ui_attempt": "try number",
+              "Value": "refusal rate"
+            }
+          }
+        }
+      ],
+      "id": 322,
+      "gridPos": {
+        "x": 12,
+        "y": 204,
+        "w": 12,
+        "h": 8
+      }
+    },
+    {
+      "type": "timeseries",
+      "title": "Refused tries per hour, per agent",
+      "description": "Refused card tries per hour per agent (7-day digest, Loki), stacked: who is hitting refusals.",
+      "datasource": {
+        "type": "loki",
+        "uid": "loki"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "loki",
+            "uid": "loki"
+          },
+          "expr": "sum by (staff) (count_over_time({service_name=\"quicc-callcenter\", deployment_environment=\"$env\", detail=\"digest\"} | ui_kind=\"card\" | ui_name=\"attempt\" | staff=~\"$staff\" | ui_outcome=\"refused\" [1h]))",
+          "refId": "A",
+          "legendFormat": "{{staff}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "custom": {
+            "drawStyle": "bars",
+            "lineWidth": 1,
+            "fillOpacity": 60,
+            "showPoints": "never",
+            "spanNulls": true,
+            "stacking": {
+              "mode": "normal",
+              "group": "A"
+            }
+          },
+          "noValue": "no data"
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "right",
+          "calcs": [
+            "sum",
+            "max"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "id": 323,
+      "gridPos": {
+        "x": 0,
+        "y": 212,
+        "w": 12,
+        "h": 8
+      }
+    },
+    {
+      "type": "timeseries",
+      "title": "Clock wrong samples per hour, per agent",
+      "description": "Clock samples over the allowed skew (CC_CLOCK_SKEW_SECONDS, default 120 s), per hour per agent. A wrong clock can make Square refuse a card.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "sum by (staff) (((max_over_time(callcenter_clock_bad_total{deployment_environment=\"$env\", staff=~\"$staff\"}[1h]) unless callcenter_clock_bad_total{deployment_environment=\"$env\", staff=~\"$staff\"} offset 1h) or increase(callcenter_clock_bad_total{deployment_environment=\"$env\", staff=~\"$staff\"}[1h])))",
+          "refId": "A",
+          "legendFormat": "{{staff}}",
+          "range": true
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "custom": {
+            "drawStyle": "bars",
+            "lineWidth": 1,
+            "fillOpacity": 60,
+            "showPoints": "never",
+            "spanNulls": true,
+            "stacking": {
+              "mode": "normal",
+              "group": "A"
+            }
+          },
+          "noValue": "no data"
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "right",
+          "calcs": [
+            "sum",
+            "max"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "id": 324,
+      "gridPos": {
+        "x": 12,
+        "y": 212,
+        "w": 12,
+        "h": 8
+      }
     }
   ]
 }
