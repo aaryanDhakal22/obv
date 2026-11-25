@@ -455,13 +455,21 @@ def test_grafana_loads_every_dashboard(tmp_path):
         shutil.copytree(OBS / "grafana" / "provisioning" / sub, prov / sub)
     port = _free_port()
     subprocess.run(["docker", "run", "-d", "--rm", "--name", name, "--network", "host",
+                    # Grafana's first start runs ~600 SQLite migrations, each one fsynced: on a disk the gate's other
+                    # lanes are hammering that took 60-160 s (health 200 at 61-161 s in 18 recorded runs, 5 s idle).
+                    # A throwaway data dir in RAM has no fsync to wait for.
+                    "--tmpfs", "/var/lib/grafana:rw,mode=1777,size=256m",
                     "-e", "GF_SERVER_HTTP_ADDR=127.0.0.1", "-e", f"GF_SERVER_HTTP_PORT={port}",
                     "-e", "GF_SECURITY_ADMIN_USER=admin", "-e", "GF_SECURITY_ADMIN_PASSWORD=tc-test",
                     "-v", f"{prov}:/etc/grafana/provisioning:ro", "-v", f"{DASH}:/var/lib/grafana/dashboards:ro",
                     IMG["grafana"]], capture_output=True, text=True, check=True)
     try:
         base = f"http://127.0.0.1:{port}"
-        _wait(f"{base}/api/health", 120, name)
+        try:
+            _wait(f"{base}/api/health", 120, name)
+        except AssertionError:
+            print(subprocess.run(["docker", "logs", "--tail", "40", name], capture_output=True, text=True).stderr[-4000:])
+            raise
         auth = {"Authorization": "Basic " + base64.b64encode(b"admin:tc-test").decode()}
         want = {json.loads(f.read_text())["uid"]: f for f in DASH.glob("*/*.json")}
         found: dict = {}
