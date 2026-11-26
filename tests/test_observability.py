@@ -319,6 +319,81 @@ def test_the_1_year_rules_and_the_efficiency_dashboard_count_a_single_event(tmp_
     assert r.returncode == 0, f"promtool test rules:\n{r.stdout}{r.stderr}"
 
 
+HOP_BOUNDS = ["0.05", "0.1", "0.25", "0.5", "1", "2.5", "5", "10", "30", "60", "90", "120", "180", "300", "1800", "+Inf"]
+
+
+def rules_expr(uid: str) -> str:
+    """The PromQL of a provisioned Grafana alert rule's query A (rules.yaml), by uid."""
+    doc = yaml.safe_load((OBS / "grafana" / "provisioning" / "alerting" / "rules.yaml").read_text())
+    for g in doc["groups"]:
+        for r in g["rules"]:
+            if r["uid"] == uid:
+                return next(d["model"]["expr"] for d in r["data"] if d["refId"] == "A")
+    raise AssertionError(f"no rule {uid} in rules.yaml (renamed? update this test)")
+
+
+@needs_docker
+def test_placed_to_picked_up_panels_and_the_alert_rule_read_main_s_histogram(tmp_path):
+    """CARD-124: main's orders.pickup.latency (HopBuckets, seconds) for stores whose series were born INSIDE the window
+    (a fresh deploy: a plain increase() reads 0). A: 8 orders under 5 s, 2 in 30-60 s. B: ONE order in 30-60 s, web.
+    C: 20 orders under 5 s, vendor. The Store health panels (all stores) read 31 orders: median and p95 interpolated in
+    their buckets, 3 over 30 s (B's single event kept); Storefront's (web: A + B) read 3 of 11 over 30 s; the alert
+    rule's own query puts A and B over 30 s and C under."""
+    minutes, born = 90, 40
+
+    def hist(store: str, channel: str, fast: int, slow: int) -> list[dict]:
+        labels = f'deployment_environment="prod", tenant="{store}", channel="{channel}"'
+        total = fast + slow
+        rows = [(f"orders_pickup_latency_seconds_count{{{labels}}}", total)]
+        for le in HOP_BOUNDS:
+            bound = float(le.replace("+Inf", "inf"))
+            rows.append((f'orders_pickup_latency_seconds_bucket{{{labels}, le="{le}"}}',
+                         0 if bound < 5 else fast if bound <= 30 else total))
+        return [{"series": name, "values": " ".join(["_"] * born + [str(n)] * (minutes - born))} for name, n in rows]
+
+    series = [*hist("A", "web", 8, 2), *hist("B", "web", 0, 1), *hist("C", "vendor", 20, 0)]
+    at = "80m"
+    var = {"__range": "1h", "__interval": "1h"}
+    # all stores: 31 orders, 28 in (2.5, 5], 3 in (30, 60]
+    # median = 2.5 + 2.5 * (0.5 * 31) / 28 = 3.88392857142857..., written as promtool prints it (it compares exactly)
+    p95 = 30 + 30 * (0.95 * 31 - 28) / 3
+    rule = rules_expr("quicc-ord-pickup-slow")
+    test = {
+        "tests": [{
+            "interval": "1m",
+            "input_series": series,
+            "promql_expr_test": [
+                {"expr": substitute(the_query("store-health.json", "Placed → picked up, median"), var), "eval_time": at,
+                 "exp_samples": [{"labels": "{}", "value": 3.8839285714285716}]},
+                {"expr": substitute(the_query("store-health.json", "Placed → picked up, p95"), var), "eval_time": at,
+                 "exp_samples": [{"labels": "{}", "value": p95}]},
+                {"expr": substitute(the_query("store-health.json", "Picked up after more than 30 s"), var), "eval_time": at,
+                 "exp_samples": [{"labels": "{}", "value": 3}]},
+                {"expr": substitute(the_query("storefront.json", "Picked up after more than 30 s"), var), "eval_time": at,
+                 "exp_samples": [{"labels": "{}", "value": 3}]},
+            ],
+        }, {
+            # The alert rule's own query over orders still coming in: slow keeps every order in 30-60 s, fast in 2.5-5 s.
+            "interval": "1m",
+            "input_series": [
+                {"series": f'orders_pickup_latency_seconds_bucket{{deployment_environment="prod", tenant="{t}", channel="web", le="{le}"}}',
+                 "values": "0+1x89" if (bound >= (60 if t == "slow" else 5)) else "0x89"}
+                for t in ("slow", "fast") for le in HOP_BOUNDS for bound in [float(le.replace("+Inf", "inf"))]
+            ],
+            "promql_expr_test": [
+                {"expr": rule, "eval_time": "60m", "exp_samples": [
+                    {"labels": '{deployment_environment="prod", tenant="slow"}', "value": 30 + 30 * 0.95},
+                    {"labels": '{deployment_environment="prod", tenant="fast"}', "value": 2.5 + 2.5 * 0.95}]},
+                {"expr": f"({rule}) > 30", "eval_time": "60m", "exp_samples": [
+                    {"labels": '{deployment_environment="prod", tenant="slow"}', "value": 30 + 30 * 0.95}]},
+            ],
+        }],
+    }
+    (tmp_path / "t.yaml").write_text(yaml.safe_dump(test, width=10_000))
+    r = run_promtool(tmp_path, "test", "rules", "t.yaml")
+    assert r.returncode == 0, f"promtool test rules:\n{r.stdout}{r.stderr}"
+
+
 @needs_docker
 def test_the_1_year_rules_check_and_their_own_unit_test_passes():
     """README "Long-term efficiency": check config, check rules, test rules, as before a deploy."""

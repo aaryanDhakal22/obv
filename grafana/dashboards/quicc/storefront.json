@@ -502,6 +502,299 @@
      }
     }
    ]
+  },
+  {
+   "type": "stat",
+   "title": "Placed → picked up, median",
+   "description": "Placed → picked up: from the order's start (when it reached main; a scheduled order from the moment the Pi rings it) to the Pi's order.ack. The middle order. Normal is a few seconds.",
+   "datasource": {
+    "type": "prometheus",
+    "uid": "prometheus"
+   },
+   "targets": [
+    {
+     "datasource": {
+      "type": "prometheus",
+      "uid": "prometheus"
+     },
+     "expr": "histogram_quantile(0.5, sum by (le) (((max_over_time({__name__=~\"orders_pickup_latency(_seconds)?_bucket\", deployment_environment=\"$env\", channel=\"web\"}[$__range]) unless {__name__=~\"orders_pickup_latency(_seconds)?_bucket\", deployment_environment=\"$env\", channel=\"web\"} offset $__range) or increase({__name__=~\"orders_pickup_latency(_seconds)?_bucket\", deployment_environment=\"$env\", channel=\"web\"}[$__range]))))",
+     "legendFormat": "Placed → picked up, median",
+     "range": false,
+     "instant": true,
+     "refId": "A"
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "unit": "s",
+     "thresholds": {
+      "mode": "absolute",
+      "steps": [
+       {
+        "color": "green",
+        "value": null
+       },
+       {
+        "color": "yellow",
+        "value": 10
+       },
+       {
+        "color": "red",
+        "value": 30
+       }
+      ]
+     },
+     "color": {
+      "mode": "thresholds"
+     },
+     "decimals": 1,
+     "noValue": "no data"
+    },
+    "overrides": []
+   },
+   "options": {
+    "colorMode": "background",
+    "graphMode": "none",
+    "justifyMode": "center",
+    "textMode": "auto",
+    "wideLayout": true,
+    "showPercentChange": false,
+    "orientation": "auto",
+    "reduceOptions": {
+     "calcs": [
+      "lastNotNull"
+     ],
+     "fields": "",
+     "values": false
+    }
+   },
+   "id": 111,
+   "gridPos": {
+    "x": 0,
+    "y": 41,
+    "w": 8,
+    "h": 4
+   }
+  },
+  {
+   "type": "stat",
+   "title": "Placed → picked up, p95",
+   "description": "Placed → picked up: from the order's start (when it reached main; a scheduled order from the moment the Pi rings it) to the Pi's order.ack. Nineteen in twenty are faster. Red over 30 s: the store is slow to pick orders up (the alert rule fires at p95 over 30 s for 10 min).",
+   "datasource": {
+    "type": "prometheus",
+    "uid": "prometheus"
+   },
+   "targets": [
+    {
+     "datasource": {
+      "type": "prometheus",
+      "uid": "prometheus"
+     },
+     "expr": "histogram_quantile(0.95, sum by (le) (((max_over_time({__name__=~\"orders_pickup_latency(_seconds)?_bucket\", deployment_environment=\"$env\", channel=\"web\"}[$__range]) unless {__name__=~\"orders_pickup_latency(_seconds)?_bucket\", deployment_environment=\"$env\", channel=\"web\"} offset $__range) or increase({__name__=~\"orders_pickup_latency(_seconds)?_bucket\", deployment_environment=\"$env\", channel=\"web\"}[$__range]))))",
+     "legendFormat": "Placed → picked up, p95",
+     "range": false,
+     "instant": true,
+     "refId": "A"
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "unit": "s",
+     "thresholds": {
+      "mode": "absolute",
+      "steps": [
+       {
+        "color": "green",
+        "value": null
+       },
+       {
+        "color": "yellow",
+        "value": 10
+       },
+       {
+        "color": "red",
+        "value": 30
+       }
+      ]
+     },
+     "color": {
+      "mode": "thresholds"
+     },
+     "decimals": 1,
+     "noValue": "no data"
+    },
+    "overrides": []
+   },
+   "options": {
+    "colorMode": "background",
+    "graphMode": "none",
+    "justifyMode": "center",
+    "textMode": "auto",
+    "wideLayout": true,
+    "showPercentChange": false,
+    "orientation": "auto",
+    "reduceOptions": {
+     "calcs": [
+      "lastNotNull"
+     ],
+     "fields": "",
+     "values": false
+    }
+   },
+   "id": 112,
+   "gridPos": {
+    "x": 8,
+    "y": 41,
+    "w": 8,
+    "h": 4
+   }
+  },
+  {
+   "type": "stat",
+   "title": "Picked up after more than 30 s",
+   "description": "Placed → picked up: from the order's start (when it reached main; a scheduled order from the moment the Pi rings it) to the Pi's order.ack. How many orders took longer than 30 s in the selected range. Each of those raised the not-picked-up alert.",
+   "datasource": {
+    "type": "prometheus",
+    "uid": "prometheus"
+   },
+   "targets": [
+    {
+     "datasource": {
+      "type": "prometheus",
+      "uid": "prometheus"
+     },
+     "expr": "sum(((max_over_time({__name__=~\"orders_pickup_latency(_seconds)?_count\", deployment_environment=\"$env\", channel=\"web\"}[$__range]) unless {__name__=~\"orders_pickup_latency(_seconds)?_count\", deployment_environment=\"$env\", channel=\"web\"} offset $__range) or increase({__name__=~\"orders_pickup_latency(_seconds)?_count\", deployment_environment=\"$env\", channel=\"web\"}[$__range]))) - sum(((max_over_time({__name__=~\"orders_pickup_latency(_seconds)?_bucket\", deployment_environment=\"$env\", channel=\"web\", le=\"30\"}[$__range]) unless {__name__=~\"orders_pickup_latency(_seconds)?_bucket\", deployment_environment=\"$env\", channel=\"web\", le=\"30\"} offset $__range) or increase({__name__=~\"orders_pickup_latency(_seconds)?_bucket\", deployment_environment=\"$env\", channel=\"web\", le=\"30\"}[$__range])))",
+     "legendFormat": "Picked up after more than 30 s",
+     "range": false,
+     "instant": true,
+     "refId": "A"
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "unit": "short",
+     "thresholds": {
+      "mode": "absolute",
+      "steps": [
+       {
+        "color": "green",
+        "value": null
+       },
+       {
+        "color": "red",
+        "value": 1
+       }
+      ]
+     },
+     "color": {
+      "mode": "thresholds"
+     },
+     "decimals": 0,
+     "noValue": "no data"
+    },
+    "overrides": []
+   },
+   "options": {
+    "colorMode": "background",
+    "graphMode": "none",
+    "justifyMode": "center",
+    "textMode": "auto",
+    "wideLayout": true,
+    "showPercentChange": false,
+    "orientation": "auto",
+    "reduceOptions": {
+     "calcs": [
+      "lastNotNull"
+     ],
+     "fields": "",
+     "values": false
+    }
+   },
+   "id": 113,
+   "gridPos": {
+    "x": 16,
+    "y": 41,
+    "w": 8,
+    "h": 4
+   }
+  },
+  {
+   "type": "timeseries",
+   "title": "Website orders: placed → picked up",
+   "description": "The time from a website order reaching main to the store's Pi picking it up (order.ack). Median and p95; a rising p95 is a slow or offline store. A website order is told after 5 min and cancelled after 10 min of not being picked up.",
+   "datasource": {
+    "type": "prometheus",
+    "uid": "prometheus"
+   },
+   "targets": [
+    {
+     "datasource": {
+      "type": "prometheus",
+      "uid": "prometheus"
+     },
+     "expr": "histogram_quantile(0.5, sum by (le) (((max_over_time({__name__=~\"orders_pickup_latency(_seconds)?_bucket\", deployment_environment=\"$env\", channel=\"web\"}[$__interval]) unless {__name__=~\"orders_pickup_latency(_seconds)?_bucket\", deployment_environment=\"$env\", channel=\"web\"} offset $__interval) or increase({__name__=~\"orders_pickup_latency(_seconds)?_bucket\", deployment_environment=\"$env\", channel=\"web\"}[$__interval]))))",
+     "legendFormat": "median",
+     "range": true,
+     "instant": false,
+     "refId": "A"
+    },
+    {
+     "datasource": {
+      "type": "prometheus",
+      "uid": "prometheus"
+     },
+     "expr": "histogram_quantile(0.95, sum by (le) (((max_over_time({__name__=~\"orders_pickup_latency(_seconds)?_bucket\", deployment_environment=\"$env\", channel=\"web\"}[$__interval]) unless {__name__=~\"orders_pickup_latency(_seconds)?_bucket\", deployment_environment=\"$env\", channel=\"web\"} offset $__interval) or increase({__name__=~\"orders_pickup_latency(_seconds)?_bucket\", deployment_environment=\"$env\", channel=\"web\"}[$__interval]))))",
+     "legendFormat": "p95",
+     "range": true,
+     "instant": false,
+     "refId": "B"
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "unit": "s",
+     "custom": {
+      "drawStyle": "line",
+      "lineWidth": 2,
+      "fillOpacity": 10,
+      "showPoints": "never",
+      "spanNulls": false,
+      "axisSoftMin": 0
+     },
+     "color": {
+      "mode": "palette-classic"
+     },
+     "thresholds": {
+      "mode": "absolute",
+      "steps": [
+       {
+        "color": "green",
+        "value": null
+       }
+      ]
+     }
+    },
+    "overrides": []
+   },
+   "options": {
+    "legend": {
+     "displayMode": "list",
+     "placement": "bottom",
+     "showLegend": true,
+     "calcs": []
+    },
+    "tooltip": {
+     "mode": "multi",
+     "sort": "desc"
+    }
+   },
+   "id": 114,
+   "gridPos": {
+    "x": 0,
+    "y": 45,
+    "w": 24,
+    "h": 8
+   }
   }
  ]
 }

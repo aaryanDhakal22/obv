@@ -222,6 +222,31 @@ groups:
             datasourceUid: __expr__
             model: { refId: C, type: threshold, expression: A, conditions: [ { evaluator: { type: gt, params: [0] } } ] }
 
+      # 10b — the store is slow to pick orders up (CARD-124): the p95 of placed → picked up (main's
+      #       orders.pickup.latency: from the order's start, a scheduled order from the moment the Pi
+      #       rings it, to the Pi's order.ack) is over PICKUP_P95_SECONDS = 30 for PICKUP_P95_FOR = 10m
+      #       (the rule's `for`), over a sliding 5m of orders. A single late order has its own alert
+      #       (order_not_picked_up, CARD-121); this one is the store being slow as a whole. No orders in
+      #       the window = no series = OK.
+      - uid: quicc-ord-pickup-slow
+        title: store slow to pick orders up (p95)
+        condition: C
+        for: 10m
+        labels: { team: orders, module: main, severity: warn }
+        annotations:
+          summary: "Orders took {{ printf \"%.0f\" $values.A.Value }}s (p95) from placed to picked up by the store's Pi, for 10m — the Pi or its link is slow; check the store's order page and the Pi."
+        noDataState: OK
+        execErrState: Error
+        data:
+          - refId: A
+            relativeTimeRange: { from: 300, to: 0 }
+            datasourceUid: prometheus
+            model: { refId: A, instant: true, expr: "histogram_quantile(0.95, sum by (le, deployment_environment, tenant) (increase({__name__=~\"orders_pickup_latency(_seconds)?_bucket\"}[5m])))" }
+          - refId: C
+            datasourceUid: __expr__
+            # PICKUP_P95_SECONDS = 30
+            model: { refId: C, type: threshold, expression: A, conditions: [ { evaluator: { type: gt, params: [30] } } ] }
+
       # 11 — orders arrive but no floor events come back: main persisted orders
       #      in the last hour and received NO floor event from any agent (an old
       #      agent build, a broken sync, or orders nobody is accepting). Prod
