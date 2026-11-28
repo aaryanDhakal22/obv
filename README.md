@@ -286,7 +286,6 @@ move through any module, your phone buzzes.**
   | agent failed to print | orders printed nowhere even after failover (`orders_print_failed_total`, never a rerouted ticket): ≥ `PRINT_MISSES_PAGE` (2) in 10 min, or 1 while a printer has been down `PRINTER_DOWN_FOR` (2 min, no up sample); `for: 1m` — a short blip never pages | agent |
   | agent command channel timing out | `increase(rpc_timeouts_total{type!="terminal.relay"}[10m]) > 0` (the call center's relay has its own rule, below) | main |
   | **order could not reach the agent (SSE down)** | `increase(sse_events_broadcast_total{event_type="order",result="no_subscribers"}[10m]) > 0` | main |
-  | online orders refused, store's Pi offline | `increase(orders_refusals_total{reason="kitchen_offline"}[10m]) > 0` | main |
   | online order expired before it was placed | `increase(orders_placements_total{result="expired"}[10m])` or sweeper `expired`/`parked_expired` > 0 | main |
   | online order voided by the placement sweeper | `increase(orders_placements_sweeps_total{action="voided"}[10m]) > 0` | main |
   | store hub stopped reporting | no `hub_info` from a prod hub seen in the last day for 10m | hub |
@@ -370,11 +369,13 @@ move through any module, your phone buzzes.**
   (spoken callouts + the store TVs). Its SoftTouch rule and the hub's own
   Pushover pages went with SoftTouch (2026-11-11).
 
-  The three **placement** rules (main's channel orders, `DURABILITY-PLAN.md`)
+  The two **placement** rules (main's channel orders, `DURABILITY-PLAN.md`)
   read main's `orders.refusals` / `orders.placements` / `orders.placements.sweeps`
-  counters (store-labelled). A kitchen_offline that never clears is usually a
-  retired Pi whose agent key was never revoked: main's admin shows a **Kitchen
-  offline** badge on that store; revoke the old key.
+  counters (store-labelled). Since CARD-122 main no longer refuses
+  with kitchen_offline: a Pi that is away makes main pause the store and push the
+  owner `online_paused` (the alert ladder, Pushover), so the Grafana rule
+  `quicc-ord-kitchen-offline` was retired (CARD-128). A retired Pi whose agent key
+  was never revoked still pauses the store: revoke the old key.
 
   The **SSE-down** rule is the headline "the agent went offline while an order
   arrived" alarm: `main` keeps the order (outbox retries, replays on reconnect —
