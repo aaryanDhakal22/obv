@@ -180,6 +180,27 @@ def all_promql() -> list[tuple[str, str, str]]:
     return out
 
 
+# Main reads no queue and online is gone (CARD-093 / CARD-181): nothing may read what only they emitted.
+GONE_METRICS = re.compile(r"sqs_|orders_(received|relayed|rejected|consumed|cast_failed|persist_failed|persisted|ingest_latency)")
+RULES = OBS / "grafana" / "provisioning" / "alerting" / "rules.yaml"
+
+
+def test_no_dashboard_or_alert_rule_reads_the_gone_online_and_sqs_metrics():
+    """No dashboard query, no live alert rule reads a metric of online or main's old queue reader, no dashboard
+    reads quicc-online logs or spans, the online relay dashboard is gone, and the three online / SQS rules are
+    deleted from Grafana by uid (a provisioned rule lingers otherwise)."""
+    assert not (DASH / "debug" / "online-relay.json").exists()
+    bad = [f"{f} > {t}: {e[:120]}" for f, t, e in all_promql() if GONE_METRICS.search(e)]
+    bad += [f"{p.name} > {t}: {e[:120]}" for p in DASH.glob("*/*.json") for t, _, e in panels_exprs(p)
+            if "quicc-online" in e or "quicc-(online" in e or "sqs.process" in e]
+    assert not bad, "\n".join(bad)
+    doc = yaml.safe_load(RULES.read_text())
+    live = {r["uid"]: json.dumps(r) for g in doc["groups"] for r in g["rules"]}
+    for uid in ("quicc-ord-online-rejected", "quicc-ord-main-cast", "quicc-ord-main-persist", "quicc-floor-no-events"):
+        assert uid not in live and {"orgId": 1, "uid": uid} in doc["deleteRules"], uid
+    assert [u for u, r in live.items() if GONE_METRICS.search(r)] == []
+
+
 @needs_docker
 def test_every_dashboard_query_parses(tmp_path):
     """Every PromQL query of every dashboard (variables filled in as Grafana would) parses: promtool check rules

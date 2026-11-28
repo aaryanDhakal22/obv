@@ -24,6 +24,7 @@ The `store` variable is `label_values(target_info{deployment_environment="$env"}
 Existing instruments are listed in `contract/main.md` §7.2 and `contract/agent.md` §7.1; the ones below are **new**. Durations are histograms in seconds. Use buckets that suit each hop: sub-second hops get 0.05…30 s, human hops get 5…1800 s.
 
 ### main (each carries `tenant`/`location`)
+> CARD-181 (2026-11-27): `orders.ingest.latency`, `sqs.message.age` and `sqs.receive.errors` below went with main's queue reader (CARD-093); their panels are off the dashboards.
 - `orders.ingest.latency` (s, `source`): the vendor's `placed_at` → persisted in main. It covers the online relay and SQS, but mostly measures the vendor's own hand-over delay (1–4 min, measured 2026-11-01; the vendor's timestamp has minute precision, adding up to 59 s). Dashboards call it **Vendor → saved**. It's clamped at 0 to absorb clock skew.
 - `sqs.message.age` (s): the SQS `SentTimestamp` → received by main. This is the queue wait, readable without CloudWatch. Before routing the store is unknown, so it has no tenant.
 - `sqs.receive.errors` (counter, `reason`): `ReceiveMessage` failures, which today are only logged.
@@ -66,7 +67,7 @@ Existing instruments are listed in `contract/main.md` §7.2 and `contract/agent.
    - Order flow today: received → saved → reached the Pi → accepted → printed, by source.
    - p95 for each hop, and recent errors (Loki).
 2. **Latency & bottlenecks** (`latency`):
-   - p50/p95/p99 per hop: ingest, SQS wait, dispatch, ack, accept, print, floor sync, RPC round trip, printer write.
+   - p50/p95/p99 per hop: dispatch, ack, accept, print, floor sync, RPC round trip, printer write.
    - A "where the time goes" breakdown.
    - Queue depths over time.
    - The slowest traces (Tempo).
@@ -78,4 +79,4 @@ Existing instruments are listed in `contract/main.md` §7.2 and `contract/agent.
    - A per-store table: main / agent / Quibase / hub versions, Pi uptime, disk, temp, SD errors, last update result.
    - **"Safe to upgrade now?"** checks per store: no open orders, all printers up, disk and temp OK, no firing alerts, Pi connected, tablets connected; with version drift vs the newest version seen.
 5. **Counter** (`counter`, 2026-11-12): the counter terminal: counter orders, money events reaching main, kitchen tickets, the Pi ↔ main sync, terminals and staff, the day's close. **The one exception to "no business stats":** money panels (payments, voids, drawers; sales $ and tenders once CM-11 lands) are there to spot money that didn't reach main. They come only from pushed metrics (main counts an event when it applies it, exactly once), never from the database. Metrics it still waits for: CM-0 … CM-14 in the quicc-ops `HARDENING-PLAN.md` R-1a.
-6. The **Quicc Debug** folder is unchanged: stack-health, logs-explorer, online-relay, duplex-rpc, admin-catalog.
+6. The **Quicc Debug** folder is unchanged: stack-health, logs-explorer, duplex-rpc, admin-catalog.

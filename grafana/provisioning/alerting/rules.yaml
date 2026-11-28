@@ -22,6 +22,17 @@ deleteRules:
   # SoftTouch is gone (2026-11-11): the hub is only the callout box.
   - orgId: 1
     uid: quicc-hub-softtouch-down
+  # The vendor queue is gone (CARD-093, DEC-079: main reads no SQS; CARD-181): online, the relay and
+  # main's queue reader no longer exist, so these three could never fire again.
+  - orgId: 1
+    uid: quicc-ord-online-rejected
+  - orgId: 1
+    uid: quicc-ord-main-cast
+  - orgId: 1
+    uid: quicc-ord-main-persist
+  # Read orders_persisted_total, the queue reader's counter (gone with it): it could never be above 0.
+  - orgId: 1
+    uid: quicc-floor-no-events
 
 groups:
   - orgId: 1
@@ -29,63 +40,6 @@ groups:
     folder: Order pipeline
     interval: 1m
     rules:
-      # 1 — online rejected an inbound order (bad body / SQS publish error).
-      - uid: quicc-ord-online-rejected
-        title: online rejected an order
-        condition: C
-        for: 0m
-        labels: { team: orders, module: online, severity: page }
-        annotations:
-          summary: "online/ rejected {{ printf \"%.0f\" $values.A.Value }} order(s) in 10m — a vendor POST was not relayed to SQS."
-        noDataState: OK
-        execErrState: Error
-        data:
-          - refId: A
-            relativeTimeRange: { from: 600, to: 0 }
-            datasourceUid: prometheus
-            model: { refId: A, instant: true, expr: "sum by (deployment_environment, tenant, reason) (increase(orders_rejected_total[10m]))" }
-          - refId: C
-            datasourceUid: __expr__
-            model: { refId: C, type: threshold, expression: A, conditions: [ { evaluator: { type: gt, params: [0] } } ] }
-
-      # 2 — main could not cast a message (missing scope / unknown source / bad body) → DLQ.
-      - uid: quicc-ord-main-cast
-        title: main failed to cast an order (DLQ)
-        condition: C
-        for: 0m
-        labels: { team: orders, module: main, severity: page }
-        annotations:
-          summary: "main/ cast-failed {{ printf \"%.0f\" $values.A.Value }} message(s) in 10m (reason={{ $labels.reason }}) — left for redrive/DLQ, never persisted."
-        noDataState: OK
-        execErrState: Error
-        data:
-          - refId: A
-            relativeTimeRange: { from: 600, to: 0 }
-            datasourceUid: prometheus
-            model: { refId: A, instant: true, expr: "sum by (deployment_environment, tenant, reason) (increase(orders_cast_failed_total[10m]))" }
-          - refId: C
-            datasourceUid: __expr__
-            model: { refId: C, type: threshold, expression: A, conditions: [ { evaluator: { type: gt, params: [0] } } ] }
-
-      # 3 — main consumed but failed to persist (DB error; message left on queue).
-      - uid: quicc-ord-main-persist
-        title: main failed to persist an order
-        condition: C
-        for: 0m
-        labels: { team: orders, module: main, severity: page }
-        annotations:
-          summary: "main/ persist-failed {{ printf \"%.0f\" $values.A.Value }} order(s) in 10m — consumed from SQS but not written to Postgres."
-        noDataState: OK
-        execErrState: Error
-        data:
-          - refId: A
-            relativeTimeRange: { from: 600, to: 0 }
-            datasourceUid: prometheus
-            model: { refId: A, instant: true, expr: "sum by (deployment_environment, tenant) (increase(orders_persist_failed_total[10m]))" }
-          - refId: C
-            datasourceUid: __expr__
-            model: { refId: C, type: threshold, expression: A, conditions: [ { evaluator: { type: gt, params: [0] } } ] }
-
       # 4 — main dispatched an outbox event and it errored (SSE fan-out failing).
       - uid: quicc-ord-main-dispatch
         title: main outbox dispatch failing
@@ -246,31 +200,6 @@ groups:
             datasourceUid: __expr__
             # PICKUP_P95_SECONDS = 30
             model: { refId: C, type: threshold, expression: A, conditions: [ { evaluator: { type: gt, params: [30] } } ] }
-
-      # 11 — orders arrive but no floor events come back: main persisted orders
-      #      in the last hour and received NO floor event from any agent (an old
-      #      agent build, a broken sync, or orders nobody is accepting). Prod
-      #      only: dev/staging smoke orders are never accepted on purpose.
-      - uid: quicc-floor-no-events
-        title: orders arriving but no floor updates from the agent
-        condition: C
-        for: 0m
-        labels: { team: orders, module: main, severity: warn }
-        annotations:
-          summary: "main/ persisted {{ printf \"%.0f\" $values.A.Value }} order(s) in the last hour but received no floor events — check the agent's sync (or whether orders are being accepted)."
-        noDataState: OK
-        execErrState: Error
-        data:
-          - refId: A
-            relativeTimeRange: { from: 3600, to: 0 }
-            datasourceUid: prometheus
-            model:
-              refId: A
-              instant: true
-              expr: "(sum by (deployment_environment, tenant) (increase(orders_persisted_total{deployment_environment=\"prod\"}[60m])) > 0) unless (sum by (deployment_environment, tenant) (increase(floor_events_received_total{deployment_environment=\"prod\"}[60m])) > 0)"
-          - refId: C
-            datasourceUid: __expr__
-            model: { refId: C, type: threshold, expression: A, conditions: [ { evaluator: { type: gt, params: [0] } } ] }
 
       # 12 — delivery guarantee breached: main has orders the connected agent
       #      hasn't acked for over a minute (main re-sends every 10 s; the
@@ -912,14 +841,14 @@ groups:
         for: 0m
         labels: { team: orders, module: runtime, severity: page }
         annotations:
-          summary: "{{ $labels.service_name }} recovered {{ printf \"%.0f\" $values.A.Value }} panic(s) in 10 min (where={{ $labels.where }}): the work in that goroutine / handler / SQS message was dropped or left for redrive. The stack is in the logs (Loki, level=error)."
+          summary: "{{ $labels.service_name }} recovered {{ printf \"%.0f\" $values.A.Value }} panic(s) in 10 min (where={{ $labels.where }}): the work in that goroutine / handler was dropped. The stack is in the logs (Loki, level=error)."
         noDataState: OK
         execErrState: Error
         data:
           - refId: A
             relativeTimeRange: { from: 600, to: 0 }
             datasourceUid: prometheus
-            model: { refId: A, instant: true, expr: "sum by (deployment_environment, tenant, service_name, where) (increase({__name__=~\"agent_panics_total|main_panics_total|sqs_messages_panicked_total\", deployment_environment=~\"prod|staging\"}[10m]))" }
+            model: { refId: A, instant: true, expr: "sum by (deployment_environment, tenant, service_name, where) (increase({__name__=~\"agent_panics_total|main_panics_total\", deployment_environment=~\"prod|staging\"}[10m]))" }
           - refId: C
             datasourceUid: __expr__
             model: { refId: C, type: threshold, expression: A, conditions: [ { evaluator: { type: gt, params: [0] } } ] }

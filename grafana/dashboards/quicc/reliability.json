@@ -1197,22 +1197,11 @@
             "type": "prometheus",
             "uid": "prometheus"
           },
-          "expr": "((sum by (tenant) (increase(orders_persist_failed_total{deployment_environment=\"$env\", tenant=~\"${store:regex}|\"}[10m]))) > 0) * 0 + 1",
-          "legendFormat": "{{tenant}} save failed",
-          "range": true,
-          "instant": false,
-          "refId": "E"
-        },
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "prometheus"
-          },
           "expr": "((sum by (tenant) (increase(outbox_events_failed_total{deployment_environment=\"$env\", tenant=~\"${store:regex}|\"}[10m]))) > 0) * 0 + 1",
           "legendFormat": "{{tenant}} outbox dispatch failing",
           "range": true,
           "instant": false,
-          "refId": "F"
+          "refId": "E"
         },
         {
           "datasource": {
@@ -1223,7 +1212,7 @@
           "legendFormat": "{{tenant}} outbox stuck 15m",
           "range": true,
           "instant": false,
-          "refId": "G"
+          "refId": "F"
         },
         {
           "datasource": {
@@ -1234,7 +1223,7 @@
           "legendFormat": "{{tenant}} floor sync stuck 15m",
           "range": true,
           "instant": false,
-          "refId": "H"
+          "refId": "G"
         },
         {
           "datasource": {
@@ -1245,7 +1234,7 @@
           "legendFormat": "{{tenant}} SD-card errors",
           "range": true,
           "instant": false,
-          "refId": "I"
+          "refId": "H"
         },
         {
           "datasource": {
@@ -1256,7 +1245,7 @@
           "legendFormat": "{{tenant}} online orders refused, Pi offline",
           "range": true,
           "instant": false,
-          "refId": "J"
+          "refId": "I"
         },
         {
           "datasource": {
@@ -1267,7 +1256,7 @@
           "legendFormat": "{{tenant}} online order expired unplaced",
           "range": true,
           "instant": false,
-          "refId": "K"
+          "refId": "J"
         },
         {
           "datasource": {
@@ -1278,7 +1267,7 @@
           "legendFormat": "{{tenant}} online order voided by the sweeper",
           "range": true,
           "instant": false,
-          "refId": "L"
+          "refId": "K"
         }
       ],
       "fieldConfig": {
@@ -1380,55 +1369,11 @@
             "type": "prometheus",
             "uid": "prometheus"
           },
-          "expr": "sum(increase(orders_rejected_total{deployment_environment=\"$env\", tenant=~\"${store:regex}|\"}[$__interval]))",
-          "legendFormat": "online rejected",
-          "range": true,
-          "instant": false,
-          "refId": "A"
-        },
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "prometheus"
-          },
-          "expr": "sum(increase(orders_cast_failed_total{deployment_environment=\"$env\", tenant=~\"${store:regex}|\"}[$__interval]))",
-          "legendFormat": "unroutable (DLQ)",
-          "range": true,
-          "instant": false,
-          "refId": "B"
-        },
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "prometheus"
-          },
-          "expr": "sum(increase(sqs_receive_errors_total{deployment_environment=\"$env\"}[$__interval]))",
-          "legendFormat": "SQS receive errors",
-          "range": true,
-          "instant": false,
-          "refId": "C"
-        },
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "prometheus"
-          },
-          "expr": "sum(increase(orders_persist_failed_total{deployment_environment=\"$env\", tenant=~\"${store:regex}|\"}[$__interval]))",
-          "legendFormat": "save failed",
-          "range": true,
-          "instant": false,
-          "refId": "D"
-        },
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "prometheus"
-          },
           "expr": "sum(increase(outbox_events_failed_total{deployment_environment=\"$env\", tenant=~\"${store:regex}|\"}[$__interval]))",
           "legendFormat": "outbox failed",
           "range": true,
           "instant": false,
-          "refId": "E"
+          "refId": "A"
         },
         {
           "datasource": {
@@ -1439,7 +1384,7 @@
           "legendFormat": "no Pi listening",
           "range": true,
           "instant": false,
-          "refId": "F"
+          "refId": "B"
         },
         {
           "datasource": {
@@ -1450,7 +1395,7 @@
           "legendFormat": "re-sent to Pi",
           "range": true,
           "instant": false,
-          "refId": "G"
+          "refId": "C"
         },
         {
           "datasource": {
@@ -1461,7 +1406,7 @@
           "legendFormat": "command timeout",
           "range": true,
           "instant": false,
-          "refId": "H"
+          "refId": "D"
         },
         {
           "datasource": {
@@ -1472,7 +1417,7 @@
           "legendFormat": "command, Pi offline",
           "range": true,
           "instant": false,
-          "refId": "I"
+          "refId": "E"
         },
         {
           "datasource": {
@@ -1483,7 +1428,7 @@
           "legendFormat": "floor event rejected",
           "range": true,
           "instant": false,
-          "refId": "J"
+          "refId": "F"
         },
         {
           "datasource": {
@@ -1494,7 +1439,7 @@
           "legendFormat": "floor event send error",
           "range": true,
           "instant": false,
-          "refId": "K"
+          "refId": "G"
         },
         {
           "datasource": {
@@ -1505,7 +1450,7 @@
           "legendFormat": "print failed",
           "range": true,
           "instant": false,
-          "refId": "L"
+          "refId": "H"
         }
       ],
       "fieldConfig": {
@@ -1579,7 +1524,7 @@
           "refId": "A",
           "queryType": "range",
           "legendFormat": "{{service_name}}",
-          "expr": "sum by (service_name) (count_over_time({deployment_environment=\"$env\", service_name=~\"quicc-(online|main|agent|hub)\"} | detected_level=~\"error|fatal|panic\" | tenant=\"\" or tenant=~\"${store:regex}\" [$__auto]))"
+          "expr": "sum by (service_name) (count_over_time({deployment_environment=\"$env\", service_name=~\"quicc-(main|agent|hub)\"} | detected_level=~\"error|fatal|panic\" | tenant=\"\" or tenant=~\"${store:regex}\" [$__auto]))"
         }
       ],
       "fieldConfig": {
